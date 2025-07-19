@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 // ✅ Fix 1: Correct named import
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function TestListingsPage() {
   // ✅ Fix 2: Temporarily disable ESLint rule
