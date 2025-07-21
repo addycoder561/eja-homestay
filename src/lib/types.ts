@@ -89,6 +89,7 @@ export interface PropertyWithHost extends Property {
 }
 
 export interface PropertyWithReviews extends Property {
+  host: Profile;
   reviews: Review[];
   average_rating: number;
   review_count: number;
