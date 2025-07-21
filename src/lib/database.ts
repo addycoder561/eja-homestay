@@ -68,10 +68,6 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
     query = query.eq('property_type', filters.propertyType);
   }
 
-  if (filters?.guests) {
-    query = query.gte('max_guests', filters.guests);
-  }
-
   const { data, error } = await query;
 
   if (error) {
@@ -292,10 +288,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     query = query.eq('property_type', filters.propertyType);
   }
 
-  if (filters.guests) {
-    query = query.gte('max_guests', filters.guests);
-  }
-
   if (filters.amenities && filters.amenities.length > 0) {
     query = query.overlaps('amenities', filters.amenities);
   }
@@ -308,54 +300,4 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   return data || [];
-} 
-
-// --- Admin: Ad Campaigns ---
-export async function getAdCampaigns() {
-  const { data, error } = await supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
-}
-
-export async function createAdCampaign(campaign: Omit<any, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase.from('ad_campaigns').insert(campaign).select('*').single();
-  if (error) throw error;
-  return data;
-}
-
-export async function updateAdCampaign(id: string, updates: Partial<any>) {
-  const { data, error } = await supabase.from('ad_campaigns').update(updates).eq('id', id).select('*').single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteAdCampaign(id: string) {
-  const { error } = await supabase.from('ad_campaigns').delete().eq('id', id);
-  if (error) throw error;
-  return true;
-}
-
-// --- Admin: Coupons ---
-export async function getCoupons() {
-  const { data, error } = await supabase.from('coupons').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
-}
-
-export async function createCoupon(coupon: Omit<any, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase.from('coupons').insert(coupon).select('*').single();
-  if (error) throw error;
-  return data;
-}
-
-export async function updateCoupon(id: string, updates: Partial<any>) {
-  const { data, error } = await supabase.from('coupons').update(updates).eq('id', id).select('*').single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteCoupon(id: string) {
-  const { error } = await supabase.from('coupons').delete().eq('id', id);
-  if (error) throw error;
-  return true;
 } 
