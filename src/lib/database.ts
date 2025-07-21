@@ -122,6 +122,18 @@ export async function getPropertyWithReviews(id: string): Promise<PropertyWithRe
 
   return {
     ...data,
+    host: data.host || {
+      id: '',
+      email: '',
+      full_name: 'Host Name',
+      phone: '',
+      avatar_url: '',
+      is_host: true,
+      created_at: '',
+      updated_at: '',
+      host_bio: 'Experienced host passionate about hospitality and local culture.',
+      host_usps: ['Warm hospitality', 'Local expertise', 'Quick response'],
+    },
     reviews,
     average_rating: averageRating,
     review_count: reviews.length
