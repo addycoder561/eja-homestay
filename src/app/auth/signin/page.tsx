@@ -36,11 +36,9 @@ export default function SignIn() {
     }
 
     try {
-      const { error } = await signIn(formData.email, formData.password);
+      const result = await signIn(formData.email, formData.password);
       
-      if (error) {
-        toast.error(error.message || 'Failed to sign in');
-      } else {
+      if (!result.error) {
         toast.success('Signed in successfully!');
         // Wait for profile to be available
         setTimeout(() => {
@@ -51,7 +49,7 @@ export default function SignIn() {
           }
         }, 100);
       }
-    } catch (error) {
+    } catch (err) {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

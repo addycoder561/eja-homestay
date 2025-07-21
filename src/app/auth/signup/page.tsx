@@ -54,11 +54,8 @@ export default function SignUp() {
     }
 
     try {
-      const { error } = await signUp(formData.email, formData.password, formData.fullName, formData.role as 'guest' | 'host');
-      
-      if (error) {
-        toast.error(error.message || 'Failed to create account');
-      } else {
+      const result = await signUp(formData.email, formData.password, formData.fullName, formData.role as 'guest' | 'host');
+      if (!result.error) {
         toast.success('Account created and logged in!');
         if (formData.role === 'host') {
           router.push('/host/dashboard');
@@ -66,7 +63,7 @@ export default function SignUp() {
           router.push('/');
         }
       }
-    } catch (error) {
+    } catch (err) {
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);

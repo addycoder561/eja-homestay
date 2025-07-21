@@ -4,11 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { GuestSelector } from '@/components/GuestSelector';
 import {
   MagnifyingGlassIcon,
-  MapPinIcon,
-  CalendarIcon,
   UserGroupIcon,
   ChevronUpDownIcon
 } from '@heroicons/react/24/outline';

@@ -8,10 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { 
   HomeIcon, 
   MagnifyingGlassIcon, 
-  UserIcon, 
   Bars3Icon,
   XMarkIcon,
-  HeartIcon,
   BookmarkIcon,
   ChatBubbleLeftEllipsisIcon
 } from '@heroicons/react/24/outline';
@@ -29,15 +27,10 @@ export function Navigation() {
 
   const displayName = profile?.full_name?.split(' ')[0] || profile?.full_name || user?.email;
   const isHost = profile?.role === 'host' || profile?.is_host;
-  const isGuest = profile?.role === 'guest' || (!profile?.is_host && !isHost);
   const isAdmin = user?.email === 'admin@eja.com'; // stub: treat this email as admin
 
   const handleSignOut = async () => {
     await signOut();
-  };
-
-  const handleAddListing = () => {
-    router.push('/auth/signup?role=host');
   };
 
   return (
