@@ -9,6 +9,11 @@ import { BookingForm } from '@/components/BookingForm';
 import { getPropertyWithReviews } from '@/lib/database';
 import { PropertyWithReviews, Profile } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import Script from 'next/script';
 
 function GoogleMap({ lat, lng }: { lat: number; lng: number }) {
   return (
@@ -26,8 +31,16 @@ function GoogleMap({ lat, lng }: { lat: number; lng: number }) {
 export default function PropertyDetailPage() {
   const params = useParams();
   const propertyId = params.id as string;
+  const { user, profile } = useAuth();
   const [property, setProperty] = useState<PropertyWithReviews | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [lastBooking, setLastBooking] = useState<any>(null);
+
+  console.log('PropertyDetailPage propertyId:', propertyId);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -45,6 +58,63 @@ export default function PropertyDetailPage() {
       fetchProperty();
     }
   }, [propertyId]);
+
+  useEffect(() => {
+    if (lastBooking) {
+      console.log('lastBooking set:', lastBooking);
+    }
+  }, [lastBooking]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !profile) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('reviews').insert({
+        property_id: propertyId,
+        guest_id: profile.id,
+        rating: reviewRating,
+        comment: reviewText,
+      });
+      if (error) throw error;
+      setReviewText('');
+      setReviewRating(5);
+      // Refresh property data to show new review
+      const data = await getPropertyWithReviews(propertyId);
+      setProperty(data);
+    } catch (err) {
+      alert('Failed to submit review');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePayNow = async () => {
+    if (!lastBooking) return;
+    setPaymentLoading(true);
+    const options = {
+      key: 'rzp_test_C7d9Vbcc9JM8dp',
+      amount: Math.round(lastBooking.total_price * 100), // in paise
+      currency: 'INR',
+      name: property.title,
+      description: 'Booking Payment',
+      handler: async function (response: any) {
+        // Mark booking as paid (in test mode, just update status)
+        await supabase.from('bookings').update({ status: 'paid' }).eq('id', lastBooking.id);
+        alert('Payment successful! Your booking is confirmed.');
+        window.location.href = '/guest/dashboard';
+      },
+      prefill: {
+        email: profile?.email,
+        name: profile?.full_name,
+      },
+      theme: { color: '#2563eb' },
+    };
+    // @ts-ignore
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+    setPaymentLoading(false);
+  };
 
   if (loading) {
     return (
@@ -111,6 +181,7 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Title & Subtitle */}
@@ -272,10 +343,73 @@ export default function PropertyDetailPage() {
             )}
           </div>
 
-          {/* Booking Form */}
-          <div className="lg:col-span-1">
-            <BookingForm property={property} />
-          </div>
+          {/* Booking Form and Payment */}
+          <section className="mt-8 mb-12">
+            {property && (
+              <BookingForm
+                property={property}
+                onBookingCreated={setLastBooking}
+              />
+            )}
+            {lastBooking && lastBooking.status !== 'paid' && (
+              <div className="mt-8 p-6 bg-blue-50 rounded-lg shadow text-center">
+                <h3 className="text-xl font-bold mb-4 text-blue-700">Complete Your Payment</h3>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  loading={paymentLoading}
+                  onClick={handlePayNow}
+                  className="w-full text-lg font-bold"
+                >
+                  Pay Now
+                </Button>
+              </div>
+            )}
+          </section>
+
+          {/* Reviews Section */}
+          <section className="mt-12">
+            <h2 className="text-2xl font-bold mb-4">Guest Reviews</h2>
+            {property?.reviews && property.reviews.length > 0 ? (
+              <div className="space-y-6 mb-8">
+                {property.reviews.map((review: any) => (
+                  <div key={review.id} className="bg-white rounded-lg shadow p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-bold text-blue-700">Rating: {review.rating} / 5</span>
+                      <span className="text-gray-500 text-xs ml-2">{new Date(review.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-gray-800 mb-1">{review.comment}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-gray-500 mb-8">No reviews yet.</div>
+            )}
+            {user && profile && (
+              <form onSubmit={handleReviewSubmit} className="bg-white rounded-lg shadow p-6 max-w-lg">
+                <h3 className="text-lg font-semibold mb-2">Leave a Review</h3>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                <select
+                  value={reviewRating}
+                  onChange={e => setReviewRating(Number(e.target.value))}
+                  className="mb-4 border border-gray-300 rounded px-3 py-2 w-full"
+                  required
+                >
+                  {[5,4,3,2,1].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <Input
+                  label="Comment"
+                  value={reviewText}
+                  onChange={e => setReviewText(e.target.value)}
+                  required
+                  className="mb-4"
+                />
+                <Button type="submit" variant="primary" size="md" loading={submitting} disabled={submitting || !reviewText}>
+                  Submit Review
+                </Button>
+              </form>
+            )}
+          </section>
         </div>
       </main>
       <Footer />

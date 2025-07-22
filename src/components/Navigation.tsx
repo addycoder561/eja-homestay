@@ -14,15 +14,12 @@ import {
   ChatBubbleLeftEllipsisIcon
 } from '@heroicons/react/24/outline';
 import { SupportModal } from '@/components/SupportModal';
-import { AuthModal } from '@/components/AuthModal';
 
 export function Navigation() {
   const { user, profile, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const router = useRouter();
 
   const displayName = profile?.full_name?.split(' ')[0] || profile?.full_name || user?.email;
@@ -55,6 +52,18 @@ export function Navigation() {
               Home
             </Link>
             <Link 
+              href="/experiences" 
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Local Experiences
+            </Link>
+            <Link 
+              href="/trips" 
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Trips
+            </Link>
+            <Link 
               href="/search" 
               className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
@@ -63,13 +72,6 @@ export function Navigation() {
             </Link>
             {user && (
               <>
-                <Link 
-                  href="/bookings" 
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  <BookmarkIcon className="w-5 h-5 inline mr-1" />
-                  My Bookings
-                </Link>
                 {profile?.is_host && (
                   <Link 
                     href="/host/dashboard" 
@@ -105,23 +107,22 @@ export function Navigation() {
                   My Account ▾
                 </div>
                 {isAccountMenuOpen && (
-                  <div className="absolute right-0 mt-10 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50" style={{ top: '100%' }}>
                     <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-900">
-                      {displayName}
+                      {profile?.full_name ? profile.full_name.split(' ')[0] : user?.email}
                     </div>
                     {isHost ? (
                       <>
                         <Link href="/host/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Dashboard</Link>
                         <Link href="/host/bookings" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Bookings</Link>
                         <Link href="/host/listings/new" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Submit New Listing</Link>
-                        <Link href="/host/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Profile</Link>
                         <Link href="/host/payments" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Payments</Link>
                         <Link href="/host/calendar" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Calendar</Link>
                         <button onClick={handleSignOut} className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Sign Out</button>
                       </>
                     ) : (
                       <>
-                        <Link href="/guest/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">My Trips</Link>
+                        <Link href="/guest/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">My Bookings</Link>
                         <Link href="/guest/bookmarks" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Bookmarks</Link>
                         <Link href="/guest/messages" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Messages</Link>
                         <Link href="/guest/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Profile</Link>
@@ -132,7 +133,7 @@ export function Navigation() {
                 )}
               </div>
             ) : (
-              <Button size="md" className="ml-4 px-6 font-medium" onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>
+              <Button size="md" className="ml-4 px-6 font-medium" onClick={() => router.push('/auth/signin')}>
                 Log In
               </Button>
             )}
@@ -166,6 +167,20 @@ export function Navigation() {
                 Home
               </Link>
               <Link 
+                href="/experiences" 
+                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Local Experiences
+              </Link>
+              <Link 
+                href="/trips" 
+                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Trips
+              </Link>
+              <Link 
                 href="/search" 
                 className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -175,14 +190,6 @@ export function Navigation() {
               </Link>
               {user && (
                 <>
-                  <Link 
-                    href="/bookings" 
-                    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <BookmarkIcon className="w-5 h-5 inline mr-2" />
-                    My Bookings
-                  </Link>
                   {profile?.is_host && (
                     <Link 
                       href="/host/dashboard" 
@@ -192,44 +199,24 @@ export function Navigation() {
                       Host Dashboard
                     </Link>
                   )}
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <div className="text-sm text-gray-700 px-3 py-2">
-                      Welcome, {displayName}
-                    </div>
-                    <button
-                      onClick={handleSignOut}
-                      className="block w-full text-left text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
                 </>
               )}
-              {!user && (
-                <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
-                  <Link 
-                    href="/auth/signin"
-                    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
-                  <Link 
-                    href="/auth/signup"
-                    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="text-sm text-gray-700 px-3 py-2">
+                  Welcome, {displayName}
                 </div>
-              )}
+                <button
+                  onClick={handleSignOut}
+                  className="block w-full text-left text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
-      {/* Auth Modal */}
-      <AuthModal open={authModalOpen} mode={authMode} onClose={() => setAuthModalOpen(false)} onSwitchMode={setAuthMode} />
     </nav>
   );
 } 

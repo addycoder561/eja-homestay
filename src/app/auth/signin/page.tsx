@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 
 export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signIn, profile } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -42,7 +43,10 @@ export default function SignIn() {
         toast.success('Signed in successfully!');
         // Wait for profile to be available
         setTimeout(() => {
-          if (profile?.role === 'host' || profile?.is_host) {
+          const redirect = searchParams.get('redirect');
+          if (redirect) {
+            router.push(redirect);
+          } else if (profile?.role === 'host' || profile?.is_host) {
             router.push('/host/dashboard');
           } else {
             router.push('/');

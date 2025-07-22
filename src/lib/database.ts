@@ -46,10 +46,7 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
 export async function getProperties(filters?: SearchFilters): Promise<PropertyWithHost[]> {
   let query = supabase
     .from('properties')
-    .select(`
-      *,
-      host:profiles(*)
-    `)
+    .select('*')
     .eq('is_available', true);
 
   if (filters?.location) {
@@ -99,16 +96,12 @@ export async function getProperty(id: string): Promise<PropertyWithHost | null> 
 export async function getPropertyWithReviews(id: string): Promise<PropertyWithReviews | null> {
   const { data, error } = await supabase
     .from('properties')
-    .select(`
-      *,
-      host:profiles(*),
-      reviews(*)
-    `)
+    .select(`*, reviews(*)`)
     .eq('id', id)
     .single();
 
   if (error) {
-    console.error('Error fetching property with reviews:', error);
+    console.error('Error fetching property with reviews:', error, 'for id:', id);
     return null;
   }
 
@@ -122,18 +115,6 @@ export async function getPropertyWithReviews(id: string): Promise<PropertyWithRe
 
   return {
     ...data,
-    host: data.host || {
-      id: '',
-      email: '',
-      full_name: 'Host Name',
-      phone: '',
-      avatar_url: '',
-      is_host: true,
-      created_at: '',
-      updated_at: '',
-      host_bio: 'Experienced host passionate about hospitality and local culture.',
-      host_usps: ['Warm hospitality', 'Local expertise', 'Quick response'],
-    },
     reviews,
     average_rating: averageRating,
     review_count: reviews.length
@@ -278,10 +259,7 @@ export async function checkAvailability(
 export async function searchProperties(filters: SearchFilters): Promise<PropertyWithHost[]> {
   let query = supabase
     .from('properties')
-    .select(`
-      *,
-      host:profiles(*)
-    `)
+    .select('*')
     .eq('is_available', true);
 
   if (filters.location) {
@@ -312,4 +290,42 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   return data || [];
+} 
+
+export async function createExperienceBooking({ experienceId, email, name, date, guests, totalPrice, guestId }: { experienceId: string, email: string, name: string, date: string, guests: number, totalPrice: number, guestId: string }) {
+  // Insert booking for authenticated user
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert({
+      experience_id: experienceId,
+      guest_id: guestId,
+      check_in_date: date,
+      check_out_date: date,
+      guests_count: guests,
+      total_price: totalPrice,
+      status: 'pending',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function createTripBooking({ tripId, email, name, date, guests, totalPrice, guestId }: { tripId: string, email: string, name: string, date: string, guests: number, totalPrice: number, guestId: string }) {
+  // Insert booking for authenticated user
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert({
+      trip_id: tripId,
+      guest_id: guestId,
+      check_in_date: date,
+      check_out_date: date,
+      guests_count: guests,
+      total_price: totalPrice,
+      status: 'pending',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 } 

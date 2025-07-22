@@ -9,6 +9,8 @@ import {
   UserGroupIcon,
   ChevronUpDownIcon
 } from '@heroicons/react/24/outline';
+import { SearchFilters } from './SearchFilters';
+import { SearchFilters as SearchFiltersType } from '@/lib/types';
 
 export function HeroSection() {
   const router = useRouter();
@@ -22,6 +24,9 @@ export function HeroSection() {
   });
   const [guestsOpen, setGuestsOpen] = useState(false);
   const guestsRef = useRef<HTMLDivElement>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<SearchFiltersType>({});
+  const filtersRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -34,7 +39,23 @@ export function HeroSection() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [guestsOpen]);
 
+  // Close filters dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (filtersRef.current && !filtersRef.current.contains(e.target as Node)) {
+        setFiltersOpen(false);
+      }
+    }
+    if (filtersOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [filtersOpen]);
+
   const totalGuests = searchData.adults + searchData.children;
+
+  const handleFilterChange = (newFilters: SearchFiltersType) => {
+    setFilters(newFilters);
+    setFiltersOpen(false);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +64,11 @@ export function HeroSection() {
     if (searchData.checkIn) params.append('checkIn', searchData.checkIn);
     if (searchData.checkOut) params.append('checkOut', searchData.checkOut);
     if (searchData.adults) params.append('adults', String(searchData.adults));
-    
+    // Merge filters
+    if (filters.minPrice) params.append('minPrice', String(filters.minPrice));
+    if (filters.maxPrice) params.append('maxPrice', String(filters.maxPrice));
+    if (filters.propertyType) params.append('propertyType', filters.propertyType);
+    if (filters.amenities && filters.amenities.length > 0) params.append('amenities', filters.amenities.join(','));
     router.push(`/search?${params.toString()}`);
   };
 
@@ -70,7 +95,7 @@ export function HeroSection() {
 
           {/* Search Form */}
           <div className="max-w-4xl mx-auto">
-            <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+            <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 relative">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative overflow-visible">
                 {/* Location */}
                 <div className="px-4">
@@ -162,15 +187,41 @@ export function HeroSection() {
                 </div>
               </div>
 
-              <div className="mt-6">
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full md:w-auto"
-                >
-                  <MagnifyingGlassIcon className="w-5 h-5 mr-2" />
-                  Search Properties
-                </Button>
+              {/* In the form, update the layout for the search and filters buttons */}
+              <div className="mt-6 flex flex-col md:flex-row md:items-center md:gap-4">
+                <div className="flex-1 flex justify-center md:justify-start">
+                  <Button 
+                    type="submit" 
+                    size="lg" 
+                    className="w-full md:w-auto"
+                  >
+                    <MagnifyingGlassIcon className="w-5 h-5 mr-2" />
+                    Search Properties
+                  </Button>
+                </div>
+                <div className="relative flex justify-center md:justify-start mt-4 md:mt-0" ref={filtersRef}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    onClick={() => setFiltersOpen((v) => !v)}
+                  >
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0013 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 017 17v-3.586a1 1 0 00-.293-.707L3.293 6.707A1 1 0 013 6V4z" /></svg>
+                    Filters
+                  </Button>
+                  {filtersOpen && (
+                    <div className="absolute right-0 mt-2 z-50 min-w-[320px] max-w-[400px] w-full bg-white border border-gray-200 rounded-lg shadow-2xl p-4 animate-fade-in overflow-auto">
+                      <button
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold"
+                        onClick={() => setFiltersOpen(false)}
+                        aria-label="Close filters"
+                      >
+                        &times;
+                      </button>
+                      <SearchFilters filters={filters} onFilterChange={handleFilterChange} />
+                    </div>
+                  )}
+                </div>
               </div>
             </form>
           </div>

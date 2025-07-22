@@ -37,6 +37,7 @@ export default function SearchPageClient() {
         } else {
           data = await getProperties();
         }
+        console.log('Fetched properties:', data);
         setProperties(data);
       } catch (error) {
         console.error('Error fetching properties:', error);

@@ -8,6 +8,7 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
+  console.log('PropertyCard property.id:', property.id);
   return (
     <Link href={`/property/${property.id}`}>
       <Card className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
