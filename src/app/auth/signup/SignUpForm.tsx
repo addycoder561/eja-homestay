@@ -15,7 +15,7 @@ export default function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialRole = searchParams.get('role') === 'host' ? 'host' : 'guest';
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -79,6 +79,14 @@ export default function SignUpForm() {
             <p className="text-gray-600">Create your account to get started</p>
           </CardHeader>
           <CardContent>
+            <Button
+              type="button"
+              className="w-full mb-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+              onClick={() => signInWithGoogle(searchParams.get('redirect') ? `${window.location.origin}${searchParams.get('redirect')}` : undefined)}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C36.68 2.69 30.77 0 24 0 14.82 0 6.71 5.13 2.69 12.56l7.98 6.2C12.13 13.09 17.62 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.64 7.02l7.19 5.59C43.93 37.13 46.1 31.3 46.1 24.55z"/><path fill="#FBBC05" d="M10.67 28.13c-1.01-2.99-1.01-6.27 0-9.26l-7.98-6.2C.99 16.09 0 19.93 0 24c0 4.07.99 7.91 2.69 11.33l7.98-6.2z"/><path fill="#EA4335" d="M24 48c6.48 0 11.92-2.15 15.89-5.85l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.38 0-11.87-3.59-14.33-8.79l-7.98 6.2C6.71 42.87 14.82 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
+              Sign up with Google
+            </Button>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 type="text"

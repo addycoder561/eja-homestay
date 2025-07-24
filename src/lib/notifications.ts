@@ -13,4 +13,15 @@ export async function sendBookingConfirmationSMS({ to, guestName, propertyTitle,
 export async function sendPaymentReceiptEmail({ to, guestName, bookingType, title, checkIn, checkOut, guests, totalPrice, paymentRef }: { to: string; guestName: string; bookingType: string; title: string; checkIn: string; checkOut: string; guests: number; totalPrice: number; paymentRef: string }) {
   // Replace with real email service (e.g., SendGrid)
   console.log(`[EMAIL RECEIPT] To: ${to} | Subject: Payment Receipt | Guest: ${guestName} | Type: ${bookingType} | Title: ${title} | ${checkIn} - ${checkOut} | Guests: ${guests} | Total: ₹${totalPrice} | Payment Ref: ${paymentRef}`);
+}
+
+export async function sendCollaborationNotification({ type, name, email, role, details }: {
+  type: 'create' | 'retreat' | 'campaign',
+  name: string,
+  email: string,
+  role: string,
+  details: string,
+}) {
+  // Replace with real email service (e.g., SendGrid)
+  console.log(`[COLLAB NOTIFY] New collaboration: ${type} | Name: ${name} | Email: ${email} | Role: ${role} | Details: ${details}`);
 } 

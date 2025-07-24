@@ -1,37 +1,85 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, MutableRefObject } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { PropertyWithReviews } from '@/lib/types';
-import { createBooking, checkAvailability } from '@/lib/database';
+import { createMultiRoomBooking, checkMultiRoomAvailability, getRoomsForProperty, getRoomInventory } from '@/lib/database';
+import { Room } from '@/lib/types';
 import { GuestSelector } from '@/components/GuestSelector';
 import toast from 'react-hot-toast';
 import { sendBookingConfirmationEmail, sendBookingConfirmationSMS } from '@/lib/notifications';
 import Script from 'next/script';
-import { useRef } from 'react';
+import { useEffect } from 'react';
 import { sendPaymentReceiptEmail } from '@/lib/notifications';
+import { BookingStatus } from '@/lib/types';
+import { addDays, format, isSameDay } from 'date-fns';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
+
+// Add RazorpayInstance type at the top
+type RazorpayInstance = {
+  open: () => void;
+};
 
 interface BookingFormProps {
   property: PropertyWithReviews;
+  preselectedRoomId?: string | null;
 }
 
-export function BookingForm({ property }: BookingFormProps) {
+export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const [rooms, setRooms] = useState<Room[]>([]);
+  // State for multi-room selection
+  const [roomSelections, setRoomSelections] = useState<{ [roomId: string]: number }>({});
+  // Track both adults and children in formData
   const [formData, setFormData] = useState({
     checkIn: '',
     checkOut: '',
     rooms: 1,
     adults: 1,
+    children: 0,
     specialRequests: ''
   });
   const [loading, setLoading] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const paymentRef = useRef<any>(null);
+  const paymentRef = useRef<RazorpayInstance | null>(null);
+  // Add state for roomInventory
+  const [roomInventory, setRoomInventory] = useState<{ [roomId: string]: { [date: string]: number } }>({});
+
+  // Fetch rooms and inventory for all rooms in the selected date range
+  useEffect(() => {
+    getRoomsForProperty(property.id).then((data: Room[]) => {
+      setRooms(data);
+      // Fetch inventory for all rooms for the selected date range
+      if (formData.checkIn && formData.checkOut) {
+        Promise.all(
+          data.map(room =>
+            getRoomInventory(room.id, formData.checkIn, formData.checkOut).then(inv => ({ roomId: room.id, inv }))
+          )
+        ).then(results => {
+          const inventoryMap: { [roomId: string]: { [date: string]: number } } = {};
+          results.forEach(({ roomId, inv }) => {
+            inventoryMap[roomId] = {};
+            inv.forEach(i => { inventoryMap[roomId][i.date] = i.available; });
+          });
+          setRoomInventory(inventoryMap);
+        });
+      } else {
+        setRoomInventory({});
+      }
+    });
+  }, [property.id, formData.checkIn, formData.checkOut]);
+
+  // On room or date change, update available quantities
+  useEffect(() => {
+    // Reset roomSelections if checkIn/checkOut changes
+    setRoomSelections({});
+  }, [formData.checkIn, formData.checkOut, rooms]);
 
   const calculateNights = () => {
     if (!formData.checkIn || !formData.checkOut) return 0;
@@ -41,48 +89,118 @@ export function BookingForm({ property }: BookingFormProps) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Calculate total capacity for selected rooms
+  let totalCapacity = Object.entries(roomSelections).reduce((sum, [roomId, qty]) => {
+    const room = rooms.find(r => r.id === roomId);
+    return sum + (room ? room.max_guests * qty : 0);
+  }, 0);
+  if (isNaN(totalCapacity) || totalCapacity < 1) totalCapacity = 0;
+  // Limit adults to totalCapacity + 1, but always at least 1
+  let maxAdults = Math.max(totalCapacity + 1, 1);
+  let adults = Math.max(1, Math.min(formData.adults, maxAdults));
+
+  // Calculate maxChildren as 2 * total selected room units
+  const totalRoomUnits = Object.values(roomSelections).reduce((sum, qty) => sum + qty, 0);
+  const maxChildren = 2 * totalRoomUnits;
+
   const calculateTotalPrice = () => {
-    const nights = calculateNights();
-    return nights * property.price_per_night;
+    let total = 0;
+    if (!formData.checkIn || !formData.checkOut) return total;
+    const nights = (new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60 * 24);
+    Object.entries(roomSelections).forEach(([roomId, qty]) => {
+      if (qty > 0) {
+        const room = rooms.find(r => r.id === roomId);
+        if (room) {
+          total += nights * room.price * qty;
+        }
+      }
+    });
+    // Extra adult charge
+    if (adults > totalCapacity) {
+      total += nights * 1500 * (adults - totalCapacity);
+    }
+    // Children breakfast charge
+    if (formData.children > 0) {
+      total += nights * 250 * formData.children;
+    }
+    return total;
   };
 
+  // Check if all dates in range are available
+  const isRoomAvailable = () => {
+    if (!formData.checkIn || !formData.checkOut) return true;
+    const start = new Date(formData.checkIn);
+    const end = new Date(formData.checkOut);
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      for (const roomId in roomSelections) {
+        if ((roomInventory[roomId]?.[dateStr] || 0) < roomSelections[roomId]) return false;
+      }
+    }
+    return true;
+  };
+
+  const handleRoomQuantityChange = (roomId: string, quantity: number) => {
+    setRoomSelections(prev => ({ ...prev, [roomId]: quantity }));
+  };
+
+  // In handleSubmit, integrate Razorpay payment before booking creation
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error('Please sign in to book a property');
-      router.push('/auth/signin');
+      const redirectUrl = `/auth/signin?redirect=/property/${property.id}`;
+      router.push(redirectUrl);
       return;
     }
     if (!formData.checkIn || !formData.checkOut) {
       toast.error('Please select check-in and check-out dates');
       return;
     }
-    if (formData.adults > property.max_guests) {
-      toast.error(`Maximum ${property.max_guests} guests allowed`);
+    // Prepare room requests
+    const roomRequests = Object.entries(roomSelections)
+      .filter(([_, qty]) => qty > 0)
+      .map(([room_id, quantity]) => ({
+        room_id,
+        quantity,
+        check_in: formData.checkIn,
+        check_out: formData.checkOut,
+      }));
+    if (roomRequests.length === 0) {
+      toast.error('Please select at least one room type and quantity');
       return;
     }
+    // Check availability for all selected rooms
     setLoading(true);
+    const isAvailable = await checkMultiRoomAvailability(roomRequests);
+    if (!isAvailable) {
+      setLoading(false);
+      toast.error('One or more selected room types are not available for the chosen dates/quantities');
+      return;
+    }
+    // Calculate total price
+    const totalPrice = calculateTotalPrice();
+    // Trigger Razorpay payment
     setPaymentInProgress(true);
     try {
-      const totalPrice = calculateTotalPrice();
       const options = {
         key: 'rzp_test_C7d9Vbcc9JM8dp',
         amount: Math.round(totalPrice * 100),
         currency: 'INR',
         name: property.title,
         description: 'Booking Payment',
-        handler: async function (response: any) {
+        handler: async function (response: { razorpay_payment_id: string }) {
           // On payment success, create booking
-          const booking = await createBooking({
+          const booking = await createMultiRoomBooking({
             property_id: property.id,
             guest_id: user.id,
             check_in_date: formData.checkIn,
             check_out_date: formData.checkOut,
-            guests_count: formData.adults,
+            guests_count: adults,
             total_price: totalPrice,
             special_requests: formData.specialRequests || null,
-            status: 'paid',
-          });
+            status: 'paid' as BookingStatus,
+          }, roomRequests, response.razorpay_payment_id);
           setPaymentInProgress(false);
           setLoading(false);
           if (booking) {
@@ -93,7 +211,7 @@ export function BookingForm({ property }: BookingFormProps) {
               title: property.title,
               checkIn: formData.checkIn,
               checkOut: formData.checkOut,
-              guests: formData.adults,
+              guests: adults,
               totalPrice,
               paymentRef: response.razorpay_payment_id
             });
@@ -118,9 +236,9 @@ export function BookingForm({ property }: BookingFormProps) {
           }
         }
       };
-      // @ts-expect-error
-      paymentRef.current = new window.Razorpay(options);
-      paymentRef.current.open();
+      // @ts-expect-error: Razorpay is a global injected by the script
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (error) {
       setPaymentInProgress(false);
       setLoading(false);
@@ -157,6 +275,35 @@ export function BookingForm({ property }: BookingFormProps) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Room selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-900 mb-2">Select Room Types & Quantities</label>
+              <div className="space-y-2">
+                {rooms.map(room => {
+                  // Set maxAvailable to 2 for all room types for now
+                  let maxAvailable = 2;
+                  return (
+                    <div key={room.id} className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <span className="font-semibold">{room.name}</span> <span className="text-xs text-gray-500">({room.room_type})</span>
+                        <span className="ml-2 text-green-700 font-bold">₹{room.price}</span>
+                      </div>
+                      <label className="text-sm">Qty:</label>
+                      <select
+                        value={roomSelections[room.id] || 0}
+                        onChange={e => handleRoomQuantityChange(room.id, Number(e.target.value))}
+                        className="border rounded px-2 py-1"
+                      >
+                        {Array.from({ length: maxAvailable + 1 }, (_, i) => (
+                          <option key={i} value={i}>{i}</option>
+                        ))}
+                      </select>
+                      <span className="text-xs text-gray-500">(max {maxAvailable})</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 label="Check-in"
@@ -175,12 +322,19 @@ export function BookingForm({ property }: BookingFormProps) {
                 min={formData.checkIn || new Date().toISOString().split('T')[0]}
               />
             </div>
+            {/* Show unavailable warning if needed */}
+            {!isRoomAvailable() && (
+              <div className="text-red-600 text-sm mb-2">Selected room is not available for the chosen dates.</div>
+            )}
             {/* Guest Selector */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">Guests</label>
               <GuestSelector
-                value={{ rooms: formData.rooms, adults: formData.adults }}
+                value={{ adults: adults, children: formData.children }}
                 onChange={(val) => setFormData({ ...formData, ...val })}
+                showRoomsSelector={false}
+                maxAdults={maxAdults}
+                maxChildren={maxChildren}
               />
             </div>
             <div>
@@ -205,13 +359,25 @@ export function BookingForm({ property }: BookingFormProps) {
                   <span>Total</span>
                   <span>₹{totalPrice}</span>
                 </div>
+                {adults > totalCapacity && (
+                  <div className="flex justify-between text-sm text-red-700">
+                    <span>Extra Adult Charge (₹1500 x {adults - totalCapacity} x {nights} nights)</span>
+                    <span>₹{nights * 1500 * (adults - totalCapacity)}</span>
+                  </div>
+                )}
+                {formData.children > 0 && (
+                  <div className="flex justify-between text-sm text-yellow-700">
+                    <span>Children Breakfast (₹250 x {formData.children} x {nights} nights)</span>
+                    <span>₹{nights * 250 * formData.children}</span>
+                  </div>
+                )}
               </div>
             )}
             <Button
               type="submit"
               loading={loading || paymentInProgress}
               className="w-full"
-              disabled={!formData.checkIn || !formData.checkOut || loading || paymentInProgress}
+              disabled={!formData.checkIn || !formData.checkOut || loading || paymentInProgress || Object.values(roomSelections).every(qty => qty === 0)}
             >
               Book Now & Pay
             </Button>

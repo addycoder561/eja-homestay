@@ -13,6 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { sendPaymentReceiptEmail } from '@/lib/notifications';
+import { isBookmarked, addBookmark, removeBookmark } from '@/lib/database';
+import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
+import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
 
 type Experience = {
   id: string;
@@ -74,6 +77,7 @@ export default function ExperiencesPage() {
   const [loading, setLoading] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const paymentRef = useRef<any>(null);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
 
   const filtered = selectedLocation
     ? experiences.filter((exp) =>
@@ -102,6 +106,34 @@ export default function ExperiencesPage() {
     }
     // eslint-disable-next-line
   }, [searchParams, user, profile]);
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchBookmarks() {
+      if (user) {
+        const bookmarks = await Promise.all(filtered.map(exp => isBookmarked(user.id, exp.id, 'experience')));
+        if (!ignore) {
+          setBookmarkedIds(filtered.map((exp, i) => bookmarks[i] ? exp.id : '').filter(Boolean));
+        }
+      } else {
+        setBookmarkedIds([]);
+      }
+    }
+    fetchBookmarks();
+    return () => { ignore = true; };
+  }, [user, filtered]);
+
+  const handleBookmark = async (expId: string, bookmarked: boolean, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (bookmarked) {
+      await removeBookmark(user.id, expId, 'experience');
+      setBookmarkedIds(ids => ids.filter(id => id !== expId));
+    } else {
+      await addBookmark(user.id, expId, 'experience');
+      setBookmarkedIds(ids => [...ids, expId]);
+    }
+  };
 
   const closeBooking = () => {
     setBookingOpen(false);
@@ -214,20 +246,31 @@ export default function ExperiencesPage() {
 
         {/* Experiences Grid */}
         <div className="max-w-7xl mx-auto px-4 pb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {filtered.length === 0 ? (
-              <div className="col-span-full text-center text-gray-500">No experiences found for this location.</div>
-            ) : (
-              filtered.map((exp) => (
-                <Card key={exp.id} className="group hover:shadow-2xl transition-shadow duration-300 cursor-pointer bg-white/90 border-0 shadow-lg rounded-3xl overflow-hidden relative">
-                  <div className="relative h-56 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+            {filtered.map((exp) => {
+              const isBook = bookmarkedIds.includes(exp.id);
+              return (
+                <Card key={exp.id} className="relative group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
+                  <div className="relative h-48 overflow-hidden rounded-t-lg">
                     <img
                       src={exp.image}
                       alt={exp.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-blue-700/60 to-transparent" />
-                    <div className="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-base font-semibold text-blue-700 shadow">
+                    {user && (
+                      <button
+                        className="absolute top-4 left-4 z-10 p-1 rounded-full bg-white shadow hover:bg-pink-100"
+                        onClick={e => handleBookmark(exp.id, isBook, e)}
+                        aria-label={isBook ? 'Remove bookmark' : 'Add bookmark'}
+                      >
+                        {isBook ? (
+                          <HeartSolid className="w-6 h-6 text-pink-500" />
+                        ) : (
+                          <HeartOutline className="w-6 h-6 text-gray-400" />
+                        )}
+                      </button>
+                    )}
+                    <div className="absolute top-4 right-4 bg-white px-2 py-1 rounded-full text-sm font-semibold text-gray-900">
                       ₹{exp.price}
                     </div>
                   </div>
@@ -248,8 +291,8 @@ export default function ExperiencesPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
+              );
+            })}
           </div>
         </div>
         <Modal open={bookingOpen} onClose={closeBooking} title={selectedExp ? `Book: ${selectedExp.title}` : ""}>

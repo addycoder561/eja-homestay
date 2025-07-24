@@ -1,19 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { BookingForm } from '@/components/BookingForm';
-import { getPropertyWithReviews } from '@/lib/database';
-import { PropertyWithReviews, Profile } from '@/lib/types';
+import { getPropertyWithReviews, hasCompletedBooking, getRoomsForProperty } from '@/lib/database';
+import { PropertyWithReviews, Profile, Room } from '@/lib/types';
+import { addDays, format, isSameDay } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import Script from 'next/script';
+import toast from 'react-hot-toast';
 
 function GoogleMap({ lat, lng }: { lat: number; lng: number }) {
   return (
@@ -39,6 +41,11 @@ export default function PropertyDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [lastBooking, setLastBooking] = useState<any>(null);
+  const [canReview, setCanReview] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [preselectedRoomId, setPreselectedRoomId] = useState<string | null>(null);
+  const bookingFormRef = useRef<HTMLDivElement>(null);
 
   console.log('PropertyDetailPage propertyId:', propertyId);
 
@@ -60,30 +67,74 @@ export default function PropertyDetailPage() {
   }, [propertyId]);
 
   useEffect(() => {
+    // Check if user can review (has completed booking)
+    const checkEligibility = async () => {
+      if (user && propertyId) {
+        const eligible = await hasCompletedBooking(user.id, propertyId);
+        setCanReview(eligible);
+      } else {
+        setCanReview(false);
+      }
+    };
+    checkEligibility();
+  }, [user, propertyId]);
+
+  useEffect(() => {
     if (lastBooking) {
       console.log('lastBooking set:', lastBooking);
     }
   }, [lastBooking]);
+
+  useEffect(() => {
+    // Check if user has already reviewed this property
+    if (user && property && property.reviews) {
+      const alreadyReviewed = property.reviews.some(r => r.guest_id === user.id);
+      setHasReviewed(alreadyReviewed);
+    } else {
+      setHasReviewed(false);
+    }
+  }, [user, property]);
+
+  useEffect(() => {
+    // Fetch rooms for this property
+    if (propertyId) {
+      getRoomsForProperty(propertyId).then(setRooms);
+    }
+  }, [propertyId]);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('reviews').insert({
+      const { data, error } = await supabase.from('reviews').insert({
         property_id: propertyId,
         guest_id: profile.id,
         rating: reviewRating,
         comment: reviewText,
-      });
+      }).select().single();
       if (error) throw error;
       setReviewText('');
       setReviewRating(5);
-      // Refresh property data to show new review
-      const data = await getPropertyWithReviews(propertyId);
-      setProperty(data);
+      // Optimistically update reviews
+      if (property !== null && data) {
+        // property is guaranteed non-null here
+        const newReviews = [
+          { ...data, guest_id: profile.id },
+          ...(property.reviews || [])
+        ];
+        const newReviewCount = (property.review_count || 0) + 1;
+        const newAverageRating =
+          (property.average_rating * property.review_count + reviewRating) / newReviewCount;
+        setProperty({
+          ...property,
+          reviews: newReviews,
+          review_count: newReviewCount,
+          average_rating: newAverageRating,
+        });
+      }
     } catch (err) {
-      alert('Failed to submit review');
+      toast.error('Failed to submit review');
     } finally {
       setSubmitting(false);
     }
@@ -98,10 +149,10 @@ export default function PropertyDetailPage() {
       currency: 'INR',
       name: property.title,
       description: 'Booking Payment',
-      handler: async function (response: any) {
+      handler: async function (response: { razorpay_payment_id: string }) {
         // Mark booking as paid (in test mode, just update status)
         await supabase.from('bookings').update({ status: 'paid' }).eq('id', lastBooking.id);
-        alert('Payment successful! Your booking is confirmed.');
+        toast.success('Payment successful! Your booking is confirmed.');
         window.location.href = '/guest/dashboard';
       },
       prefill: {
@@ -110,10 +161,20 @@ export default function PropertyDetailPage() {
       },
       theme: { color: '#2563eb' },
     };
-    // @ts-ignore
+    // @ts-expect-error: Razorpay is a global injected by the script
     const rzp = new window.Razorpay(options);
     rzp.open();
     setPaymentLoading(false);
+  };
+
+  // Helper: get next 30 days
+  const getNext30Days = () => {
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      days.push(addDays(today, i));
+    }
+    return days;
   };
 
   if (loading) {
@@ -211,6 +272,57 @@ export default function PropertyDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Property Details */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Room Types List */}
+            {property && rooms.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold mb-4">Available Room Types</h2>
+                  <div className="space-y-8">
+                    {rooms.map(room => {
+                      // Use per-room images if available, else fallback to property images
+                      const roomImages = room.images && room.images.length > 0 ? room.images : property.images.slice(0, 2);
+                      return (
+                        <div key={room.id} className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-gray-50">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-lg text-blue-900 mb-1">{room.name} <span className="text-xs text-gray-500">({room.room_type})</span></div>
+                            {room.description && <div className="text-gray-700 mb-1 text-sm">{room.description}</div>}
+                            <div className="flex flex-wrap gap-2 mt-1 mb-2">
+                              {room.amenities && room.amenities.map((a, i) => (
+                                <span key={i} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">{a}</span>
+                              ))}
+                            </div>
+                            {/* Room images */}
+                            <div className="flex gap-2 mb-2">
+                              {roomImages.map((img, i) => (
+                                <div key={i} className="relative h-20 w-20 rounded-md overflow-hidden">
+                                  <Image src={img} alt={`${room.name} image ${i + 1}`} fill className="object-cover" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end min-w-[140px] gap-2">
+                            <div className="text-xl font-bold text-green-700">₹{room.price}</div>
+                            <div className="text-xs text-gray-500">per night</div>
+                            <div className="text-xs text-gray-500 mt-1">Total: {room.total_inventory} rooms</div>
+                            <button
+                              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition"
+                              onClick={() => {
+                                setPreselectedRoomId(room.id);
+                                setTimeout(() => {
+                                  bookingFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 100);
+                              }}
+                            >
+                              Book this Room
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {/* USPs */}
             <Card>
               <CardContent className="p-6">
@@ -279,27 +391,31 @@ export default function PropertyDetailPage() {
                 </div>
                 {property.reviews.length > 0 ? (
                   <div className="space-y-4">
-                    {property.reviews.slice(0, 3).map((review) => (
+                    {property.reviews.slice(0, 3).map((review, idx) => (
                       <div key={review.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-                        <div className="flex items-center mb-2">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <svg
-                                key={i}
-                                className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
+                        <div className="flex items-center mb-2 gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                            <span className="text-lg font-bold text-gray-500">?</span>
                           </div>
-                          <span className="text-sm text-gray-600 ml-2">
-                            {new Date(review.created_at).toLocaleDateString()}
-                          </span>
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm">Guest</div>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                              <span className="text-xs text-gray-600 ml-2">{new Date(review.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
                         </div>
                         {review.comment && (
-                          <p className="text-gray-700">{review.comment}</p>
+                          <p className="text-gray-700 mt-2">{review.comment}</p>
                         )}
                       </div>
                     ))}
@@ -344,12 +460,9 @@ export default function PropertyDetailPage() {
           </div>
 
           {/* Booking Form and Payment */}
-          <section className="mt-8 mb-12">
+          <section className="mt-8 mb-12" ref={bookingFormRef}>
             {property && (
-              <BookingForm
-                property={property}
-                onBookingCreated={setLastBooking}
-              />
+              <BookingForm property={property} preselectedRoomId={preselectedRoomId} />
             )}
             {lastBooking && lastBooking.status !== 'paid' && (
               <div className="mt-8 p-6 bg-blue-50 rounded-lg shadow text-center">
@@ -372,13 +485,15 @@ export default function PropertyDetailPage() {
             <h2 className="text-2xl font-bold mb-4">Guest Reviews</h2>
             {property?.reviews && property.reviews.length > 0 ? (
               <div className="space-y-6 mb-8">
-                {property.reviews.map((review: any) => (
+                {property.reviews.map((review, idx) => (
                   <div key={review.id} className="bg-white rounded-lg shadow p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-bold text-blue-700">Rating: {review.rating} / 5</span>
                       <span className="text-gray-500 text-xs ml-2">{new Date(review.created_at).toLocaleDateString()}</span>
                     </div>
-                    <div className="text-gray-800 mb-1">{review.comment}</div>
+                    {review.comment && (
+                      <div className="text-gray-800 mb-1">{review.comment}</div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -386,28 +501,36 @@ export default function PropertyDetailPage() {
               <div className="text-gray-500 mb-8">No reviews yet.</div>
             )}
             {user && profile && (
-              <form onSubmit={handleReviewSubmit} className="bg-white rounded-lg shadow p-6 max-w-lg">
-                <h3 className="text-lg font-semibold mb-2">Leave a Review</h3>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-                <select
-                  value={reviewRating}
-                  onChange={e => setReviewRating(Number(e.target.value))}
-                  className="mb-4 border border-gray-300 rounded px-3 py-2 w-full"
-                  required
-                >
-                  {[5,4,3,2,1].map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <Input
-                  label="Comment"
-                  value={reviewText}
-                  onChange={e => setReviewText(e.target.value)}
-                  required
-                  className="mb-4"
-                />
-                <Button type="submit" variant="primary" size="md" loading={submitting} disabled={submitting || !reviewText}>
-                  Submit Review
-                </Button>
-              </form>
+              <>
+                {/* Show review form only if eligible and not already reviewed */}
+                {canReview && !hasReviewed && (
+                  <form onSubmit={handleReviewSubmit} className="bg-white rounded-lg shadow p-6 max-w-lg">
+                    <h3 className="text-lg font-semibold mb-2">Leave a Review</h3>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                    <select
+                      value={reviewRating}
+                      onChange={e => setReviewRating(Number(e.target.value))}
+                      className="mb-4 border border-gray-300 rounded px-3 py-2 w-full"
+                      required
+                    >
+                      {[5,4,3,2,1].map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <Input
+                      label="Comment"
+                      value={reviewText}
+                      onChange={e => setReviewText(e.target.value)}
+                      required
+                      className="mb-4"
+                    />
+                    <Button type="submit" variant="primary" size="md" loading={submitting} disabled={submitting || !reviewText}>
+                      Submit Review
+                    </Button>
+                  </form>
+                )}
+                {hasReviewed && user && (
+                  <div className="text-center text-green-600 mt-8">You have already reviewed this property. Thank you!</div>
+                )}
+              </>
             )}
           </section>
         </div>

@@ -86,6 +86,11 @@ export function Navigation() {
 
           {/* User Menu */}
           <div className="hidden md:flex items-center space-x-4">
+            <Link href="/collaborate">
+              <Button size="md" className="px-6 font-medium bg-green-600 hover:bg-green-700 text-white">
+                Collaborate
+              </Button>
+            </Link>
             {isAdmin && (
               <div className="relative">
                 <button className="text-sm text-gray-700 font-bold px-3 py-2 rounded hover:bg-gray-100" onClick={() => router.push('/admin/dashboard')}>

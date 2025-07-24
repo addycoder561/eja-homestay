@@ -24,7 +24,7 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   is_host: boolean;
-  role?: 'host' | 'guest';
+  role?: 'host' | 'guest' | 'admin';
   host_bio?: string | null;
   host_usps?: string[];
   created_at: string;
@@ -60,6 +60,37 @@ export interface Property {
   updated_at: string;
 }
 
+export interface Room {
+  id: string;
+  property_id: string;
+  name: string;
+  description: string | null;
+  room_type: string;
+  price: number;
+  total_inventory: number;
+  amenities: string[] | null;
+  images: string[]; // per-room images
+  created_at: string;
+}
+
+export interface RoomInventory {
+  id: string;
+  room_id: string;
+  date: string; // YYYY-MM-DD
+  available: number;
+  created_at: string;
+}
+
+export interface BookingRoom {
+  id: string;
+  booking_id: string;
+  room_id: string;
+  quantity: number;
+  check_in: string;
+  check_out: string;
+}
+
+// Update Booking to remove room_id (now handled by booking_rooms)
 export interface Booking {
   id: string;
   property_id: string;
@@ -70,6 +101,7 @@ export interface Booking {
   total_price: number;
   status: BookingStatus;
   special_requests: string | null;
+  payment_ref?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -114,4 +146,47 @@ export interface SearchFilters {
   maxPrice?: number;
   propertyType?: PropertyType;
   amenities?: string[];
+}
+
+export interface Experience {
+  id: string;
+  host_id: string | null;
+  title: string;
+  subtitle?: string | null;
+  description: string | null;
+  location: string;
+  date: string; // YYYY-MM-DD
+  price: number;
+  max_guests: number;
+  images: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Trip {
+  id: string;
+  host_id: string | null;
+  title: string;
+  subtitle?: string | null;
+  description: string | null;
+  location: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+  price: number;
+  max_guests: number;
+  images: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Collaboration {
+  id: string;
+  type: 'create' | 'retreat' | 'campaign';
+  name: string;
+  email: string;
+  role: string;
+  details: string;
+  created_at: string;
 } 

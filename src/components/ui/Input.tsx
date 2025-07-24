@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
+import { InputHTMLAttributes, forwardRef, useId } from 'react';
 import { clsx } from 'clsx';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -8,7 +8,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, id, ...props }, ref) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const reactId = useId();
+    const inputId = id || `input-${reactId}`;
     // For date input, set min to today if not provided
     const isDate = props.type === 'date';
     const min = isDate && !props.min ? new Date().toISOString().split('T')[0] : props.min;
@@ -32,10 +33,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           ref={ref}
           min={min}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${inputId}-error` : undefined}
           {...props}
         />
         {error && (
-          <p className="mt-1 text-sm text-red-600">{error}</p>
+          <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600">{error}</p>
         )}
       </div>
     );

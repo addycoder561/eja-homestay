@@ -7,7 +7,14 @@ import {
   BookingWithProperty, 
   Profile, 
   SearchFilters,
-  BookingStatus 
+  BookingStatus,
+  Room,
+  RoomInventory,
+  BookingRoom,
+  Experience,
+  Trip,
+  BookingWithPropertyAndGuest,
+  Collaboration
 } from './types';
 
 // Profile functions
@@ -203,18 +210,32 @@ export async function getHostBookings(userId: string): Promise<BookingWithProper
   return data || [];
 }
 
+export async function getAllBookings(): Promise<BookingWithPropertyAndGuest[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`*, property:properties(*), guest:profiles(*)`)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching all bookings:', error);
+    return [];
+  }
+  return data || [];
+}
+
 export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>): Promise<Booking | null> {
+  if (!booking.guest_id) {
+    console.error('Booking creation failed: guest_id is required.');
+    return null;
+  }
   const { data, error } = await supabase
     .from('bookings')
     .insert(booking)
     .select()
     .single();
-
   if (error) {
     console.error('Error creating booking:', error);
     return null;
   }
-
   return data;
 }
 
@@ -328,4 +349,370 @@ export async function createTripBooking({ tripId, email, name, date, guests, tot
     .single();
   if (error) throw error;
   return data;
+} 
+
+export async function submitCollaboration({ type, name, email, role, details }: {
+  type: 'create' | 'retreat' | 'campaign',
+  name: string,
+  email: string,
+  role: string,
+  details: string,
+}) {
+  const { data, error } = await supabase.from('collaborations').insert([
+    { type, name, email, role, details }
+  ]);
+  return { data, error };
+} 
+
+export async function getAllCollaborations(): Promise<Collaboration[]> {
+  const { data, error } = await supabase
+    .from('collaborations')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching collaborations:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function hasCompletedBooking(userId: string, propertyId: string): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('guest_id', userId)
+    .eq('property_id', propertyId)
+    .eq('status', 'completed')
+    .lte('check_out_date', today);
+  if (error) {
+    console.error('Error checking completed booking:', error);
+    return false;
+  }
+  return (data || []).length > 0;
+} 
+
+// Bookmark functions
+export async function getBookmarks(userId: string) {
+  const { data, error } = await supabase
+    .from('bookmarks')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.error('Error fetching bookmarks:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function isBookmarked(userId: string, itemId: string, itemType: string) {
+  const { data, error } = await supabase
+    .from('bookmarks')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('item_id', itemId)
+    .eq('item_type', itemType)
+    .single();
+  return !!data;
+}
+
+export async function addBookmark(userId: string, itemId: string, itemType: string) {
+  const { error } = await supabase
+    .from('bookmarks')
+    .insert({ user_id: userId, item_id: itemId, item_type: itemType });
+  if (error) {
+    console.error('Error adding bookmark:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function removeBookmark(userId: string, itemId: string, itemType: string) {
+  const { error } = await supabase
+    .from('bookmarks')
+    .delete()
+    .eq('user_id', userId)
+    .eq('item_id', itemId)
+    .eq('item_type', itemType);
+  if (error) {
+    console.error('Error removing bookmark:', error);
+    return false;
+  }
+  return true;
+} 
+
+// --- Multi-room inventory functions ---
+
+// Get all rooms for a property
+export async function getRoomsForProperty(propertyId: string): Promise<Room[]> {
+  const { data, error } = await supabase
+    .from('rooms')
+    .select('*')
+    .eq('property_id', propertyId);
+  if (error) {
+    console.error('Error fetching rooms:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// Get room inventory for a room in a date range
+export async function getRoomInventory(roomId: string, startDate: string, endDate: string): Promise<RoomInventory[]> {
+  const { data, error } = await supabase
+    .from('room_inventory')
+    .select('*')
+    .eq('room_id', roomId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: true });
+  if (error) {
+    console.error('Error fetching room inventory:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// Check if a room is available for the given date range
+export async function checkRoomAvailability(roomId: string, checkIn: string, checkOut: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('room_inventory')
+    .select('available, date')
+    .eq('room_id', roomId)
+    .gte('date', checkIn)
+    .lt('date', checkOut); // checkOut is exclusive
+  if (error) {
+    console.error('Error checking room availability:', error);
+    return false;
+  }
+  // Room is available if all days in range have available > 0
+  return (data || []).every((inv: { available: number }) => inv.available > 0);
+}
+
+// Check if all requested rooms/units are available for the date range
+export async function checkMultiRoomAvailability(
+  requests: { room_id: string; quantity: number; check_in: string; check_out: string }[]
+): Promise<boolean> {
+  for (const req of requests) {
+    const { room_id, quantity, check_in, check_out } = req;
+    const { data, error } = await supabase
+      .from('room_inventory')
+      .select('available, date')
+      .eq('room_id', room_id)
+      .gte('date', check_in)
+      .lt('date', check_out);
+    if (error) {
+      console.error('Error checking room availability:', error);
+      return false;
+    }
+    if ((data || []).some((inv: { available: number }) => inv.available < quantity)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Create a booking for multiple rooms/units and decrement inventory
+export async function createMultiRoomBooking(
+  booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>,
+  rooms: { room_id: string; quantity: number; check_in: string; check_out: string }[],
+  payment_ref?: string | null
+): Promise<Booking | null> {
+  // 1. Check availability for all rooms
+  const isAvailable = await checkMultiRoomAvailability(rooms);
+  if (!isAvailable) {
+    console.error('One or more rooms are not available for selected dates/quantities');
+    return null;
+  }
+  // 2. Create booking
+  const { data: bookingData, error: bookingError } = await supabase
+    .from('bookings')
+    .insert({ ...booking, payment_ref })
+    .select()
+    .single();
+  if (bookingError || !bookingData) {
+    console.error('Error creating booking:', bookingError);
+    return null;
+  }
+  // 3. Create booking_rooms and decrement inventory
+  for (const req of rooms) {
+    // Create booking_rooms entry
+    const { error: brError } = await supabase
+      .from('booking_rooms')
+      .insert({
+        booking_id: bookingData.id,
+        room_id: req.room_id,
+        quantity: req.quantity,
+        check_in: req.check_in,
+        check_out: req.check_out,
+      });
+    if (brError) {
+      console.error('Error creating booking_rooms:', brError);
+      // Optionally: rollback booking here
+    }
+    // Decrement inventory for each date
+    const start = new Date(req.check_in);
+    const end = new Date(req.check_out);
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      // Fetch current available
+      const { data: invData, error: invError } = await supabase
+        .from('room_inventory')
+        .select('available')
+        .eq('room_id', req.room_id)
+        .eq('date', dateStr)
+        .single();
+      if (invError || !invData) {
+        console.error('Error fetching inventory:', invError);
+        continue;
+      }
+      const newAvailable = invData.available - req.quantity;
+      await supabase
+        .from('room_inventory')
+        .update({ available: newAvailable })
+        .eq('room_id', req.room_id)
+        .eq('date', dateStr);
+    }
+  }
+  return bookingData;
+} 
+
+// Experience functions
+export async function getExperiences(): Promise<Experience[]> {
+  const { data, error } = await supabase
+    .from('experiences')
+    .select('*')
+    .order('date', { ascending: false });
+  if (error) {
+    console.error('Error fetching experiences:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getExperience(id: string): Promise<Experience | null> {
+  const { data, error } = await supabase
+    .from('experiences')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) {
+    console.error('Error fetching experience:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function createExperience(experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>): Promise<Experience | null> {
+  const { data, error } = await supabase
+    .from('experiences')
+    .insert(experience)
+    .select()
+    .single();
+  if (error) {
+    console.error('Error creating experience:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateExperience(id: string, updates: Partial<Experience>): Promise<Experience | null> {
+  const { data, error } = await supabase
+    .from('experiences')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    console.error('Error updating experience:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function deleteExperience(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('experiences')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('Error deleting experience:', error);
+    return false;
+  }
+  return true;
+} 
+
+// Trip functions
+export async function getTrips(): Promise<Trip[]> {
+  const { data, error } = await supabase
+    .from('trips')
+    .select('*')
+    .order('start_date', { ascending: false });
+  if (error) {
+    console.error('Error fetching trips:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getTrip(id: string): Promise<Trip | null> {
+  const { data, error } = await supabase
+    .from('trips')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) {
+    console.error('Error fetching trip:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function createTrip(trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>): Promise<Trip | null> {
+  const { data, error } = await supabase
+    .from('trips')
+    .insert(trip)
+    .select()
+    .single();
+  if (error) {
+    console.error('Error creating trip:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateTrip(id: string, updates: Partial<Trip>): Promise<Trip | null> {
+  const { data, error } = await supabase
+    .from('trips')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    console.error('Error updating trip:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function deleteTrip(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('trips')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('Error deleting trip:', error);
+    return false;
+  }
+  return true;
+} 
+
+export async function setRoomInventory(roomId: string, date: string, available: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('room_inventory')
+    .upsert({ room_id: roomId, date, available }, { onConflict: 'room_id,date' });
+  if (error) {
+    console.error('Error setting room inventory:', error);
+    return false;
+  }
+  return true;
 } 
