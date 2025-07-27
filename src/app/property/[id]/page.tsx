@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { BookingForm } from '@/components/BookingForm';
+import { LiveRating } from '@/components/LiveRating';
 import { getPropertyWithReviews, hasCompletedBooking, getRoomsForProperty } from '@/lib/database';
+import { updatePropertyRating } from '@/lib/rating-calculator';
 import { PropertyWithReviews, Profile, Room } from '@/lib/types';
 import { addDays, format, isSameDay } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -40,7 +42,7 @@ export default function PropertyDetailPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [lastBooking, setLastBooking] = useState<any>(null);
+  const [lastBooking, setLastBooking] = useState<{ id: string; status: string; total_price?: number } | null>(null);
   const [canReview, setCanReview] = useState(false);
   const [hasReviewed, setHasReviewed] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -116,22 +118,13 @@ export default function PropertyDetailPage() {
       if (error) throw error;
       setReviewText('');
       setReviewRating(5);
-      // Optimistically update reviews
-      if (property !== null && data) {
-        // property is guaranteed non-null here
-        const newReviews = [
-          { ...data, guest_id: profile.id },
-          ...(property.reviews || [])
-        ];
-        const newReviewCount = (property.review_count || 0) + 1;
-        const newAverageRating =
-          (property.average_rating * property.review_count + reviewRating) / newReviewCount;
-        setProperty({
-          ...property,
-          reviews: newReviews,
-          review_count: newReviewCount,
-          average_rating: newAverageRating,
-        });
+      // Update property rating in database
+      await updatePropertyRating(propertyId);
+      
+      // Refresh property data to get updated ratings
+      const updatedProperty = await getPropertyWithReviews(propertyId);
+      if (updatedProperty) {
+        setProperty(updatedProperty);
       }
     } catch (err) {
       toast.error('Failed to submit review');
@@ -145,9 +138,9 @@ export default function PropertyDetailPage() {
     setPaymentLoading(true);
     const options = {
       key: 'rzp_test_C7d9Vbcc9JM8dp',
-      amount: Math.round(lastBooking.total_price * 100), // in paise
+      amount: Math.round((lastBooking.total_price || 0) * 100), // in paise
       currency: 'INR',
-      name: property.title,
+      name: property?.title || 'Property Booking',
       description: 'Booking Payment',
       handler: async function (response: { razorpay_payment_id: string }) {
         // Mark booking as paid (in test mode, just update status)
@@ -213,6 +206,8 @@ export default function PropertyDetailPage() {
       </div>
     );
   }
+
+
 
   // Demo/placeholder data for new fields
   const gallery = property.gallery || {
@@ -381,13 +376,11 @@ export default function PropertyDetailPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">Reviews</h2>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    <span className="font-medium">{property.average_rating?.toFixed(1)}</span>
-                    <span className="text-gray-600 ml-1">({property.review_count} reviews)</span>
-                  </div>
+                  <LiveRating 
+                    propertyId={property.id}
+                    propertyTitle={property.title}
+                    size="md"
+                  />
                 </div>
                 {property.reviews.length > 0 ? (
                   <div className="space-y-4">

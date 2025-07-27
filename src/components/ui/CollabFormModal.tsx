@@ -35,7 +35,12 @@ export function CollabFormModal({ open, onClose, type, onSuccess }: {
     }
     setLoading(false);
     if (error) {
-      toast.error("Submission failed. Please try again.");
+      console.error('Collaboration submission error:', error);
+      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('table not found')) {
+        toast.error("Database setup incomplete. Please contact support.");
+      } else {
+        toast.error("Submission failed. Please try again.");
+      }
     } else {
       setSubmitted(true);
       if (onSuccess) onSuccess();
@@ -57,7 +62,7 @@ export function CollabFormModal({ open, onClose, type, onSuccess }: {
         <div className="text-center py-8">
           <div className="text-3xl mb-4">🎉</div>
           <div className="text-lg font-semibold mb-2">Thank you for your interest!</div>
-          <div className="text-gray-600 mb-6">We'll get in touch soon to explore this collaboration.</div>
+          <div className="text-gray-600 mb-6">We&apos;ll get in touch soon to explore this collaboration.</div>
           <Button onClick={reset} className="w-full">Close</Button>
         </div>
       ) : (

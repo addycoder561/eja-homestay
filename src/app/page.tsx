@@ -40,7 +40,6 @@ export default function Home() {
                   <div className="p-4 text-center">
                     <div className="font-bold text-lg text-gray-900">{dest.city}</div>
                     <div className="text-gray-600 text-sm">{dest.state}, {dest.country}</div>
-                    <div className="mt-2 text-blue-600 font-semibold">{dest.count} stays</div>
                   </div>
                 </Link>
               ))}

@@ -55,6 +55,22 @@ export interface Property {
   usps?: string[];
   house_rules?: string | null;
   cancellation_policy?: string | null;
+  room_config?: {
+    room_types: {
+      name: string;
+      description: string;
+      room_type: string;
+      base_price: number;
+      total_inventory: number;
+      amenities: string[];
+      extra_adult_price: number;
+      child_breakfast_price: number;
+    }[];
+  };
+  google_rating?: number | null;
+  google_reviews_count?: number | null;
+  google_place_id?: string | null;
+  google_last_updated?: string | null;
   is_available: boolean;
   created_at: string;
   updated_at: string;
@@ -68,8 +84,11 @@ export interface Room {
   room_type: string;
   price: number;
   total_inventory: number;
+  max_guests: number;
   amenities: string[] | null;
   images: string[]; // per-room images
+  extra_adult_price?: number;
+  child_breakfast_price?: number;
   created_at: string;
 }
 
@@ -118,6 +137,8 @@ export interface Review {
 
 export interface PropertyWithHost extends Property {
   host: Profile;
+  average_rating?: number;
+  review_count?: number;
 }
 
 export interface PropertyWithReviews extends Property {
@@ -146,6 +167,7 @@ export interface SearchFilters {
   maxPrice?: number;
   propertyType?: PropertyType;
   amenities?: string[];
+  preference?: string[];
 }
 
 export interface Experience {

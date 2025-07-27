@@ -20,7 +20,6 @@ export function HeroSection() {
     checkOut: '',
     rooms: 1,
     adults: 1,
-    children: 0,
   });
   const [guestsOpen, setGuestsOpen] = useState(false);
   const guestsRef = useRef<HTMLDivElement>(null);
@@ -50,7 +49,7 @@ export function HeroSection() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [filtersOpen]);
 
-  const totalGuests = searchData.adults + searchData.children;
+  const totalGuests = searchData.rooms;
 
   const handleFilterChange = (newFilters: SearchFiltersType) => {
     setFilters(newFilters);
@@ -63,6 +62,7 @@ export function HeroSection() {
     if (searchData.location) params.append('location', searchData.location);
     if (searchData.checkIn) params.append('checkIn', searchData.checkIn);
     if (searchData.checkOut) params.append('checkOut', searchData.checkOut);
+    if (searchData.rooms) params.append('rooms', String(searchData.rooms));
     if (searchData.adults) params.append('adults', String(searchData.adults));
     // Merge filters
     if (filters.minPrice) params.append('minPrice', String(filters.minPrice));
@@ -126,6 +126,7 @@ export function HeroSection() {
                     type="date"
                     value={searchData.checkOut}
                     onChange={(e) => setSearchData({ ...searchData, checkOut: e.target.value })}
+                    min={searchData.checkIn ? new Date(new Date(searchData.checkIn).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined}
                     className="text-gray-400 font-normal text-sm font-[Arial,Helvetica,sans-serif] text-ellipsis overflow-hidden whitespace-nowrap placeholder-gray-400 placeholder:font-normal placeholder:text-sm placeholder:font-[Arial,Helvetica,sans-serif] px-0"
                     style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '14px', fontWeight: 400 }}
                   />
@@ -139,9 +140,8 @@ export function HeroSection() {
                     tabIndex={0}
                     style={{ height: '44px' }}
                   >
-                    <UserGroupIcon className="w-5 h-5 text-gray-400" />
                     <span className="text-gray-400 text-sm font-normal select-none">
-                      {totalGuests} Guest{totalGuests !== 1 ? 's' : ''}
+                      {searchData.rooms} Room{searchData.rooms !== 1 ? 's' : ''}, {searchData.adults} Adult{searchData.adults !== 1 ? 's' : ''}
                     </span>
                     <ChevronUpDownIcon className="w-4 h-4 text-gray-400 ml-auto" />
                   </div>
@@ -155,31 +155,19 @@ export function HeroSection() {
                         <div className="flex items-center gap-2">
                           <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, rooms: Math.max(1, d.rooms - 1) }))} disabled={searchData.rooms <= 1}>-</button>
                           <span className="w-4 text-center">{searchData.rooms}</span>
-                          <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, rooms: d.rooms + 1 }))}>+</button>
+                          <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, rooms: Math.min(20, d.rooms + 1) }))} disabled={searchData.rooms >= 20}>+</button>
                         </div>
                       </div>
+                      
                       {/* Adults */}
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col items-start">
                           <div className="font-normal text-gray-900 text-sm text-left">Adults</div>
-                          <div className="text-xs text-gray-500 text-left">Ages 13 or above</div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, adults: Math.max(1, d.adults - 1) }))} disabled={searchData.adults <= 1}>-</button>
                           <span className="w-4 text-center">{searchData.adults}</span>
-                          <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, adults: d.adults + 1 }))}>+</button>
-                        </div>
-                      </div>
-                      {/* Children */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col items-start">
-                          <div className="font-normal text-gray-900 text-sm text-left">Children</div>
-                          <div className="text-xs text-gray-500 text-left">Ages 2–12</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, children: Math.max(0, d.children - 1) }))} disabled={searchData.children <= 0}>-</button>
-                          <span className="w-4 text-center">{searchData.children}</span>
-                          <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, children: d.children + 1 }))}>+</button>
+                          <button type="button" className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 text-lg" onClick={() => setSearchData(d => ({ ...d, adults: Math.min(20, d.adults + 1) }))} disabled={searchData.adults >= 20}>+</button>
                         </div>
                       </div>
                     </div>
@@ -188,40 +176,15 @@ export function HeroSection() {
               </div>
 
               {/* In the form, update the layout for the search and filters buttons */}
-              <div className="mt-6 flex flex-col md:flex-row md:items-center md:gap-4">
-                <div className="flex-1 flex justify-center md:justify-start">
-                  <Button 
-                    type="submit" 
-                    size="lg" 
-                    className="w-full md:w-auto"
-                  >
-                    <MagnifyingGlassIcon className="w-5 h-5 mr-2" />
-                    Search Properties
-                  </Button>
-                </div>
-                <div className="relative flex justify-center md:justify-start mt-4 md:mt-0" ref={filtersRef}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex items-center gap-2"
-                    onClick={() => setFiltersOpen((v) => !v)}
-                  >
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0013 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 017 17v-3.586a1 1 0 00-.293-.707L3.293 6.707A1 1 0 013 6V4z" /></svg>
-                    Filters
-                  </Button>
-                  {filtersOpen && (
-                    <div className="absolute right-0 mt-2 z-50 min-w-[320px] max-w-[400px] w-full bg-white border border-gray-200 rounded-lg shadow-2xl p-4 animate-fade-in overflow-auto">
-                      <button
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold"
-                        onClick={() => setFiltersOpen(false)}
-                        aria-label="Close filters"
-                      >
-                        &times;
-                      </button>
-                      <SearchFilters filters={filters} onFilterChange={handleFilterChange} />
-                    </div>
-                  )}
-                </div>
+              <div className="mt-10 flex justify-center w-full">
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full md:w-auto max-w-xs mx-auto"
+                >
+                  <MagnifyingGlassIcon className="w-5 h-5 mr-2" />
+                  Search Properties
+                </Button>
               </div>
             </form>
           </div>

@@ -53,7 +53,10 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
 export async function getProperties(filters?: SearchFilters): Promise<PropertyWithHost[]> {
   let query = supabase
     .from('properties')
-    .select('*')
+    .select(`
+      *,
+      reviews(*)
+    `)
     .eq('is_available', true);
 
   if (filters?.location) {
@@ -79,7 +82,19 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
     return [];
   }
 
-  return data || [];
+  // Keep original platform ratings separate from Google ratings
+  const propertiesWithRatings = (data || []).map(property => {
+    const reviews = property.reviews || [];
+    
+    return {
+      ...property,
+      host: null, // Placeholder since we don't have host relationship
+      average_rating: property.average_rating || 0, // Keep original platform rating
+      review_count: property.review_count || 0 // Keep original platform review count
+    };
+  });
+
+  return propertiesWithRatings;
 }
 
 export async function getProperty(id: string): Promise<PropertyWithHost | null> {
@@ -114,17 +129,14 @@ export async function getPropertyWithReviews(id: string): Promise<PropertyWithRe
 
   if (!data) return null;
 
-  // Calculate average rating
+  // Keep original platform ratings separate from Google ratings
   const reviews = data.reviews || [];
-  const averageRating = reviews.length > 0 
-    ? reviews.reduce((sum: number, review: { rating: number }) => sum + review.rating, 0) / reviews.length 
-    : 0;
 
   return {
     ...data,
     reviews,
-    average_rating: averageRating,
-    review_count: reviews.length
+    average_rating: data.average_rating || 0, // Keep original platform rating
+    review_count: data.review_count || 0 // Keep original platform review count
   };
 }
 
@@ -280,7 +292,10 @@ export async function checkAvailability(
 export async function searchProperties(filters: SearchFilters): Promise<PropertyWithHost[]> {
   let query = supabase
     .from('properties')
-    .select('*')
+    .select(`
+      *,
+      reviews(*)
+    `)
     .eq('is_available', true);
 
   if (filters.location) {
@@ -303,6 +318,16 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     query = query.overlaps('amenities', filters.amenities);
   }
 
+  // Filter by max adult capacity
+  if (filters.adults) {
+    query = query.gte('max_guests', filters.adults);
+  }
+
+  // Filter by max rooms (bedrooms)
+  if (filters.rooms) {
+    query = query.gte('bedrooms', filters.rooms);
+  }
+
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
@@ -310,7 +335,36 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     return [];
   }
 
-  return data || [];
+  let filteredProperties = data || [];
+
+  // Additional date-based availability filtering
+  if (filters.checkIn && filters.checkOut) {
+    const checkInDate = new Date(filters.checkIn);
+    const checkOutDate = new Date(filters.checkOut);
+    
+    // Filter out properties that have conflicting bookings
+    const availabilityPromises = filteredProperties.map(async (property) => {
+      const isAvailable = await checkAvailability(property.id, filters.checkIn!, filters.checkOut!);
+      return isAvailable ? property : null;
+    });
+
+    const availabilityResults = await Promise.all(availabilityPromises);
+    filteredProperties = availabilityResults.filter((property): property is NonNullable<typeof property> => property !== null);
+  }
+
+  // Keep original platform ratings separate from Google ratings
+  const propertiesWithRatings = filteredProperties.map(property => {
+    const reviews = property.reviews || [];
+    
+    return {
+      ...property,
+      host: null, // Placeholder since we don't have host relationship
+      average_rating: property.average_rating || 0, // Keep original platform rating
+      review_count: property.review_count || 0 // Keep original platform review count
+    };
+  });
+
+  return propertiesWithRatings;
 } 
 
 export async function createExperienceBooking({ experienceId, email, name, date, guests, totalPrice, guestId }: { experienceId: string, email: string, name: string, date: string, guests: number, totalPrice: number, guestId: string }) {
@@ -358,10 +412,25 @@ export async function submitCollaboration({ type, name, email, role, details }: 
   role: string,
   details: string,
 }) {
-  const { data, error } = await supabase.from('collaborations').insert([
-    { type, name, email, role, details }
-  ]);
-  return { data, error };
+  try {
+    const { data, error } = await supabase.from('collaborations').insert([
+      { type, name, email, role, details }
+    ]);
+    return { data, error };
+  } catch (error) {
+    console.error('Error submitting collaboration:', error);
+    // Return a specific error for missing table
+    if (error instanceof Error && error.message.includes('relation "collaborations" does not exist')) {
+      return { 
+        data: null, 
+        error: { 
+          message: 'Collaborations table not found. Please run the database migration first.',
+          details: 'The collaborations table needs to be created in the database.'
+        } 
+      };
+    }
+    return { data: null, error };
+  }
 } 
 
 export async function getAllCollaborations(): Promise<Collaboration[]> {

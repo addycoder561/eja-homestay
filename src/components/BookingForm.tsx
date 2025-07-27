@@ -10,6 +10,7 @@ import { PropertyWithReviews } from '@/lib/types';
 import { createMultiRoomBooking, checkMultiRoomAvailability, getRoomsForProperty, getRoomInventory } from '@/lib/database';
 import { Room } from '@/lib/types';
 import { GuestSelector } from '@/components/GuestSelector';
+import { LiveRating } from '@/components/LiveRating';
 import toast from 'react-hot-toast';
 import { sendBookingConfirmationEmail, sendBookingConfirmationSMS } from '@/lib/notifications';
 import Script from 'next/script';
@@ -50,6 +51,7 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
   const paymentRef = useRef<RazorpayInstance | null>(null);
   // Add state for roomInventory
   const [roomInventory, setRoomInventory] = useState<{ [roomId: string]: { [date: string]: number } }>({});
+  const [dataRestored, setDataRestored] = useState(false);
 
   // Fetch rooms and inventory for all rooms in the selected date range
   useEffect(() => {
@@ -75,6 +77,47 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
     });
   }, [property.id, formData.checkIn, formData.checkOut]);
 
+  // Restore booking data from sessionStorage when user is authenticated
+  useEffect(() => {
+    if (user) {
+      const pendingBooking = sessionStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        try {
+          const bookingData = JSON.parse(pendingBooking);
+          // Check if the booking data is for this property and not too old (within 1 hour)
+          if (bookingData.propertyId === property.id && 
+              (Date.now() - bookingData.timestamp) < 60 * 60 * 1000) {
+            setFormData(bookingData.formData);
+            setRoomSelections(bookingData.roomSelections);
+            setDataRestored(true);
+            // Clear the stored data
+            sessionStorage.removeItem('pendingBooking');
+          } else {
+            // Clear stale data
+            sessionStorage.removeItem('pendingBooking');
+          }
+        } catch (error) {
+          console.error('Error parsing pending booking data:', error);
+          sessionStorage.removeItem('pendingBooking');
+        }
+      }
+    }
+  }, [user, property.id]);
+
+  // Show success message when data is restored
+  useEffect(() => {
+    if (dataRestored && rooms.length > 0 && user) {
+      // Check if we have valid room selections
+      const hasValidRoomSelections = Object.values(roomSelections).some(qty => qty > 0);
+      if (hasValidRoomSelections && formData.checkIn && formData.checkOut) {
+        // Reset the flag
+        setDataRestored(false);
+        // Show success message that form data was restored
+        toast.success('Your booking details have been restored! Click "Book Now & Pay" to continue.');
+      }
+    }
+  }, [dataRestored, rooms.length, roomSelections, formData.checkIn, formData.checkOut, user]);
+
   // On room or date change, update available quantities
   useEffect(() => {
     // Reset roomSelections if checkIn/checkOut changes
@@ -96,8 +139,8 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
   }, 0);
   if (isNaN(totalCapacity) || totalCapacity < 1) totalCapacity = 0;
   // Limit adults to totalCapacity + 1, but always at least 1
-  let maxAdults = Math.max(totalCapacity + 1, 1);
-  let adults = Math.max(1, Math.min(formData.adults, maxAdults));
+  const maxAdults = Math.max(totalCapacity + 1, 1);
+  const adults = Math.max(1, Math.min(formData.adults, maxAdults));
 
   // Calculate maxChildren as 2 * total selected room units
   const totalRoomUnits = Object.values(roomSelections).reduce((sum, qty) => sum + qty, 0);
@@ -107,6 +150,8 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
     let total = 0;
     if (!formData.checkIn || !formData.checkOut) return total;
     const nights = (new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60 * 24);
+    
+    // Calculate base room prices
     Object.entries(roomSelections).forEach(([roomId, qty]) => {
       if (qty > 0) {
         const room = rooms.find(r => r.id === roomId);
@@ -115,14 +160,21 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
         }
       }
     });
-    // Extra adult charge
+    
+    // Calculate extra adult charges based on room type
     if (adults > totalCapacity) {
-      total += nights * 1500 * (adults - totalCapacity);
+      const extraAdults = adults - totalCapacity;
+      // Find the room with highest extra adult price for the selected rooms
+      const selectedRooms = rooms.filter(r => roomSelections[r.id] > 0);
+      const maxExtraAdultPrice = Math.max(...selectedRooms.map(r => r.extra_adult_price || 1500));
+      total += nights * maxExtraAdultPrice * extraAdults;
     }
-    // Children breakfast charge
+    
+    // Children breakfast charge (fixed at ₹250 per child per night)
     if (formData.children > 0) {
       total += nights * 250 * formData.children;
     }
+    
     return total;
   };
 
@@ -148,6 +200,15 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
+      // Store form data in sessionStorage before redirecting
+      const bookingData = {
+        formData,
+        roomSelections,
+        propertyId: property.id,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+      
       toast.error('Please sign in to book a property');
       const redirectUrl = `/auth/signin?redirect=/property/${property.id}`;
       router.push(redirectUrl);
@@ -193,7 +254,7 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
           // On payment success, create booking
           const booking = await createMultiRoomBooking({
             property_id: property.id,
-            guest_id: user.id,
+            guest_id: user.id!,
             check_in_date: formData.checkIn,
             check_out_date: formData.checkOut,
             guests_count: adults,
@@ -205,8 +266,8 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
           setLoading(false);
           if (booking) {
             await sendPaymentReceiptEmail({
-              to: user.email,
-              guestName: user.user_metadata?.full_name || user.email,
+              to: user.email || '',
+              guestName: user.user_metadata?.full_name || user.email || '',
               bookingType: 'Homestay',
               title: property.title,
               checkIn: formData.checkIn,
@@ -215,6 +276,8 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
               totalPrice,
               paymentRef: response.razorpay_payment_id
             });
+            // Clear any pending booking data
+            sessionStorage.removeItem('pendingBooking');
             toast.success(
               <span>Booking created and payment successful!<br/><span className="text-xs text-gray-500">Payment Ref: {response.razorpay_payment_id}</span></span>
             );
@@ -224,8 +287,8 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
           }
         },
         prefill: {
-          email: user.email,
-          name: user.user_metadata?.full_name,
+          email: user.email || '',
+          name: user.user_metadata?.full_name || '',
         },
         theme: { color: '#2563eb' },
         modal: {
@@ -266,22 +329,41 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
             <span className="text-2xl font-bold">₹{property.price_per_night}</span>
             <span className="text-gray-600">per night</span>
           </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span>{property.average_rating?.toFixed(1) || '0.0'} ({property.review_count || 0} reviews)</span>
-          </div>
+          {/* Rating display using LiveRating component */}
+          <LiveRating 
+            propertyId={property.id}
+            propertyTitle={property.title}
+            size="sm"
+          />
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Check-in/Check-out dates */}
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                label="Check-in"
+                type="date"
+                required
+                value={formData.checkIn}
+                onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <Input
+                label="Check-out"
+                type="date"
+                required
+                value={formData.checkOut}
+                onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
+                min={formData.checkIn || new Date().toISOString().split('T')[0]}
+              />
+            </div>
             {/* Room selection */}
             <div className="mb-4">
               <label className="block text-sm font-bold text-gray-900 mb-2">Select Room Types & Quantities</label>
               <div className="space-y-2">
                 {rooms.map(room => {
                   // Set maxAvailable to 2 for all room types for now
-                  let maxAvailable = 2;
+                  const maxAvailable = 2;
                   return (
                     <div key={room.id} className="flex items-center gap-4">
                       <div className="flex-1">
@@ -303,24 +385,6 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
                   );
                 })}
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                label="Check-in"
-                type="date"
-                required
-                value={formData.checkIn}
-                onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-              />
-              <Input
-                label="Check-out"
-                type="date"
-                required
-                value={formData.checkOut}
-                onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
-                min={formData.checkIn || new Date().toISOString().split('T')[0]}
-              />
             </div>
             {/* Show unavailable warning if needed */}
             {!isRoomAvailable() && (
@@ -351,26 +415,42 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
             </div>
             {nights > 0 && (
               <div className="border-t border-gray-200 pt-4 space-y-2">
-                <div className="flex justify-between">
-                  <span>₹{property.price_per_night} × {nights} nights</span>
-                  <span>₹{totalPrice}</span>
-                </div>
+                {/* Room charges */}
+                {Object.entries(roomSelections).map(([roomId, qty]) => {
+                  if (qty > 0) {
+                    const room = rooms.find(r => r.id === roomId);
+                    if (room) {
+                      return (
+                        <div key={roomId} className="flex justify-between text-sm">
+                          <span>{room.name} (₹{room.price} × {qty} × {nights} nights)</span>
+                          <span>₹{room.price * qty * nights}</span>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })}
+                
+                {/* Extra adult charges */}
+                {adults > totalCapacity && (
+                  <div className="flex justify-between text-sm text-red-700">
+                    <span>Extra Adult Charge (₹{Math.max(...rooms.filter(r => roomSelections[r.id] > 0).map(r => r.extra_adult_price || 1500))} × {adults - totalCapacity} × {nights} nights)</span>
+                    <span>₹{nights * Math.max(...rooms.filter(r => roomSelections[r.id] > 0).map(r => r.extra_adult_price || 1500)) * (adults - totalCapacity)}</span>
+                  </div>
+                )}
+                
+                {/* Children breakfast charges */}
+                {formData.children > 0 && (
+                  <div className="flex justify-between text-sm text-yellow-700">
+                    <span>Children Breakfast (₹250 × {formData.children} × {nights} nights)</span>
+                    <span>₹{nights * 250 * formData.children}</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between font-semibold text-lg border-t border-gray-200 pt-2">
                   <span>Total</span>
                   <span>₹{totalPrice}</span>
                 </div>
-                {adults > totalCapacity && (
-                  <div className="flex justify-between text-sm text-red-700">
-                    <span>Extra Adult Charge (₹1500 x {adults - totalCapacity} x {nights} nights)</span>
-                    <span>₹{nights * 1500 * (adults - totalCapacity)}</span>
-                  </div>
-                )}
-                {formData.children > 0 && (
-                  <div className="flex justify-between text-sm text-yellow-700">
-                    <span>Children Breakfast (₹250 x {formData.children} x {nights} nights)</span>
-                    <span>₹{nights * 250 * formData.children}</span>
-                  </div>
-                )}
               </div>
             )}
             <Button

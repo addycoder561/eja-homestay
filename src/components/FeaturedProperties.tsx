@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { getProperties } from '@/lib/database';
 import { PropertyWithHost } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
-import { StarIcon, MapPinIcon, UserGroupIcon } from '@heroicons/react/24/solid';
+import { MapPinIcon, UserGroupIcon } from '@heroicons/react/24/solid';
+import { LiveRating } from './LiveRating';
 
 export function FeaturedProperties() {
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
@@ -80,7 +81,7 @@ export function FeaturedProperties() {
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-4 right-4 bg-white px-2 py-1 rounded-full text-sm font-semibold text-gray-900">
-                    ${property.price_per_night}/night
+                    ₹{property.price_per_night}/night
                   </div>
                 </div>
                 <CardContent className="p-4">
@@ -102,10 +103,11 @@ export function FeaturedProperties() {
                       <UserGroupIcon className="w-4 h-4 mr-1" />
                       <span>Up to {property.max_guests} guests</span>
                     </div>
-                    <div className="flex items-center">
-                      <StarIcon className="w-4 h-4 text-yellow-400 mr-1" />
-                      <span className="text-sm font-medium">4.8</span>
-                    </div>
+                    <LiveRating 
+                      propertyId={property.id}
+                      propertyTitle={property.title}
+                      size="sm"
+                    />
                   </div>
 
                   <div className="flex flex-wrap gap-1">

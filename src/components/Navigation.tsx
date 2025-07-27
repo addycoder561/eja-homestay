@@ -129,7 +129,6 @@ export function Navigation() {
                       <>
                         <Link href="/guest/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">My Bookings</Link>
                         <Link href="/guest/bookmarks" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Bookmarks</Link>
-                        <Link href="/guest/messages" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Messages</Link>
                         <Link href="/guest/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Profile</Link>
                         <button onClick={handleSignOut} className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Sign Out</button>
                       </>
