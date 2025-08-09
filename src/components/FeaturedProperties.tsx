@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { buildCoverFirstImages } from '@/lib/media';
 import { getProperties } from '@/lib/database';
 import { PropertyWithHost } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -75,7 +76,7 @@ export function FeaturedProperties() {
               <Card className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
                 <div className="relative h-48 overflow-hidden rounded-t-lg">
                   <Image
-                    src={property.images[0] || '/placeholder-property.jpg'}
+                    src={buildCoverFirstImages(property.cover_image, property.images)[0]}
                     alt={property.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"

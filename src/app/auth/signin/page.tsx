@@ -41,7 +41,7 @@ export default function SignIn() {
       console.log('SignIn result:', result); // DEBUG LOG
       if (!result.error) {
         toast.success('Signed in successfully!');
-        // Wait for profile to be available
+        // Wait for profile to be available and auth state to update
         setTimeout(() => {
           const redirect = searchParams.get('redirect');
           if (redirect) {
@@ -51,7 +51,7 @@ export default function SignIn() {
           } else {
             router.push('/');
           }
-        }, 100);
+        }, 500); // Increased timeout to ensure auth state is updated
       }
     } catch (err) {
       toast.error('An unexpected error occurred');

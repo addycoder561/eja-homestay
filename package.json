@@ -2,39 +2,37 @@
   "name": "eja-homestay",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "generate-images": "node scripts/generate-image-urls.js",
-    "check-env": "node scripts/setup-env.js"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.18",
-    "@heroicons/react": "^2.2.0",
-    "@supabase/supabase-js": "^2.52.0",
-    "clsx": "^2.1.1",
+    "@heroicons/react": "^2.1.5",
+    "@supabase/supabase-js": "^2.49.0",
     "date-fns": "^3.6.0",
-    "jspdf": "^3.0.1",
-    "lucide-react": "^0.460.0",
-    "next": "15.4.1",
-    "react": "^18.3.1",
-    "react-day-picker": "^9.8.0",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.50.1",
-    "react-hot-toast": "^2.5.2"
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-day-picker": "^9.5.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "dotenv": "^16.4.5",
-    "eslint": "^9",
-    "eslint-config-next": "15.4.1",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@eslint/eslintrc": "^3.1.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.7.4",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "eslint": "^9.12.0",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.18.0"
   }
 }
+

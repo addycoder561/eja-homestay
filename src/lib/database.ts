@@ -100,15 +100,30 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
 export async function getProperty(id: string): Promise<PropertyWithHost | null> {
   const { data, error } = await supabase
     .from('properties')
-    .select(`
-      *,
-      host:profiles(*)
-    `)
+    .select('*')
     .eq('id', id)
     .single();
 
   if (error) {
     console.error('Error fetching property:', error);
+    return null;
+  }
+
+  return data ? { ...data, host: null } : null;
+}
+
+export async function getPropertyWithHost(id: string): Promise<PropertyWithHost | null> {
+  const { data, error } = await supabase
+    .from('properties')
+    .select(`
+      *,
+      host:profiles!host_id(*)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching property with host:', error);
     return null;
   }
 
@@ -315,7 +330,16 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   if (filters.amenities && filters.amenities.length > 0) {
-    query = query.overlaps('amenities', filters.amenities);
+    // Convert amenity IDs to actual amenity names for database query
+    const amenityMap: Record<string, string> = {
+      'pet-friendly': 'Pet Friendly',
+      'pure-veg': 'Pure-Veg'
+    };
+    
+    const dbAmenities = filters.amenities.map(id => amenityMap[id]).filter(Boolean);
+    if (dbAmenities.length > 0) {
+      query = query.overlaps('amenities', dbAmenities);
+    }
   }
 
   // Filter by max adult capacity
@@ -336,6 +360,23 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   let filteredProperties = data || [];
+
+  // Handle preference filters (client-side filtering)
+  if (filters.preference && filters.preference.length > 0) {
+    filteredProperties = filteredProperties.filter(property => {
+      // For now, we'll implement basic preference filtering
+      // This can be enhanced based on your specific requirements
+      if (filters.preference?.includes('families')) {
+        // Filter for family-friendly properties (you can add specific logic)
+        return property.max_guests >= 4; // Example: properties that can accommodate families
+      }
+      if (filters.preference?.includes('females')) {
+        // Filter for female-only properties (you can add specific logic)
+        return true; // For now, return all properties
+      }
+      return true;
+    });
+  }
 
   // Additional date-based availability filtering
   if (filters.checkIn && filters.checkOut) {
@@ -461,22 +502,27 @@ export async function hasCompletedBooking(userId: string, propertyId: string): P
   return (data || []).length > 0;
 } 
 
-// Bookmark functions
-export async function getBookmarks(userId: string) {
+// Wishlist functions
+export async function getWishlist(userId: string) {
+  console.log('🔍 getWishlist called with userId:', userId);
+  
   const { data, error } = await supabase
-    .from('bookmarks')
+    .from('wishlist')
     .select('*')
     .eq('user_id', userId);
+    
   if (error) {
-    console.error('Error fetching bookmarks:', error);
+    console.error('❌ Error fetching wishlist:', error);
     return [];
   }
+  
+  console.log('✅ getWishlist result:', data);
   return data || [];
 }
 
-export async function isBookmarked(userId: string, itemId: string, itemType: string) {
+export async function isWishlisted(userId: string, itemId: string, itemType: string) {
   const { data, error } = await supabase
-    .from('bookmarks')
+    .from('wishlist')
     .select('id')
     .eq('user_id', userId)
     .eq('item_id', itemId)
@@ -485,26 +531,44 @@ export async function isBookmarked(userId: string, itemId: string, itemType: str
   return !!data;
 }
 
-export async function addBookmark(userId: string, itemId: string, itemType: string) {
-  const { error } = await supabase
-    .from('bookmarks')
-    .insert({ user_id: userId, item_id: itemId, item_type: itemType });
-  if (error) {
-    console.error('Error adding bookmark:', error);
+export async function addToWishlist(userId: string, itemId: string, itemType: string) {
+  console.log('🔖 addToWishlist called:', { userId, itemId, itemType });
+  
+  // Validate inputs
+  if (!userId || !itemId || !itemType) {
+    console.error('❌ Invalid inputs for addToWishlist:', { userId, itemId, itemType });
     return false;
   }
+  
+  // Check if userId is a valid UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId)) {
+    console.error('❌ Invalid user ID format (not UUID):', userId);
+    return false;
+  }
+  
+  const { error } = await supabase
+    .from('wishlist')
+    .insert({ user_id: userId, item_id: itemId, item_type: itemType });
+    
+  if (error) {
+    console.error('❌ Error adding to wishlist:', error);
+    return false;
+  }
+  
+  console.log('✅ Item added to wishlist successfully');
   return true;
 }
 
-export async function removeBookmark(userId: string, itemId: string, itemType: string) {
+export async function removeFromWishlist(userId: string, itemId: string, itemType: string) {
   const { error } = await supabase
-    .from('bookmarks')
+    .from('wishlist')
     .delete()
     .eq('user_id', userId)
     .eq('item_id', itemId)
     .eq('item_type', itemType);
   if (error) {
-    console.error('Error removing bookmark:', error);
+    console.error('Error removing from wishlist:', error);
     return false;
   }
   return true;
@@ -650,7 +714,8 @@ export async function getExperiences(): Promise<Experience[]> {
   const { data, error } = await supabase
     .from('experiences')
     .select('*')
-    .order('date', { ascending: false });
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
   if (error) {
     console.error('Error fetching experiences:', error);
     return [];
@@ -721,6 +786,27 @@ export async function getTrips(): Promise<Trip[]> {
     return [];
   }
   return data || [];
+}
+
+// New: Retreat functions
+export async function getRetreats(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('retreats')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching retreats:', error);
+    return [];
+  }
+
+  const retreats = (data || []).map((row: any) => ({
+    ...row,
+    image: row.cover_image || (Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null),
+  }));
+
+  return retreats;
 }
 
 export async function getTrip(id: string): Promise<Trip | null> {

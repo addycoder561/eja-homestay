@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { ImageCarousel } from './ImageCarousel';
+import { buildCoverFirstImages } from '@/lib/media';
 import { PropertyWithHost } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
-import { isBookmarked, addBookmark, removeBookmark } from '@/lib/database';
+import { isWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
 import { LiveRating } from './LiveRating';
@@ -16,28 +18,28 @@ interface PropertyCardProps {
 
 export function PropertyCard({ property }: PropertyCardProps) {
   const { user } = useAuth();
-  const [bookmarked, setBookmarked] = useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
   useEffect(() => {
     let ignore = false;
     if (user) {
-      isBookmarked(user.id, property.id, 'property').then((b) => {
-        if (!ignore) setBookmarked(b);
+      isWishlisted(user.id, property.id, 'property').then((b) => {
+        if (!ignore) setWishlisted(b);
       });
     } else {
-      setBookmarked(false);
+      setWishlisted(false);
     }
     return () => { ignore = true; };
   }, [user, property.id]);
 
-  const handleBookmark = async (e: React.MouseEvent) => {
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (bookmarked) {
-      await removeBookmark(user.id, property.id, 'property');
-      setBookmarked(false);
+    if (wishlisted) {
+      await removeFromWishlist(user.id, property.id, 'property');
+      setWishlisted(false);
     } else {
-      await addBookmark(user.id, property.id, 'property');
-      setBookmarked(true);
+      await addToWishlist(user.id, property.id, 'property');
+      setWishlisted(true);
     }
   };
   console.log('PropertyCard property.id:', property.id);
@@ -45,11 +47,9 @@ export function PropertyCard({ property }: PropertyCardProps) {
     <Link href={`/property/${property.id}`}>
       <Card className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
         <div className="relative h-48 overflow-hidden rounded-t-lg">
-          <Image
-            src={property.images[0] || '/placeholder-property.jpg'}
+          <ImageCarousel
+            images={buildCoverFirstImages(property.cover_image, property.images)}
             alt={property.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
           <div className="absolute top-4 right-4 bg-white px-2 py-1 rounded-full text-sm font-semibold text-gray-900">
             ₹{property.price_per_night}/night
@@ -57,10 +57,10 @@ export function PropertyCard({ property }: PropertyCardProps) {
           {user && (
             <button
               className="absolute top-4 left-4 z-10 p-1 rounded-full bg-white shadow hover:bg-pink-100"
-              onClick={handleBookmark}
-              aria-label={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              onClick={handleWishlist}
+              aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             >
-              {bookmarked ? (
+              {wishlisted ? (
                 <HeartSolid className="w-6 h-6 text-pink-500" />
               ) : (
                 <HeartOutline className="w-6 h-6 text-gray-400" />

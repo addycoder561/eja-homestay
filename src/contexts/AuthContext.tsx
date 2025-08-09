@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
@@ -15,6 +15,7 @@ interface AuthContextType {
   signInWithGoogle: (redirectTo?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  onAuthSuccess: (callback: () => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,40 +24,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const authSuccessCallbacksRef = useRef<(() => void)[]>([]);
+  const lastAuthenticatedRef = useRef<boolean>(false);
+
+  const onAuthSuccess = (callback: () => void) => {
+    authSuccessCallbacksRef.current.push(callback);
+  };
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    let isMounted = true;
+
+    const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      const isAuthenticated = !!session?.user;
+      lastAuthenticatedRef.current = isAuthenticated;
+      if (!isMounted) return;
       setUser(session?.user ?? null);
-      
       if (session?.user) {
         const userProfile = await getProfile(session.user.id);
+        if (!isMounted) return;
         setProfile(userProfile);
       }
-      
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
-    getInitialSession();
+    init();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
+        const wasAuthenticated = lastAuthenticatedRef.current;
+        const isNowAuthenticated = !!session?.user;
+        lastAuthenticatedRef.current = isNowAuthenticated;
+
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           const userProfile = await getProfile(session.user.id);
           setProfile(userProfile);
+          if (!wasAuthenticated && isNowAuthenticated) {
+            const callbacks = authSuccessCallbacksRef.current.splice(0);
+            callbacks.forEach((cb) => {
+              try { cb(); } catch (err) { console.error('Error executing auth success callback:', err); }
+            });
+          }
         } else {
           setProfile(null);
         }
-        
         setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -117,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     updateProfile,
+    onAuthSuccess,
   }), [user, profile, loading]);
 
   return (

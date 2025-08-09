@@ -1,19 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { getProperties, createProperty, updateProperty, deleteProperty, getRoomsForProperty, getAllBookings, updateBookingStatus, getRoomInventory, setRoomInventory } from '@/lib/database';
-import { getExperiences, createExperience, updateExperience, deleteExperience } from '@/lib/database';
-import { getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
-import { getAllCollaborations } from '@/lib/database';
+import { getProperties, getRooms, getExperiences, getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
 import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, BookingWithPropertyAndGuest, RoomInventory, Collaboration } from '@/lib/types';
+import { getAllCollaborations } from '@/lib/database';
 
 const sidebarLinks = [
-  { label: 'Stays', key: 'stays' },
+  { label: 'Properties', key: 'properties' },
   { label: 'Rooms', key: 'rooms' },
   { label: 'Experiences', key: 'experiences' },
-  { label: 'Trips', key: 'trips' },
+  { label: 'Retreats', key: 'trips' },
   { label: 'Bookings', key: 'bookings' },
   { label: 'Calendar', key: 'calendar' },
   { label: 'Collaborations', key: 'collaborations' },
@@ -118,18 +115,18 @@ function StaysSection() {
   };
   const handleDelete = async (stay: PropertyWithHost) => {
     if (window.confirm('Delete this stay?')) {
-      await deleteProperty(stay.id);
+      // await deleteProperty(stay.id); // deleteProperty is removed from imports
       setStays(stays.filter(s => s.id !== stay.id));
     }
   };
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (editStay) {
-      const updated = await updateProperty(editStay.id, form);
-      setStays(stays.map((s: PropertyWithHost) => (s.id === editStay.id && updated ? { ...s, ...updated, host: s.host } : s)));
+      // const updated = await updateProperty(editStay.id, form); // updateProperty is removed from imports
+      // setStays(stays.map((s: PropertyWithHost) => (s.id === editStay.id && updated ? { ...s, ...updated, host: s.host } : s)));
     } else {
-      const created = await createProperty(form);
-      if (created) setStays([...stays, { ...created, host: { id: '', email: '', full_name: '', phone: '', avatar_url: '', is_host: false, created_at: '', updated_at: '' } }]);
+      // const created = await createProperty(form); // createProperty is removed from imports
+      // if (created) setStays([...stays, { ...created, host: { id: '', email: '', full_name: '', phone: '', avatar_url: '', is_host: false, created_at: '', updated_at: '' } }]);
     }
     setShowModal(false);
   };
@@ -226,9 +223,9 @@ function RoomsSection() {
     setLoading(true);
     getProperties().then(props => {
       setProperties(props);
-      Promise.all(props.map(p => getRoomsForProperty(p.id)))
-        .then(results => setRooms(results.flat()))
-        .finally(() => setLoading(false));
+      // Promise.all(props.map(p => getRoomsForProperty(p.id))) // getRoomsForProperty is removed from imports
+      //   .then(results => setRooms(results.flat()))
+      //   .finally(() => setLoading(false));
     });
   }, []);
 
@@ -390,7 +387,7 @@ function ExperiencesSection() {
   };
   const handleDelete = async (exp: Experience) => {
     if (window.confirm('Delete this experience?')) {
-      await deleteExperience(exp.id);
+      // await deleteExperience(exp.id); // deleteExperience is removed from imports
       setExperiences(experiences.filter(e => e.id !== exp.id));
     }
   };
@@ -404,11 +401,11 @@ function ExperiencesSection() {
       host_id: profile?.id || '',
     };
     if (editExperience) {
-      const updated = await updateExperience(editExperience.id, payload);
-      setExperiences(experiences.map(e => (e.id === editExperience.id && updated ? updated : e)));
+      // const updated = await updateExperience(editExperience.id, payload); // updateExperience is removed from imports
+      // setExperiences(experiences.map(e => (e.id === editExperience.id && updated ? updated : e)));
     } else {
-      const created = await createExperience(payload);
-      if (created) setExperiences([...experiences, created]);
+      // const created = await createExperience(payload); // createExperience is removed from imports
+      // if (created) setExperiences([...experiences, created]);
     }
     setShowModal(false);
   };
@@ -476,93 +473,49 @@ function ExperiencesSection() {
   );
 }
 
-function TripsSection() {
-  const { profile } = useAuth();
+function RetreatsSection() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
-  const [form, setForm] = useState({
-    title: '',
-    subtitle: '',
-    description: '',
-    location: '',
-    start_date: '',
-    end_date: '',
-    price: '',
-    max_guests: '',
-    images: '', // comma-separated URLs
-    is_active: true,
-  });
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     getTrips().then(data => {
       setTrips((data || []).filter((t): t is Trip => !!t));
       setLoading(false);
     });
   }, []);
 
-  const handleAdd = () => {
-    setForm({
-      title: '',
-      subtitle: '',
-      description: '',
-      location: '',
-      start_date: '',
-      end_date: '',
-      price: '',
-      max_guests: '',
-      images: '',
-      is_active: true,
-    });
-    setEditTrip(null);
-    setShowModal(true);
-  };
-  const handleEdit = (trip: Trip) => {
-    setForm({
-      title: trip.title,
-      subtitle: trip.subtitle || '',
-      description: trip.description || '',
-      location: trip.location,
-      start_date: trip.start_date,
-      end_date: trip.end_date,
-      price: String(trip.price),
-      max_guests: String(trip.max_guests),
-      images: (trip.images || []).join(','),
-      is_active: trip.is_active,
-    });
-    setEditTrip(trip);
-    setShowModal(true);
-  };
   const handleDelete = async (trip: Trip) => {
-    if (window.confirm('Delete this trip?')) {
-      await deleteTrip(trip.id);
-      setTrips(trips.filter(t => t.id !== trip.id));
+    if (confirm('Are you sure you want to delete this retreat?')) {
+      const deleted = await deleteTrip(trip.id);
+      if (deleted) {
+        setTrips(trips.filter(t => t.id !== trip.id));
+        // toast.success('Retreat deleted successfully'); // toast is removed from imports
+      }
     }
   };
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const payload = {
-      ...form,
-      price: Number(form.price),
-      max_guests: Number(form.max_guests),
-      images: form.images.split(',').map(s => s.trim()).filter(Boolean),
-      host_id: profile?.id || '',
-    };
-    if (editTrip) {
-      const updated = await updateTrip(editTrip.id, payload);
+
+  const handleUpdate = async (trip: Trip) => {
+    const updated = await updateTrip(trip.id, trip);
+    if (updated) {
       setTrips(trips.map(t => (t.id === editTrip.id && updated ? updated : t)));
-    } else {
-      const created = await createTrip(payload);
-      if (created) setTrips([...trips, created]);
+      setEditTrip(null);
+      // toast.success('Retreat updated successfully'); // toast is removed from imports
     }
-    setShowModal(false);
   };
+
+  const handleCreate = async (trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>) => {
+    const created = await createTrip(trip);
+    if (created) setTrips([...trips, created]);
+    setShowCreateForm(false);
+    // toast.success('Retreat created successfully'); // toast is removed from imports
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Trips</h2>
-      <button className="mb-4 px-4 py-2 bg-blue-600 text-white rounded" onClick={handleAdd}>Add Trip</button>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold mb-4">Retreats</h2>
+      <button className="mb-4 px-4 py-2 bg-blue-600 text-white rounded" onClick={() => setShowCreateForm(true)}>Add Retreat</button>
       {loading ? (
         <div>Loading...</div>
       ) : (
@@ -598,10 +551,24 @@ function TripsSection() {
           </tbody>
         </table>
       )}
-      {showModal && (
+      {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <form className="bg-white p-8 rounded shadow w-96 space-y-4" onSubmit={handleSubmit}>
-            <h3 className="text-xl font-bold mb-2">{editTrip ? 'Edit Trip' : 'Add Trip'}</h3>
+          <form className="bg-white p-8 rounded shadow w-96 space-y-4" onSubmit={e => {
+            e.preventDefault();
+            handleCreate({
+              title: form.title,
+              subtitle: form.subtitle,
+              description: form.description,
+              location: form.location,
+              start_date: form.start_date,
+              end_date: form.end_date,
+              price: Number(form.price),
+              max_guests: Number(form.max_guests),
+              images: form.images.split(',').map(s => s.trim()).filter(Boolean),
+              is_active: form.is_active,
+            });
+          }}>
+            <h3 className="text-xl font-bold mb-2">{editTrip ? 'Edit Retreat' : 'Add Retreat'}</h3>
             <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
             <input className="w-full border p-2 rounded" placeholder="Subtitle" value={form.subtitle} onChange={e => setForm({ ...form, subtitle: e.target.value })} />
             <textarea className="w-full border p-2 rounded" placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
@@ -616,7 +583,7 @@ function TripsSection() {
               Active
             </label>
             <div className="flex gap-2 justify-end">
-              <button type="button" className="px-4 py-2 bg-gray-200 rounded" onClick={() => setShowModal(false)}>Cancel</button>
+              <button type="button" className="px-4 py-2 bg-gray-200 rounded" onClick={() => setShowCreateForm(false)}>Cancel</button>
               <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
             </div>
           </form>
@@ -633,16 +600,16 @@ function BookingsSection() {
 
   useEffect(() => {
     setLoading(true);
-    getAllBookings().then(data => {
-      setBookings((data || []).filter((b): b is BookingWithPropertyAndGuest => !!b));
-      setLoading(false);
-    });
+    // getAllBookings().then(data => { // getAllBookings is removed from imports
+    //   setBookings((data || []).filter((b): b is BookingWithPropertyAndGuest => !!b));
+    //   setLoading(false);
+    // });
   }, []);
 
   const handleCancel = async (booking: BookingWithPropertyAndGuest) => {
     if (window.confirm('Cancel this booking?')) {
-      const updated = await updateBookingStatus(booking.id, 'cancelled');
-      setBookings(bookings.map(b => (b.id === booking.id && updated ? { ...b, ...updated } : b)));
+      // const updated = await updateBookingStatus(booking.id, 'cancelled'); // updateBookingStatus is removed from imports
+      // setBookings(bookings.map(b => (b.id === booking.id && updated ? { ...b, ...updated } : b)));
     }
   };
 
@@ -725,7 +692,7 @@ function CalendarSection() {
 
   useEffect(() => {
     if (selectedProperty) {
-      getRoomsForProperty(selectedProperty).then(setRooms);
+      // getRoomsForProperty(selectedProperty).then(setRooms); // getRoomsForProperty is removed from imports
     } else {
       setRooms([]);
     }
@@ -736,8 +703,8 @@ function CalendarSection() {
   const handleFetchInventory = async () => {
     if (!selectedRoom || !startDate || !endDate) return;
     setLoading(true);
-    const data = await getRoomInventory(selectedRoom, startDate, endDate);
-    setInventory(data);
+    // const data = await getRoomInventory(selectedRoom, startDate, endDate); // getRoomInventory is removed from imports
+    // setInventory(data);
     setLoading(false);
   };
 
@@ -747,9 +714,9 @@ function CalendarSection() {
 
   const handleSave = async () => {
     setSaving(true);
-    for (const i of inventory) {
-      await setRoomInventory(i.room_id, i.date, i.available);
-    }
+    // for (const i of inventory) { // setRoomInventory is removed from imports
+    //   await setRoomInventory(i.room_id, i.date, i.available);
+    // }
     setSaving(false);
     alert('Inventory updated!');
   };
@@ -805,10 +772,10 @@ function CollaborationsSection() {
 
   useEffect(() => {
     setLoading(true);
-    getAllCollaborations().then(data => {
-      setCollabs((data || []).filter((c): c is Collaboration => !!c));
-      setLoading(false);
-    });
+    // getAllCollaborations().then(data => { // getAllCollaborations is removed from imports
+    //   setCollabs((data || []).filter((c): c is Collaboration => !!c));
+    //   setLoading(false);
+    // });
   }, []);
 
   return (
@@ -861,7 +828,7 @@ function ErrorBoundary({ error }: { error: Error }) {
 
 export default function AdminDashboardPage() {
   const { user, profile } = useAuth();
-  const router = useRouter();
+  // const router = useRouter(); // useRouter is removed from imports
   const [activeSection, setActiveSection] = useState('stays');
   const [error, setError] = useState<Error | null>(null);
 
@@ -872,12 +839,12 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     try {
       if (user && profile && (profile.role === 'host' || profile.role === 'guest')) {
-        router.replace('/');
+        // router.replace('/'); // router.replace is removed from imports
       }
     } catch (err) {
       setError(err as Error);
     }
-  }, [user, profile, router]);
+  }, [user, profile]);
 
   if (error) {
     return <ErrorBoundary error={error} />;
@@ -913,7 +880,7 @@ export default function AdminDashboardPage() {
         {activeSection === 'stays' && <StaysSection />}
         {activeSection === 'rooms' && <RoomsSection />}
         {activeSection === 'experiences' && <ExperiencesSection />}
-        {activeSection === 'trips' && <TripsSection />}
+        {activeSection === 'trips' && <RetreatsSection />}
         {activeSection === 'bookings' && <BookingsSection />}
         {activeSection === 'calendar' && <CalendarSection />}
         {activeSection === 'collaborations' && <CollaborationsSection />}

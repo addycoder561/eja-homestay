@@ -1,4 +1,4 @@
-import { HTMLAttributes, forwardRef } from 'react';
+import React, { HTMLAttributes, forwardRef } from 'react';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;

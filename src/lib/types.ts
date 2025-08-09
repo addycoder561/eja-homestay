@@ -51,6 +51,7 @@ export interface Property {
   bathrooms: number;
   amenities: string[];
   images: string[];
+  cover_image?: string | null;
   gallery?: Record<string, string[]>; // { living: [url], kitchen: [url], ... }
   usps?: string[];
   house_rules?: string | null;
@@ -82,7 +83,7 @@ export interface Room {
   name: string;
   description: string | null;
   room_type: string;
-  price: number;
+  price_per_night: number;
   total_inventory: number;
   max_guests: number;
   amenities: string[] | null;
@@ -181,6 +182,9 @@ export interface Experience {
   price: number;
   max_guests: number;
   images: string[];
+  cover_image?: string;
+  duration?: string;
+  categories?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -195,6 +199,7 @@ export interface Trip {
   location: string;
   start_date: string; // YYYY-MM-DD
   end_date: string; // YYYY-MM-DD
+  duration?: string;
   price: number;
   max_guests: number;
   images: string[];

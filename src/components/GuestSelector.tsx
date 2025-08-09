@@ -29,7 +29,7 @@ export function GuestSelector({ value, onChange, showRoomsSelector = true, maxAd
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m0 0A4 4 0 0112 4a4 4 0 015 3.13M7 13h10" /></svg>
             Adults
           </span>
-          <button type="button" className="rounded-full border w-8 h-8 flex items-center justify-center text-lg" onClick={() => onChange({ ...value, adults: Math.max(value.adults - 1, 1) })} disabled={value.adults <= 1}>-</button>
+          <button type="button" className="rounded-full border w-8 h-8 flex items-center justify-center text-lg" onClick={() => onChange({ ...value, adults: Math.max(value.adults - 1, 0) })} disabled={value.adults <= 0}>-</button>
           <span className="w-4 text-center">{value.adults}</span>
           <button type="button" className="rounded-full border w-8 h-8 flex items-center justify-center text-lg" onClick={() => onChange({ ...value, adults: Math.min(value.adults + 1, maxAdults) })} disabled={value.adults >= maxAdults}>+</button>
         </div>

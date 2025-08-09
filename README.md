@@ -68,6 +68,11 @@ npm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_public_key
+
+# Server-side keys (set in your deployment environment, not in client)
+RAZORPAY_KEY_ID=your_razorpay_public_key
+RAZORPAY_KEY_SECRET=your_razorpay_secret_key
 ```
 
 ### 4. Set Up Database

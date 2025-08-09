@@ -6,11 +6,41 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const POPULAR_DESTINATIONS = [
-  { city: 'Rishikesh', state: 'Uttarakhand', country: 'India', image: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800', count: 5 },
-  { city: 'Mussoorie', state: 'Uttarakhand', country: 'India', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', count: 5 },
-  { city: 'Shimla', state: 'Himachal Pradesh', country: 'India', image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=800', count: 5 },
-  { city: 'Manali', state: 'Himachal Pradesh', country: 'India', image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=800', count: 5 },
-  { city: 'Nainital', state: 'Uttarakhand', country: 'India', image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=800', count: 5 },
+  { 
+    city: 'Rishikesh', 
+    state: 'Uttarakhand', 
+    country: 'India', 
+    image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=800&q=80',
+    description: 'Spiritual capital of yoga'
+  },
+  { 
+    city: 'Mussoorie', 
+    state: 'Uttarakhand', 
+    country: 'India', 
+    image: 'https://images.unsplash.com/photo-1504609813440-554e64a8f005?auto=format&fit=crop&w=800&q=80',
+    description: 'Queen of the hills'
+  },
+  { 
+    city: 'Kanatal', 
+    state: 'Uttarakhand', 
+    country: 'India', 
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80',
+    description: 'Serene hill station'
+  },
+  { 
+    city: 'Manali', 
+    state: 'Himachal Pradesh', 
+    country: 'India', 
+    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80',
+    description: 'Adventure paradise'
+  },
+  { 
+    city: 'Ladakh', 
+    state: 'Ladakh', 
+    country: 'India', 
+    image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=800&q=80',
+    description: 'Land of high passes'
+  },
 ];
 
 const TRENDING_GETAWAYS = [
@@ -31,15 +61,31 @@ export default function Home() {
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Popular Destinations</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {POPULAR_DESTINATIONS.map((dest) => (
-                <Link key={dest.city} href={`/search?location=${encodeURIComponent(dest.city)}`} className="block bg-gray-100 rounded-lg shadow hover:shadow-lg transition-shadow duration-300 cursor-pointer overflow-hidden">
-                  <div className="relative h-40 w-full">
-                    <Image src={dest.image} alt={dest.city} fill className="object-cover" />
-                  </div>
-                  <div className="p-4 text-center">
-                    <div className="font-bold text-lg text-gray-900">{dest.city}</div>
-                    <div className="text-gray-600 text-sm">{dest.state}, {dest.country}</div>
+                <Link 
+                  key={dest.city} 
+                  href={`/search?location=${encodeURIComponent(dest.city)}`} 
+                  className="group block relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                >
+                  <div className="relative h-48 w-full">
+                    <Image 
+                      src={dest.image} 
+                      alt={dest.city} 
+                      fill 
+                      className="object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
+                    {/* Gradient overlay for better text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                    
+                    {/* Destination name with Indian flag */}
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-bold text-lg">{dest.city}</span>
+                        <span className="text-white text-sm">🇮🇳</span>
+                      </div>
+                      <div className="text-white/80 text-sm mt-1">{dest.description}</div>
+                    </div>
                   </div>
                 </Link>
               ))}

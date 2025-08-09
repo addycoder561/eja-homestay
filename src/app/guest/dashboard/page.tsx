@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import { updateBookingStatus } from '@/lib/database';
+import { useRouter } from 'next/navigation';
 
 // Experience and trip data for lookup (should be fetched from DB in real app)
 const experiences = [
@@ -61,6 +62,7 @@ export default function GuestDashboard() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const router = useRouter();
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -237,6 +239,19 @@ export default function GuestDashboard() {
                         onClick={() => handleCancel(booking.id)}
                       >
                         Request Cancellation
+                      </button>
+                    )}
+                    {booking.status === 'paid' && booking.trip_id && (
+                      <button
+                        className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition-colors text-sm font-semibold"
+                        onClick={() => {
+                          const trip = trips.find(t => t.id === booking.trip_id);
+                          if (trip) {
+                            router.push(`/retreats/${trip.id}`);
+                          }
+                        }}
+                      >
+                        View Retreat
                       </button>
                     )}
                   </CardContent>

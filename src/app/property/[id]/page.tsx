@@ -5,8 +5,10 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+
 import { BookingForm } from '@/components/BookingForm';
 import { LiveRating } from '@/components/LiveRating';
+import { PropertyImageGallery } from '@/components/PropertyImageGallery';
 import { getPropertyWithReviews, hasCompletedBooking, getRoomsForProperty } from '@/lib/database';
 import { updatePropertyRating } from '@/lib/rating-calculator';
 import { PropertyWithReviews, Profile, Room } from '@/lib/types';
@@ -47,7 +49,8 @@ export default function PropertyDetailPage() {
   const [hasReviewed, setHasReviewed] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [preselectedRoomId, setPreselectedRoomId] = useState<string | null>(null);
-  const bookingFormRef = useRef<HTMLDivElement>(null);
+
+
 
   console.log('PropertyDetailPage propertyId:', propertyId);
 
@@ -143,8 +146,8 @@ export default function PropertyDetailPage() {
       name: property?.title || 'Property Booking',
       description: 'Booking Payment',
       handler: async function (response: { razorpay_payment_id: string }) {
-        // Mark booking as paid (in test mode, just update status)
-        await supabase.from('bookings').update({ status: 'paid' }).eq('id', lastBooking.id);
+            // Mark booking as confirmed (aligned with booking_status enum)
+            await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', lastBooking.id);
         toast.success('Payment successful! Your booking is confirmed.');
         window.location.href = '/guest/dashboard';
       },
@@ -210,11 +213,6 @@ export default function PropertyDetailPage() {
 
 
   // Demo/placeholder data for new fields
-  const gallery = property.gallery || {
-    Living: property.images.slice(0, 2),
-    Kitchen: property.images.slice(2, 3),
-    Outdoor: property.images.slice(3, 5),
-  };
   const usps = property.usps || [
     'Stunning mountain views',
     'Power backup & pure-veg meals',
@@ -246,23 +244,11 @@ export default function PropertyDetailPage() {
           {property.subtitle && <h2 className="text-lg text-gray-600 mb-2">{property.subtitle}</h2>}
         </div>
 
-        {/* Categorized Gallery */}
-        <div className="mb-8">
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {Object.entries(gallery).map(([category, images]) => (
-              <div key={category} className="min-w-[250px]">
-                <div className="font-semibold text-gray-800 mb-2">{category}</div>
-                <div className="flex gap-2">
-                  {images.map((img, i) => (
-                    <div key={i} className="relative h-40 w-40 rounded-lg overflow-hidden">
-                      <Image src={img} alt={`${category} ${i + 1}`} fill className="object-cover" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Property Image Gallery */}
+         <PropertyImageGallery 
+          images={(property.cover_image ? [property.cover_image, ...property.images] : property.images).filter((v, i, a) => v && a.indexOf(v) === i)} 
+          propertyTitle={property.title} 
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Property Details */}
@@ -296,7 +282,7 @@ export default function PropertyDetailPage() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end min-w-[140px] gap-2">
-                            <div className="text-xl font-bold text-green-700">₹{room.price}</div>
+                            <div className="text-xl font-bold text-green-700">₹{room.price_per_night}</div>
                             <div className="text-xs text-gray-500">per night</div>
                             <div className="text-xs text-gray-500 mt-1">Total: {room.total_inventory} rooms</div>
                             <button
@@ -452,26 +438,13 @@ export default function PropertyDetailPage() {
             )}
           </div>
 
-          {/* Booking Form and Payment */}
-          <section className="mt-8 mb-12" ref={bookingFormRef}>
-            {property && (
-              <BookingForm property={property} preselectedRoomId={preselectedRoomId} />
-            )}
-            {lastBooking && lastBooking.status !== 'paid' && (
-              <div className="mt-8 p-6 bg-blue-50 rounded-lg shadow text-center">
-                <h3 className="text-xl font-bold mb-4 text-blue-700">Complete Your Payment</h3>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  loading={paymentLoading}
-                  onClick={handlePayNow}
-                  className="w-full text-lg font-bold"
-                >
-                  Pay Now
-                </Button>
-              </div>
-            )}
-          </section>
+          {/* Right Sidebar - Booking Form */}
+          <div className="lg:col-span-1">
+            <BookingForm property={property} preselectedRoomId={preselectedRoomId} />
+          </div>
+        </div>
+
+
 
           {/* Reviews Section */}
           <section className="mt-12">
@@ -526,8 +499,10 @@ export default function PropertyDetailPage() {
               </>
             )}
           </section>
-        </div>
       </main>
+      
+
+      
       <Footer />
     </div>
   );
