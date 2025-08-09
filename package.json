@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env CSS_TRANSFORMER_WASM=1 next build",
+    "build": "cross-env CSS_TRANSFORMER_WASM=1 node scripts/patch-lightningcss-wasm.js && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -18,11 +18,15 @@
     "file-saver": "^2.0.5",
     "jspdf": "^3.0.1",
     "lightningcss": "^1.27.0",
+    "lightningcss-wasm": "^1.27.0",
     "next": "^15.4.1",
     "react": "^19.0.0",
     "react-day-picker": "^9.5.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.4.1"
+  },
+  "overrides": {
+    "lightningcss": "npm:lightningcss-wasm@^1.27.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
