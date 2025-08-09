@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env CSS_TRANSFORMER_WASM=1 node scripts/patch-lightningcss-wasm.js && next build",
+    "build": "cross-env CSS_TRANSFORMER_WASM=1 node scripts/patch-lightningcss-wasm.cjs && next build",
     "start": "next start",
     "lint": "next lint"
   },
