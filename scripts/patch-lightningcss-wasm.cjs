@@ -29,7 +29,8 @@ try {
     process.exit(0);
   }
 
-  if (!fs.existsSync(targetPkg) && fs.existsSync(sourcePkg)) {
+  // Always copy/overwrite to be safe in ephemeral builds
+  if (fs.existsSync(sourcePkg)) {
     copyDir(sourcePkg, targetPkg);
     console.log('Patched lightningcss to include WASM pkg folder');
   }
