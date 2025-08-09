@@ -243,7 +243,7 @@ export function BookingWizard({ property, onClose }: BookingWizardProps) {
               </p>
               <GuestInfoForm
                 guestInfo={bookingData.guestInfo}
-                onGuestInfoChange={(guestInfo) => 
+                onGuestInfoChange={(guestInfo: BookingData['guestInfo']) => 
                   updateData({ guestInfo })
                 }
               />
@@ -359,7 +359,8 @@ export function BookingWizard({ property, onClose }: BookingWizardProps) {
 }
 
 // Guest Information Form Component
-function GuestInfoForm({ guestInfo, onGuestInfoChange }: any) {
+type GuestInfo = BookingData['guestInfo'];
+function GuestInfoForm({ guestInfo, onGuestInfoChange }: { guestInfo: GuestInfo; onGuestInfoChange: (info: GuestInfo) => void }) {
   return (
     <div className="space-y-4">
       <Input

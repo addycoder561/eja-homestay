@@ -49,6 +49,7 @@ export default function PropertyDetailPage() {
   const [hasReviewed, setHasReviewed] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [preselectedRoomId, setPreselectedRoomId] = useState<string | null>(null);
+  const bookingFormRef = useRef<HTMLDivElement | null>(null);
 
 
 
@@ -439,7 +440,7 @@ export default function PropertyDetailPage() {
           </div>
 
           {/* Right Sidebar - Booking Form */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1" ref={bookingFormRef}>
             <BookingForm property={property} preselectedRoomId={preselectedRoomId} />
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { CollabFormModal } from "@/components/ui/CollabFormModal";
@@ -43,8 +43,7 @@ export default function CollaboratePage() {
   const [modalType, setModalType] = useState<null | "create" | "retreat" | "campaign">(null);
 
   // Simple auto-advance
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setCarouselIndex((i) => (i + 1) % carouselItems.length);
     }, 3500);

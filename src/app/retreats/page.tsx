@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import toast from "react-hot-toast";
@@ -35,7 +35,7 @@ type Retreat = {
   updated_at?: string;
 };
 
-export default function RetreatsPage() {
+function RetreatsPageInner() {
   const { user, profile, loading: loadingAuth } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -256,7 +256,6 @@ export default function RetreatsPage() {
           }
         }
       };
-      // @ts-expect-error: Razorpay window type
       ;(window as any).Razorpay && (paymentRef.current = new (window as any).Razorpay(options));
       paymentRef.current.open();
     } catch (err: any) {
@@ -444,3 +443,11 @@ export default function RetreatsPage() {
     </div>
   );
 } 
+
+export default function RetreatsPage() {
+  return (
+    <Suspense>
+      <RetreatsPageInner />
+    </Suspense>
+  );
+}

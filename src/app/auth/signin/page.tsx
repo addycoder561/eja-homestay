@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,7 @@ import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import toast from 'react-hot-toast';
 
-export default function SignIn() {
+function SignInInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, signInWithGoogle, profile } = useAuth();
@@ -147,4 +147,12 @@ export default function SignIn() {
       <Footer />
     </div>
   );
-} 
+}
+
+export default function SignIn() {
+  return (
+    <Suspense>
+      <SignInInner />
+    </Suspense>
+  );
+}

@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare room booking data
-    const roomBookings = Object.entries(roomSelections)
-      .filter(([_, qty]) => qty > 0)
+    const roomBookings = Object.entries(roomSelections as Record<string, number>)
+      .filter(([_, qty]) => (qty as number) > 0)
       .map(([roomId, qty]) => ({
         room_id: roomId,
         quantity: qty as number,

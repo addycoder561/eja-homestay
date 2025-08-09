@@ -13,11 +13,11 @@ interface PaymentSummaryProps {
 export function PaymentSummary({ property, bookingData, rooms, totalPrice, nights }: PaymentSummaryProps) {
   const calculateRoomPrice = () => {
     let roomPrice = 0;
-    Object.entries(bookingData.roomSelections).forEach(([roomId, qty]) => {
-      if (qty > 0) {
+    Object.entries(bookingData.roomSelections as Record<string, number>).forEach(([roomId, qty]) => {
+      if ((qty as number) > 0) {
         const room = rooms.find(r => r.id === roomId);
         if (room) {
-          roomPrice += room.price_per_night * qty * nights;
+          roomPrice += room.price_per_night * (qty as number) * nights;
         }
       }
     });
@@ -25,7 +25,7 @@ export function PaymentSummary({ property, bookingData, rooms, totalPrice, night
   };
 
   const calculateExtraAdultCharge = () => {
-    const totalRoomUnits = Object.values(bookingData.roomSelections).reduce((sum, qty) => sum + qty, 0);
+    const totalRoomUnits = Object.values(bookingData.roomSelections as Record<string, number>).reduce((sum: number, qty: number) => sum + qty, 0);
     const maxBaseGuests = totalRoomUnits * 2;
     if (bookingData.adults > maxBaseGuests) {
       const extraAdults = bookingData.adults - maxBaseGuests;
@@ -124,17 +124,17 @@ export function PaymentSummary({ property, bookingData, rooms, totalPrice, night
       </div>
 
       {/* Room Selections */}
-      {Object.entries(bookingData.roomSelections).some(([_, qty]) => qty > 0) && (
+      {Object.entries(bookingData.roomSelections as Record<string, number>).some(([_, qty]) => (qty as number) > 0) && (
         <div className="space-y-4">
           <h4 className="font-semibold">Selected Rooms</h4>
           <div className="space-y-2">
-            {Object.entries(bookingData.roomSelections).map(([roomId, qty]) => {
-              if (qty === 0) return null;
+            {Object.entries(bookingData.roomSelections as Record<string, number>).map(([roomId, qty]) => {
+              if ((qty as number) === 0) return null;
               const room = rooms.find(r => r.id === roomId);
               return (
                 <div key={roomId} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="font-medium">{room?.name || `Room Type ${roomId}`}</span>
-                  <span className="text-gray-600">{qty} unit{qty !== 1 ? 's' : ''}</span>
+                  <span className="text-gray-600">{qty as number} unit{(qty as number) !== 1 ? 's' : ''}</span>
                 </div>
               );
             })}

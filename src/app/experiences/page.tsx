@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import toast from "react-hot-toast";
@@ -31,7 +31,7 @@ const filterData = {
   ]
 };
 
-export default function ExperiencesPage() {
+function ExperiencesPageInner() {
   const { user, profile, loading: loadingAuth } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -528,3 +528,11 @@ export default function ExperiencesPage() {
     </div>
   );
 } 
+
+export default function ExperiencesPage() {
+  return (
+    <Suspense>
+      <ExperiencesPageInner />
+    </Suspense>
+  );
+}

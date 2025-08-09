@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProperties, getRooms, getExperiences, getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
+import { getProperties, getExperiences, getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
 import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, BookingWithPropertyAndGuest, RoomInventory, Collaboration } from '@/lib/types';
 import { getAllCollaborations } from '@/lib/database';
 
@@ -213,8 +213,9 @@ function RoomsSection() {
     name: '',
     description: '',
     room_type: '',
-    price: 0,
+    price_per_night: 0,
     total_inventory: 1,
+    max_guests: 1,
     amenities: [],
     images: [],
   });
@@ -235,8 +236,9 @@ function RoomsSection() {
       name: '',
       description: '',
       room_type: '',
-      price: 0,
+      price_per_night: 0,
       total_inventory: 1,
+      max_guests: 1,
       amenities: [],
       images: [],
     });
@@ -249,8 +251,9 @@ function RoomsSection() {
       name: room.name,
       description: room.description || '',
       room_type: room.room_type,
-      price: room.price,
+      price_per_night: room.price_per_night,
       total_inventory: room.total_inventory,
+      max_guests: room.max_guests,
       amenities: room.amenities || [],
       images: room.images || [],
     });
@@ -282,6 +285,7 @@ function RoomsSection() {
               <th className="p-2">Type</th>
               <th className="p-2">Price</th>
               <th className="p-2">Inventory</th>
+              <th className="p-2">Max Guests</th>
               <th className="p-2">Property</th>
               <th className="p-2">Actions</th>
             </tr>
@@ -291,8 +295,9 @@ function RoomsSection() {
               <tr key={room.id} className="border-b">
                 <td className="p-2">{room.name}</td>
                 <td className="p-2">{room.room_type}</td>
-                <td className="p-2">₹{room.price}</td>
+                <td className="p-2">₹{room.price_per_night}</td>
                 <td className="p-2">{room.total_inventory}</td>
+                <td className="p-2">{room.max_guests}</td>
                 <td className="p-2">{properties.find(p => p.id === room.property_id)?.title || ''}</td>
                 <td className="p-2 flex gap-2">
                   <button className="px-2 py-1 bg-yellow-200 rounded" onClick={() => handleEdit(room)}>Edit</button>
@@ -313,8 +318,9 @@ function RoomsSection() {
             </select>
             <input className="w-full border p-2 rounded" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
             <input className="w-full border p-2 rounded" placeholder="Type" value={form.room_type} onChange={e => setForm({ ...form, room_type: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Price" type="number" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} required />
+            <input className="w-full border p-2 rounded" placeholder="Price per night" type="number" value={form.price_per_night} onChange={e => setForm({ ...form, price_per_night: Number(e.target.value) })} required />
             <input className="w-full border p-2 rounded" placeholder="Inventory" type="number" value={form.total_inventory} onChange={e => setForm({ ...form, total_inventory: Number(e.target.value) })} required />
+            <input className="w-full border p-2 rounded" placeholder="Max Guests" type="number" value={form.max_guests} onChange={e => setForm({ ...form, max_guests: Number(e.target.value) })} required />
             <input className="w-full border p-2 rounded" placeholder="Amenities (comma separated)" value={form.amenities?.join(',') || ''} onChange={e => setForm({ ...form, amenities: e.target.value.split(',').map(a => a.trim()).filter(Boolean) })} />
             <input className="w-full border p-2 rounded" placeholder="Image URLs (comma separated)" value={form.images?.join(',') || ''} onChange={e => setForm({ ...form, images: e.target.value.split(',').map(a => a.trim()).filter(Boolean) })} />
             <textarea className="w-full border p-2 rounded" placeholder="Description" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} />
@@ -478,6 +484,18 @@ function RetreatsSection() {
   const [loading, setLoading] = useState(true);
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [form, setForm] = useState({
+    title: '',
+    subtitle: '',
+    description: '',
+    location: '',
+    start_date: '',
+    end_date: '',
+    price: '',
+    max_guests: '',
+    images: '', // comma-separated URLs
+    is_active: true,
+  });
 
   useEffect(() => {
     getTrips().then(data => {
@@ -496,10 +514,27 @@ function RetreatsSection() {
     }
   };
 
+  const handleEdit = (trip: Trip) => {
+    setEditTrip(trip);
+    setForm({
+      title: trip.title,
+      subtitle: trip.subtitle || '',
+      description: trip.description || '',
+      location: trip.location,
+      start_date: trip.start_date,
+      end_date: trip.end_date,
+      price: String(trip.price),
+      max_guests: String(trip.max_guests),
+      images: (trip.images || []).join(','),
+      is_active: trip.is_active,
+    });
+    setShowCreateForm(true);
+  };
+
   const handleUpdate = async (trip: Trip) => {
     const updated = await updateTrip(trip.id, trip);
     if (updated) {
-      setTrips(trips.map(t => (t.id === editTrip.id && updated ? updated : t)));
+      setTrips(trips.map(t => (editTrip && t.id === editTrip.id ? updated : t)));
       setEditTrip(null);
       // toast.success('Retreat updated successfully'); // toast is removed from imports
     }
@@ -555,7 +590,8 @@ function RetreatsSection() {
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <form className="bg-white p-8 rounded shadow w-96 space-y-4" onSubmit={e => {
             e.preventDefault();
-            handleCreate({
+            const payload: Omit<Trip, 'id' | 'created_at' | 'updated_at'> = {
+              host_id: null,
               title: form.title,
               subtitle: form.subtitle,
               description: form.description,
@@ -566,7 +602,13 @@ function RetreatsSection() {
               max_guests: Number(form.max_guests),
               images: form.images.split(',').map(s => s.trim()).filter(Boolean),
               is_active: form.is_active,
-            });
+            };
+            if (editTrip) {
+              handleUpdate({ ...editTrip, ...payload });
+            } else {
+              handleCreate(payload);
+            }
+            setShowCreateForm(false);
           }}>
             <h3 className="text-xl font-bold mb-2">{editTrip ? 'Edit Retreat' : 'Add Retreat'}</h3>
             <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />

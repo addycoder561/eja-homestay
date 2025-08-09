@@ -64,7 +64,7 @@ export default function MyWishlistPage() {
           .filter(b => b.item_type === 'trip')
           .map(b => b.item_id);
 
-        const allItems: BookmarkItem[] = [];
+        const allItems: WishlistItem[] = [];
 
         // Fetch properties in batch
         if (propertyIds.length > 0) {

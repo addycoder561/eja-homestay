@@ -71,7 +71,7 @@ export default function GuestDashboard() {
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('guest_id', profile.id)
+        .eq('guest_id', profile!.id)
         .order('created_at', { ascending: false });
       if (error) {
         toast.error('Failed to fetch bookings');
@@ -163,7 +163,7 @@ export default function GuestDashboard() {
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
-      .eq('guest_id', profile.id)
+      .eq('guest_id', profile!.id)
       .order('created_at', { ascending: false });
     setBookings(data || []);
   };

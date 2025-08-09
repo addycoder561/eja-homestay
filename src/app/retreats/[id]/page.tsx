@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,7 @@ import { buildCoverFirstImages } from "@/lib/media";
 export default function RetreatDetailPage() {
   const params = useParams();
   const retreatId = params.id as string;
+  const router = useRouter();
   const [retreat, setRetreat] = useState<any>(null);
 
   useEffect(() => {
