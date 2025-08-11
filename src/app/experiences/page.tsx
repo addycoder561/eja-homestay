@@ -15,21 +15,74 @@ import Script from 'next/script';
 import { sendPaymentReceiptEmail } from '@/lib/notifications';
 import { isWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
-import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartOutline, MapPinIcon, ClockIcon, UsersIcon, MagnifyingGlassIcon, XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { Experience } from '@/lib/types';
 import Link from 'next/link';
 import { ImageCarousel } from '@/components/ImageCarousel';
 import { buildCoverFirstImages } from '@/lib/media';
+import Image from 'next/image';
 
-// Filter data for experiences
+// Enhanced filter data for experiences
 const filterData = {
   category: [
-    { id: 'immersive', label: 'Immersive', icon: '🧘' },
-    { id: 'playful', label: 'Playful', icon: '🎮' },
-    { id: 'culinary', label: 'Culinary', icon: '🍽️' },
-    { id: 'meaningful', label: 'Meaningful', icon: '❤️' }
+    { id: 'immersive', label: 'Immersive', icon: '🧘', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+    { id: 'playful', label: 'Playful', icon: '🎮', color: 'bg-green-100 text-green-700 border-green-200' },
+    { id: 'culinary', label: 'Culinary', icon: '🍽️', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+    { id: 'meaningful', label: 'Meaningful', icon: '❤️', color: 'bg-red-100 text-red-700 border-red-200' }
+  ],
+  location: [
+    { id: 'mountains', label: 'Mountains', icon: '🏔️', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { id: 'delhi-ncr', label: 'Delhi-NCR', icon: '🏙️', color: 'bg-gray-100 text-gray-700 border-gray-200' }
   ]
 };
+
+// Loading skeleton for experience cards
+function ExperienceCardSkeleton({ index = 0 }: { index?: number }) {
+  return (
+    <div 
+      className="bg-white rounded-2xl shadow-lg overflow-hidden animate-fade-in"
+      style={{ animationDelay: `${index * 0.1}s` }}
+    >
+      <div className="relative h-48 bg-gray-200 animate-pulse">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300"></div>
+      </div>
+      <div className="p-6 space-y-4">
+        <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+        <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+      </div>
+    </div>
+  );
+}
+
+// Empty state component
+function EmptyExperiencesState({ searchQuery, selectedCategory, selectedLocation }: { 
+  searchQuery: string; 
+  selectedCategory: string; 
+  selectedLocation: string; 
+}) {
+  return (
+    <div className="text-center py-16">
+      <div className="text-6xl mb-6">🔍</div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-4">No experiences found</h3>
+      <p className="text-gray-600 mb-8 max-w-md mx-auto">
+        {searchQuery || selectedCategory || selectedLocation 
+          ? "Try adjusting your filters or check back later for new experiences."
+          : "We're working on adding amazing experiences. Check back soon!"
+        }
+      </p>
+      {(searchQuery || selectedCategory || selectedLocation) && (
+        <button 
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        >
+          Clear All Filters
+        </button>
+      )}
+    </div>
+  );
+}
 
 function ExperiencesPageInner() {
   const { user, profile, loading: loadingAuth } = useAuth();
@@ -46,6 +99,7 @@ function ExperiencesPageInner() {
     email: "",
     date: "",
     guests: 1,
+    phone: "",
   });
   const [loading, setLoading] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
@@ -53,6 +107,7 @@ function ExperiencesPageInner() {
   const [wishlistedIds, setWishlistedIds] = useState<string[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loadingExperiences, setLoadingExperiences] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   // Fetch experiences from database
   useEffect(() => {
@@ -72,25 +127,48 @@ function ExperiencesPageInner() {
     fetchExperiences();
   }, []);
 
+  // Enhanced filtering logic
   const filtered = experiences.filter((exp) => {
+    try {
     // Filter by search query
-    if (searchQuery && !exp.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
-        !(exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) &&
-        !exp.location.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch = 
+          exp.title.toLowerCase().includes(searchLower) ||
+          (exp.description?.toLowerCase().includes(searchLower) || false) ||
+          exp.location.toLowerCase().includes(searchLower);
+        
+        if (!matchesSearch) return false;
+      }
+      
+      // Filter by location toggle
+      if (selectedToggle === 'mountains') {
+        const mountainLocations = ['mountain', 'rishikesh', 'manali', 'shimla', 'mussoorie', 'nainital', 'dehradun', 'uttarakhand', 'himachal'];
+        const isMountainLocation = mountainLocations.some(loc => 
+          exp.location.toLowerCase().includes(loc)
+        );
+        if (!isMountainLocation) return false;
+      } else if (selectedToggle === 'delhi-ncr') {
+        const delhiLocations = ['delhi', 'ncr', 'gurgaon', 'gurugram', 'noida', 'faridabad', 'ghaziabad'];
+        const isDelhiLocation = delhiLocations.some(loc => 
+          exp.location.toLowerCase().includes(loc)
+        );
+        if (!isDelhiLocation) return false;
+      }
+      
+      // Filter by category - Simplified approach
+      if (selectedCategory && exp.categories) {
+        const categoryId = filterData.category.find(cat => cat.label === selectedCategory)?.id;
+        if (categoryId) {
+          // Convert categories to string and check if it contains the category
+          const categoriesStr = String(exp.categories).toLowerCase();
+          const categoryIdLower = categoryId.toLowerCase();
+          
+          // Check if the category ID is contained in the categories string
+          if (!categoriesStr.includes(categoryIdLower)) {
       return false;
     }
-    
-    // Filter by toggle selection (Mountains vs Delhi-NCR)
-    if (selectedToggle === 'mountains' && !exp.location.toLowerCase().includes('mountain') && !exp.location.toLowerCase().includes('rishikesh') && !exp.location.toLowerCase().includes('manali') && !exp.location.toLowerCase().includes('shimla') && !exp.location.toLowerCase().includes('mussoorie') && !exp.location.toLowerCase().includes('nainital')) {
-      return false;
     }
-    if (selectedToggle === 'delhi-ncr' && !exp.location.toLowerCase().includes('delhi') && !exp.location.toLowerCase().includes('ncr') && !exp.location.toLowerCase().includes('gurgaon') && !exp.location.toLowerCase().includes('noida')) {
-      return false;
-    }
-    
-    // Filter by category
-    if (selectedCategory && exp.categories) {
-      if (exp.categories !== selectedCategory) return false;
     }
     
     // Only show active experiences
@@ -99,6 +177,10 @@ function ExperiencesPageInner() {
     }
     
     return true;
+    } catch (error) {
+      console.error('Error filtering experience:', exp.id, error);
+      return false; // Skip experiences that cause errors
+    }
   });
 
   const openBooking = (exp: Experience) => {
@@ -141,6 +223,7 @@ function ExperiencesPageInner() {
 
   const handleWishlist = async (expId: string, wishlisted: boolean, e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!user) {
       toast.error('Please sign in to add experiences to wishlist');
       return;
@@ -152,6 +235,10 @@ function ExperiencesPageInner() {
         if (success) {
           setWishlistedIds(ids => ids.filter(id => id !== expId));
           toast.success('Experience removed from wishlist');
+          // Refresh wishlist count in navigation
+          if ((window as any).refreshWishlistCount) {
+            (window as any).refreshWishlistCount();
+          }
         } else {
           toast.error('Failed to remove from wishlist');
         }
@@ -160,6 +247,10 @@ function ExperiencesPageInner() {
         if (success) {
           setWishlistedIds(ids => [...ids, expId]);
           toast.success('Experience added to wishlist');
+          // Refresh wishlist count in navigation
+          if ((window as any).refreshWishlistCount) {
+            (window as any).refreshWishlistCount();
+          }
         } else {
           toast.error('Failed to add to wishlist');
         }
@@ -173,7 +264,7 @@ function ExperiencesPageInner() {
   const closeBooking = () => {
     setBookingOpen(false);
     setSelectedExp(null);
-    setForm({ name: "", email: "", date: "", guests: 1 });
+    setForm({ name: "", email: "", date: "", guests: 1, phone: "" });
   };
 
   const handleBook = async (e: React.FormEvent) => {
@@ -255,131 +346,116 @@ function ExperiencesPageInner() {
     }
   };
 
-  const FilterChip = ({ 
-    icon, 
-    label, 
-    isSelected, 
-    onClick 
-  }: { 
-    icon: string; 
-    label: string; 
-    isSelected: boolean; 
-    onClick: () => void;
-  }) => (
-    <button
-      onClick={onClick}
-      className={`flex flex-col items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 whitespace-nowrap text-sm font-medium min-w-[70px] ${
-        isSelected
-          ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
-          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:shadow-sm'
-      }`}
-    >
-      <span className="text-lg">{icon}</span>
-      <span className="text-xs font-normal">{label}</span>
-    </button>
-  );
+  const handleImageError = (imageUrl: string) => {
+    setImageErrors(prev => new Set(prev).add(imageUrl));
+  };
+
+  const getImageUrl = (exp: Experience) => {
+    const images = buildCoverFirstImages(exp.cover_image, exp.images);
+    const imageUrl = images[0] || '/placeholder-experience.jpg';
+    return imageErrors.has(imageUrl) ? '/placeholder-experience.jpg' : imageUrl;
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory("");
+    setSelectedLocation("");
+  };
+
+  const hasActiveFilters = searchQuery || selectedCategory || selectedLocation;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
-      {/* Hero Section with Filters */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-4">Local Experiences</h1>
-            <p className="text-xl text-blue-100">Discover unique experiences curated by locals</p>
-          </div>
-          
-          {/* Search Box */}
-          <div className="max-w-2xl mx-auto mb-8">
+      {/* Enhanced Hero Section */}
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold mb-6 animate-fade-in">Local Experiences</h1>
+            <p className="text-xl text-blue-100 mb-8 animate-fade-in-delay-1">
+              Discover unique experiences curated by locals
+            </p>
+            
+            {/* Enhanced Search Box */}
+            <div className="max-w-2xl mx-auto mb-8 animate-fade-in-delay-2">
             <div className="relative">
               <input
                 type="text"
                 placeholder="Search experiences by title, description, or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 pl-12 text-gray-900 bg-white rounded-lg shadow-lg border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg"
-              />
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
+                  className="w-full px-6 py-4 pl-12 text-gray-900 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border-0 focus:ring-4 focus:ring-blue-300 focus:outline-none text-lg placeholder-gray-500"
+                />
+                <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <XMarkIcon className="w-5 h-5 text-gray-400" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Exact Thrillophilia-style Filter Bar */}
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <div className="flex items-center gap-4">
-              {/* Left Scroll Button */}
-              <button className="flex-shrink-0 w-8 h-8 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
-                <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
+          {/* Enhanced Filter Bar */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl animate-fade-in-delay-3">
+            {/* Location Toggle */}
+            <div className="flex justify-center mb-6">
+              <div className="bg-gray-100 rounded-xl p-1 flex">
+                {filterData.location.map((location) => (
+                  <button
+                    key={location.id}
+                    onClick={() => setSelectedToggle(location.id as 'mountains' | 'delhi-ncr')}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      selectedToggle === location.id
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="text-lg">{location.icon}</span>
+                    {location.label}
               </button>
-
-              {/* Scrollable Filter Chips */}
-              <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide flex-1">
-                {/* Category Filters */}
-                {filterData.category.map((category) => (
-                  <FilterChip
-                    key={category.id}
-                    icon={category.icon}
-                    label={category.label}
-                    isSelected={selectedCategory === category.label}
-                    onClick={() => setSelectedCategory(selectedCategory === category.label ? "" : category.label)}
-                  />
                 ))}
-              </div>
-
-              {/* Right Scroll Button */}
-              <button className="flex-shrink-0 w-8 h-8 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
-                <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-
-              {/* Segmented Toggle Control */}
-              <div className="flex-shrink-0 bg-white border border-gray-300 rounded-lg p-1 flex">
-                <button
-                  onClick={() => setSelectedToggle('mountains')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    selectedToggle === 'mountains'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Mountains
-                </button>
-                <button
-                  onClick={() => setSelectedToggle('delhi-ncr')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    selectedToggle === 'delhi-ncr'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Delhi-NCR
-                </button>
               </div>
             </div>
 
-            {/* Clear Filters - Below the main filter bar */}
-            {(selectedCategory || searchQuery) && (
+                {/* Category Filters */}
+            <div className="flex justify-center">
+              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+                {filterData.category.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(selectedCategory === category.label ? "" : category.label)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium ${
+                      selectedCategory === category.label
+                        ? `${category.color} shadow-lg scale-105`
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:shadow-md'
+                    }`}
+                  >
+                    <span className="text-lg">{category.icon}</span>
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
               <div className="mt-4 flex justify-center">
                 <button
-                  onClick={() => {
-                    setSelectedCategory("");
-                    setSearchQuery("");
-                  }}
+                  onClick={clearAllFilters}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-300 rounded-full text-gray-600 font-medium hover:bg-gray-200 transition-colors text-sm"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Clear filters
+                  <XMarkIcon className="w-4 h-4" />
+                  Clear all filters
                 </button>
               </div>
             )}
@@ -387,12 +463,12 @@ function ExperiencesPageInner() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Results Counter */}
-        <div className="mb-6">
-          <p className="text-gray-600">
-            {filtered.length} experience{filtered.length !== 1 ? 's' : ''} found
-            {(selectedCategory || searchQuery) && (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Enhanced Results Counter */}
+        <div className="mb-8 text-center">
+          <p className="text-gray-600 text-lg">
+            <span className="font-semibold text-gray-900">{filtered.length}</span> experience{filtered.length !== 1 ? 's' : ''} found
+            {hasActiveFilters && (
               <span className="text-blue-600 font-medium">
                 {' '}for {[selectedCategory, searchQuery].filter(Boolean).join(' + ')}
               </span>
@@ -404,125 +480,276 @@ function ExperiencesPageInner() {
         </div>
 
         {loadingExperiences ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading experiences...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, index) => (
+              <ExperienceCardSkeleton key={index} index={index} />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No experiences found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your filters or check back later for new experiences.</p>
-            {(selectedLocation || selectedCategory || searchQuery) && (
-              <button
-                onClick={() => {
-                  setSelectedLocation("");
-                  setSelectedCategory("");
-                  setSearchQuery("");
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
+          <EmptyExperiencesState 
+            searchQuery={searchQuery}
+            selectedCategory={selectedCategory}
+            selectedLocation={selectedLocation}
+          />
         ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-              {filtered.map((exp) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filtered.map((exp, index) => {
               const isBook = wishlistedIds.includes(exp.id);
               return (
-                <Link href={`/experiences/${exp.id}`} className="block" key={exp.id}>
-                <Card className="relative group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-                  <div className="relative h-48 overflow-hidden rounded-t-lg">
-                    <ImageCarousel images={buildCoverFirstImages(exp.cover_image, exp.images)} alt={exp.title} />
+                <Link
+                  key={exp.id}
+                  href={`/experiences/${exp.id}`}
+                  className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  {/* Enhanced Image Section */}
+                  <div className="relative h-56 overflow-hidden">
+                    <Image
+                      src={getImageUrl(exp)}
+                      alt={exp.title}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      onError={() => handleImageError(buildCoverFirstImages(exp.cover_image, exp.images)[0] || '')}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                    
+                    {/* Wishlist Button */}
                     {user && (
                       <button
-                        className="absolute top-4 left-4 z-10 p-1 rounded-full bg-white shadow hover:bg-pink-100"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleWishlist(exp.id, isBook, e); }}
+                        className="absolute top-4 left-4 z-10 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-gray-900 hover:bg-pink-50 hover:text-pink-600 transition-all duration-200"
+                        onClick={(e) => handleWishlist(exp.id, isBook, e)}
                         aria-label={isBook ? 'Remove from wishlist' : 'Add to wishlist'}
                       >
                         {isBook ? (
-                          <HeartSolid className="w-6 h-6 text-pink-500" />
+                          <HeartSolid className="w-5 h-5 text-pink-500" />
                         ) : (
-                          <HeartOutline className="w-6 h-6 text-gray-400" />
+                          <HeartOutline className="w-5 h-5" />
                         )}
                       </button>
                     )}
-                    <div className="absolute top-4 right-4 bg-white px-2 py-1 rounded-full text-sm font-semibold text-gray-900">
-                      ₹{exp.price}
+                    
+                    {/* Price Badge */}
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-gray-900 shadow-lg">
+                      ₹{exp.price.toLocaleString()}
                     </div>
+                    
+                    {/* Category Badge */}
+                    {exp.categories && (
+                      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-700 shadow-lg">
+                        {exp.categories}
+                      </div>
+                    )}
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 pb-2 pt-4 px-6">
-                    <h2 className="text-2xl font-bold text-blue-800 mb-1 drop-shadow-sm">{exp.title}</h2>
-                    <div className="flex items-center justify-between">
-                      <div className="text-blue-500 text-sm font-medium flex items-center gap-1">
-                        <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6c0 4.418-6 10-6 10S4 12.418 4 8a6 6 0 016-6zm0 8a2 2 0 100-4 2 2 0 000 4z" /></svg>
-                        {exp.location}
+
+                  {/* Enhanced Content Section */}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-3 line-clamp-2">
+                      {exp.title}
+                    </h3>
+                    
+                    {/* Location & Duration */}
+                    <div className="flex items-center gap-4 text-gray-600 mb-4">
+                      <div className="flex items-center gap-1">
+                        <MapPinIcon className="w-4 h-4" />
+                        <span className="text-sm">{exp.location}</span>
                       </div>
                       {exp.duration && (
-                        <div className="text-blue-600 text-sm font-medium flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" /></svg>
-                          {exp.duration}
+                        <div className="flex items-center gap-1">
+                          <ClockIcon className="w-4 h-4" />
+                          <span className="text-sm">{exp.duration}</span>
                         </div>
                       )}
                     </div>
-                    {exp.categories && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                          {exp.categories}
-                        </span>
+                    
+                    {/* Description */}
+                    <p className="text-gray-600 text-sm mb-6 line-clamp-3 min-h-[4.5rem]">
+                      {exp.description}
+                    </p>
+                    
+                    {/* Price & Action */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex flex-col">
+                        <span className="text-2xl font-bold text-gray-900">₹{exp.price.toLocaleString()}</span>
+                        <span className="text-sm text-gray-500">per person</span>
                       </div>
-                    )}
-                  </CardHeader>
-                  <CardContent className="px-6 pb-6 pt-2">
-                    <p className="text-gray-700 mb-6 min-h-[48px]">{exp.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-blue-700">₹{exp.price}</span>
-                      <Button variant="primary" size="md" className="shadow-lg px-6 py-2 text-base font-semibold" onClick={(e) => { e.preventDefault(); e.stopPropagation(); openBooking(exp); }}>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openBooking(exp);
+                        }}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors text-sm"
+                      >
                         Book Now
-                      </Button>
+                      </button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
                 </Link>
               );
             })}
             </div>
-          </>
         )}
       </main>
-      <Modal open={bookingOpen} onClose={closeBooking} title={selectedExp ? `Book: ${selectedExp.title}` : ""}>
+      
+      <Modal open={bookingOpen} onClose={closeBooking}>
+        <div className="space-y-6">
+          {/* Experience Summary */}
+          {selectedExp && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                  <Image
+                    src={getImageUrl(selectedExp)}
+                    alt={selectedExp.title}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm truncate">{selectedExp.title}</h3>
+                  <p className="text-gray-600 text-xs truncate">{selectedExp.location}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-lg font-bold text-blue-600">₹{selectedExp.price?.toLocaleString()}</span>
+                    <span className="text-gray-500 text-xs">per person</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         {loadingAuth ? (
           <div className="text-center py-8">
             <p className="text-lg text-gray-700 mb-4">Loading profile...</p>
           </div>
         ) : (
-          <form onSubmit={handleBook} className="space-y-4">
+            <form onSubmit={handleBook} className="space-y-5">
+              {/* Date and Guests Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <CalendarIcon className="w-4 h-4 inline mr-1" />
+                    Preferred Date
+                  </label>
             <Input
-              label="Date"
               type="date"
               value={form.date}
               onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
               required
-            />
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <UsersIcon className="w-4 h-4 inline mr-1" />
+                    Number of Guests
+                  </label>
             <Input
-              label="Guests"
               type="number"
               min={1}
+                    max={selectedExp?.max_guests || 10}
               value={form.guests}
               onChange={e => setForm(f => ({ ...f, guests: Number(e.target.value) }))}
+                    required
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                  Contact Information
+                </h4>
+                
+                <Input
+                  label="Full Name"
+                  type="text"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Enter your full name"
+                  required
+                />
+                
+                <Input
+                  label="Email Address"
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="Enter your email address"
+                  required
+                />
+                
+                <Input
+                  label="Phone Number"
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="Enter your phone number"
               required
             />
-            <Button type="submit" variant="primary" size="md" loading={loading || paymentInProgress} disabled={loading || paymentInProgress} className="w-full text-lg font-bold">
+              </div>
+
+              {/* Price Calculation */}
+              {selectedExp && form.date && form.guests > 0 && (
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Booking Summary</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Price per person:</span>
+                      <span>₹{selectedExp.price?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Number of guests:</span>
+                      <span>{form.guests}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Experience date:</span>
+                      <span>{new Date(form.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}</span>
+                    </div>
+                    <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-lg">
+                      <span className="text-gray-900">Total Amount:</span>
+                      <span className="text-blue-600">₹{(selectedExp.price * form.guests).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  type="submit" 
+                  loading={loading || paymentInProgress} 
+                  disabled={loading || paymentInProgress || !form.date || !form.name || !form.email || !form.phone || form.guests < 1}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <CalendarIcon className="w-5 h-5 mr-2" />
               Confirm Booking
             </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={closeBooking}
+                  className="px-6"
+                  size="lg"
+                >
+                  Cancel
+                </Button>
+              </div>
           </form>
         )}
+        </div>
       </Modal>
       <Footer />
     </div>

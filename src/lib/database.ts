@@ -547,6 +547,13 @@ export async function addToWishlist(userId: string, itemId: string, itemType: st
     return false;
   }
   
+  // Check if item is already in wishlist
+  const isAlreadyWishlisted = await isWishlisted(userId, itemId, itemType);
+  if (isAlreadyWishlisted) {
+    console.log('⚠️ Item already in wishlist, skipping duplicate insert');
+    return true; // Return true since the item is already wishlisted
+  }
+  
   const { error } = await supabase
     .from('wishlist')
     .insert({ user_id: userId, item_id: itemId, item_type: itemType });
@@ -775,17 +782,10 @@ export async function deleteExperience(id: string): Promise<boolean> {
   return true;
 } 
 
-// Trip functions
+// Trip functions (redirected to retreats since trips table doesn't exist)
 export async function getTrips(): Promise<Trip[]> {
-  const { data, error } = await supabase
-    .from('trips')
-    .select('*')
-    .order('start_date', { ascending: false });
-  if (error) {
-    console.error('Error fetching trips:', error);
-    return [];
-  }
-  return data || [];
+  console.log('⚠️ getTrips() called - trips table doesn\'t exist, redirecting to retreats');
+  return getRetreats() as any;
 }
 
 // New: Retreat functions
@@ -810,52 +810,56 @@ export async function getRetreats(): Promise<any[]> {
 }
 
 export async function getTrip(id: string): Promise<Trip | null> {
+  console.log('⚠️ getTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { data, error } = await supabase
-    .from('trips')
+    .from('retreats')
     .select('*')
     .eq('id', id)
     .single();
   if (error) {
-    console.error('Error fetching trip:', error);
+    console.error('Error fetching trip from retreats:', error);
     return null;
   }
   return data;
 }
 
 export async function createTrip(trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>): Promise<Trip | null> {
+  console.log('⚠️ createTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { data, error } = await supabase
-    .from('trips')
+    .from('retreats')
     .insert(trip)
     .select()
     .single();
   if (error) {
-    console.error('Error creating trip:', error);
+    console.error('Error creating trip in retreats:', error);
     return null;
   }
   return data;
 }
 
 export async function updateTrip(id: string, updates: Partial<Trip>): Promise<Trip | null> {
+  console.log('⚠️ updateTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { data, error } = await supabase
-    .from('trips')
+    .from('retreats')
     .update(updates)
     .eq('id', id)
     .select()
     .single();
   if (error) {
-    console.error('Error updating trip:', error);
+    console.error('Error updating trip in retreats:', error);
     return null;
   }
-  return data;
+  return null;
 }
 
 export async function deleteTrip(id: string): Promise<boolean> {
+  console.log('⚠️ deleteTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { error } = await supabase
-    .from('trips')
+    .from('retreats')
     .delete()
     .eq('id', id);
   if (error) {
-    console.error('Error deleting trip:', error);
+    console.error('Error deleting trip from retreats:', error);
     return false;
   }
   return true;

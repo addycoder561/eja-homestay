@@ -34,43 +34,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    // Check if Supabase is properly configured
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+      console.warn('Supabase environment variables not configured, skipping auth initialization');
+      setLoading(false);
+      return;
+    }
+
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const isAuthenticated = !!session?.user;
-      lastAuthenticatedRef.current = isAuthenticated;
-      if (!isMounted) return;
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const userProfile = await getProfile(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const isAuthenticated = !!session?.user;
+        lastAuthenticatedRef.current = isAuthenticated;
         if (!isMounted) return;
-        setProfile(userProfile);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const userProfile = await getProfile(session.user.id);
+          if (!isMounted) return;
+          setProfile(userProfile);
+        }
+        if (isMounted) setLoading(false);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isMounted) setLoading(false);
       }
-      if (isMounted) setLoading(false);
     };
 
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        const wasAuthenticated = lastAuthenticatedRef.current;
-        const isNowAuthenticated = !!session?.user;
-        lastAuthenticatedRef.current = isNowAuthenticated;
+        try {
+          const wasAuthenticated = lastAuthenticatedRef.current;
+          const isNowAuthenticated = !!session?.user;
+          lastAuthenticatedRef.current = isNowAuthenticated;
 
-        setUser(session?.user ?? null);
+          setUser(session?.user ?? null);
 
-        if (session?.user) {
-          const userProfile = await getProfile(session.user.id);
-          setProfile(userProfile);
-          if (!wasAuthenticated && isNowAuthenticated) {
-            const callbacks = authSuccessCallbacksRef.current.splice(0);
-            callbacks.forEach((cb) => {
-              try { cb(); } catch (err) { console.error('Error executing auth success callback:', err); }
-            });
+          if (session?.user) {
+            const userProfile = await getProfile(session.user.id);
+            setProfile(userProfile);
+            if (!wasAuthenticated && isNowAuthenticated) {
+              const callbacks = authSuccessCallbacksRef.current.splice(0);
+              callbacks.forEach((cb) => {
+                try { cb(); } catch (err) { console.error('Error executing auth success callback:', err); }
+              });
+            }
+          } else {
+            setProfile(null);
           }
-        } else {
-          setProfile(null);
+          setLoading(false);
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 

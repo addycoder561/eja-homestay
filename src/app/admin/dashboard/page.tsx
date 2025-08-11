@@ -5,22 +5,202 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getProperties, getExperiences, getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
 import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, BookingWithPropertyAndGuest, RoomInventory, Collaboration } from '@/lib/types';
 import { getAllCollaborations } from '@/lib/database';
+import { 
+  HomeIcon,
+  BuildingOfficeIcon,
+  SparklesIcon,
+  CalendarIcon,
+  UserGroupIcon,
+  ChartBarIcon,
+  CogIcon,
+  BellIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  CurrencyRupeeIcon,
+  UsersIcon,
+  MapPinIcon,
+  StarIcon,
+  ArrowUpIcon,
+  ArrowDownIcon
+} from '@heroicons/react/24/outline';
 
 const sidebarLinks = [
-  { label: 'Properties', key: 'properties' },
-  { label: 'Rooms', key: 'rooms' },
-  { label: 'Experiences', key: 'experiences' },
-  { label: 'Retreats', key: 'trips' },
-  { label: 'Bookings', key: 'bookings' },
-  { label: 'Calendar', key: 'calendar' },
-  { label: 'Collaborations', key: 'collaborations' },
+  { label: 'Dashboard', key: 'dashboard', icon: ChartBarIcon },
+  { label: 'Properties', key: 'properties', icon: HomeIcon },
+  { label: 'Rooms', key: 'rooms', icon: BuildingOfficeIcon },
+  { label: 'Experiences', key: 'experiences', icon: SparklesIcon },
+  { label: 'Retreats', key: 'trips', icon: CalendarIcon },
+  { label: 'Bookings', key: 'bookings', icon: UserGroupIcon },
+  { label: 'Calendar', key: 'calendar', icon: CalendarIcon },
+  { label: 'Collaborations', key: 'collaborations', icon: UserGroupIcon },
 ];
+
+// Dashboard Statistics Component
+function DashboardStats() {
+  const [stats, setStats] = useState({
+    totalProperties: 0,
+    totalBookings: 0,
+    totalRevenue: 0,
+    activeExperiences: 0,
+    pendingCollaborations: 0,
+    averageRating: 0
+  });
+
+  useEffect(() => {
+    // Fetch dashboard statistics
+    const fetchStats = async () => {
+      try {
+        const properties = await getProperties();
+        const experiences = await getExperiences();
+        const trips = await getTrips();
+        
+        setStats({
+          totalProperties: properties.length,
+          totalBookings: 0, // Will be fetched from bookings
+          totalRevenue: 0, // Will be calculated from bookings
+          activeExperiences: experiences.filter(e => e.is_active).length,
+          pendingCollaborations: 0, // Will be fetched from collaborations
+          averageRating: 4.5 // Placeholder
+        });
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  const statCards = [
+    {
+      title: 'Total Properties',
+      value: stats.totalProperties,
+      change: '+12%',
+      changeType: 'increase',
+      icon: HomeIcon,
+      color: 'from-blue-500 to-blue-600'
+    },
+    {
+      title: 'Total Bookings',
+      value: stats.totalBookings,
+      change: '+8%',
+      changeType: 'increase',
+      icon: UserGroupIcon,
+      color: 'from-green-500 to-green-600'
+    },
+    {
+      title: 'Total Revenue',
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      change: '+15%',
+      changeType: 'increase',
+      icon: CurrencyRupeeIcon,
+      color: 'from-purple-500 to-purple-600'
+    },
+    {
+      title: 'Active Experiences',
+      value: stats.activeExperiences,
+      change: '+5%',
+      changeType: 'increase',
+      icon: SparklesIcon,
+      color: 'from-orange-500 to-orange-600'
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+            <ArrowUpIcon className="w-4 h-4" />
+            Refresh
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <ArrowDownIcon className="w-4 h-4" />
+            Export
+          </button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat, index) => (
+          <div key={index} className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center`}>
+                <stat.icon className="w-6 h-6 text-white" />
+              </div>
+              <div className={`flex items-center gap-1 text-sm font-medium ${
+                stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {stat.changeType === 'increase' ? (
+                  <ArrowUpIcon className="w-4 h-4" />
+                ) : (
+                  <ArrowDownIcon className="w-4 h-4" />
+                )}
+                {stat.change}
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
+            <p className="text-gray-600 text-sm">{stat.title}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Bookings</h3>
+          <div className="space-y-3">
+            {[1, 2, 3].map((_, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <UserGroupIcon className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">New booking received</p>
+                  <p className="text-sm text-gray-600">2 minutes ago</p>
+                </div>
+                <CheckCircleIcon className="w-5 h-5 text-green-500" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Collaborations</h3>
+          <div className="space-y-3">
+            {[1, 2, 3].map((_, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <UserGroupIcon className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">New collaboration request</p>
+                  <p className="text-sm text-gray-600">5 minutes ago</p>
+                </div>
+                <ClockIcon className="w-5 h-5 text-orange-500" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StaysSection() {
   const [stays, setStays] = useState<PropertyWithHost[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editStay, setEditStay] = useState<PropertyWithHost | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
   const [form, setForm] = useState<Omit<Property, 'id' | 'created_at' | 'updated_at'>>({
     host_id: '',
     title: '',
@@ -84,6 +264,7 @@ function StaysSection() {
     setEditStay(null);
     setShowModal(true);
   };
+
   const handleEdit = (stay: PropertyWithHost) => {
     setForm({
       host_id: stay.host_id,
@@ -113,89 +294,244 @@ function StaysSection() {
     setEditStay(stay);
     setShowModal(true);
   };
+
   const handleDelete = async (stay: PropertyWithHost) => {
-    if (window.confirm('Delete this stay?')) {
-      // await deleteProperty(stay.id); // deleteProperty is removed from imports
+    if (window.confirm('Are you sure you want to delete this property?')) {
       setStays(stays.filter(s => s.id !== stay.id));
     }
   };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (editStay) {
-      // const updated = await updateProperty(editStay.id, form); // updateProperty is removed from imports
-      // setStays(stays.map((s: PropertyWithHost) => (s.id === editStay.id && updated ? { ...s, ...updated, host: s.host } : s)));
-    } else {
-      // const created = await createProperty(form); // createProperty is removed from imports
-      // if (created) setStays([...stays, { ...created, host: { id: '', email: '', full_name: '', phone: '', avatar_url: '', is_host: false, created_at: '', updated_at: '' } }]);
-    }
     setShowModal(false);
   };
+
+  const filteredStays = stays.filter(stay => {
+    const matchesSearch = stay.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         stay.city.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === 'all' || stay.property_type === filterType;
+    return matchesSearch && matchesFilter;
+  });
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Stays</h2>
-      <button className="mb-4 px-4 py-2 bg-blue-600 text-white rounded" onClick={handleAdd}>Add Stay</button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Properties Management</h2>
+        <button 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={handleAdd}
+        >
+          <PlusIcon className="w-4 h-4" />
+          Add Property
+        </button>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search properties..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="all">All Types</option>
+          <option value="Homely">Homely</option>
+          <option value="Boutique">Boutique</option>
+          <option value="Cottage">Cottage</option>
+          <option value="Off-Beat">Off-Beat</option>
+        </select>
+      </div>
+
       {loading ? (
-        <div>Loading...</div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
       ) : (
-        <table className="w-full border text-left">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2">Title</th>
-              <th className="p-2">City</th>
-              <th className="p-2">Type</th>
-              <th className="p-2">Price/Night</th>
-              <th className="p-2">Max Guests</th>
-              <th className="p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stays.map(stay => (
-              <tr key={stay.id} className="border-b">
-                <td className="p-2">{stay.title}</td>
-                <td className="p-2">{stay.city}</td>
-                <td className="p-2">{stay.property_type}</td>
-                <td className="p-2">₹{stay.price_per_night}</td>
-                <td className="p-2">{stay.max_guests}</td>
-                <td className="p-2 flex gap-2">
-                  <button className="px-2 py-1 bg-yellow-200 rounded" onClick={() => handleEdit(stay)}>Edit</button>
-                  <button className="px-2 py-1 bg-red-200 rounded" onClick={() => handleDelete(stay)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price/Night</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredStays.map(stay => (
+                  <tr key={stay.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                          <HomeIcon className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{stay.title}</div>
+                          <div className="text-sm text-gray-500">{stay.max_guests} guests</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <MapPinIcon className="w-4 h-4 text-gray-400 mr-1" />
+                        <span className="text-sm text-gray-900">{stay.city}, {stay.state}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {stay.property_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{stay.price_per_night}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {stay.is_available ? (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          <CheckCircleIcon className="w-3 h-3 mr-1" />
+                          Available
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          <XCircleIcon className="w-3 h-3 mr-1" />
+                          Unavailable
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(stay)}
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(stay)}
+                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
+
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <form className="bg-white p-8 rounded shadow w-96 space-y-4" onSubmit={handleSubmit}>
-            <h3 className="text-xl font-bold mb-2">{editStay ? 'Edit Stay' : 'Add Stay'}</h3>
-            <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Subtitle" value={form.subtitle || ''} onChange={e => setForm({ ...form, subtitle: e.target.value })} />
-            <textarea className="w-full border p-2 rounded" placeholder="Description" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} />
-            <input className="w-full border p-2 rounded" placeholder="Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="City" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="State" value={form.state || ''} onChange={e => setForm({ ...form, state: e.target.value })} />
-            <input className="w-full border p-2 rounded" placeholder="Country" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Postal Code" value={form.postal_code || ''} onChange={e => setForm({ ...form, postal_code: e.target.value })} />
-            <input className="w-full border p-2 rounded" placeholder="Latitude" type="number" value={form.latitude ?? ''} onChange={e => setForm({ ...form, latitude: e.target.value ? Number(e.target.value) : null })} />
-            <input className="w-full border p-2 rounded" placeholder="Longitude" type="number" value={form.longitude ?? ''} onChange={e => setForm({ ...form, longitude: e.target.value ? Number(e.target.value) : null })} />
-            <input className="w-full border p-2 rounded" placeholder="Price per Night" type="number" value={form.price_per_night} onChange={e => setForm({ ...form, price_per_night: Number(e.target.value) })} required />
-            <input className="w-full border p-2 rounded" placeholder="Max Guests" type="number" value={form.max_guests} onChange={e => setForm({ ...form, max_guests: Number(e.target.value) })} required />
-            <input className="w-full border p-2 rounded" placeholder="Bedrooms" type="number" value={form.bedrooms} onChange={e => setForm({ ...form, bedrooms: Number(e.target.value) })} required />
-            <input className="w-full border p-2 rounded" placeholder="Bathrooms" type="number" value={form.bathrooms} onChange={e => setForm({ ...form, bathrooms: Number(e.target.value) })} required />
-            <input className="w-full border p-2 rounded" placeholder="Amenities (comma separated)" value={form.amenities.join(',')} onChange={e => setForm({ ...form, amenities: e.target.value.split(',').map(a => a.trim()).filter(Boolean) })} />
-            <input className="w-full border p-2 rounded" placeholder="Image URLs (comma separated)" value={form.images.join(',')} onChange={e => setForm({ ...form, images: e.target.value.split(',').map(a => a.trim()).filter(Boolean) })} />
-            <textarea className="w-full border p-2 rounded" placeholder="House Rules" value={form.house_rules || ''} onChange={e => setForm({ ...form, house_rules: e.target.value })} />
-            <textarea className="w-full border p-2 rounded" placeholder="Cancellation Policy" value={form.cancellation_policy || ''} onChange={e => setForm({ ...form, cancellation_policy: e.target.value })} />
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={form.is_available} onChange={e => setForm({ ...form, is_available: e.target.checked })} />
-              Available
-            </label>
-            <div className="flex gap-2 justify-end">
-              <button type="button" className="px-4 py-2 bg-gray-200 rounded" onClick={() => setShowModal(false)}>Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
-            </div>
-          </form>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-6">{editStay ? 'Edit Property' : 'Add Property'}</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  placeholder="Title" 
+                  value={form.title} 
+                  onChange={e => setForm({ ...form, title: e.target.value })} 
+                  required 
+                />
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  placeholder="Subtitle" 
+                  value={form.subtitle || ''} 
+                  onChange={e => setForm({ ...form, subtitle: e.target.value })} 
+                />
+              </div>
+              <textarea 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                placeholder="Description" 
+                value={form.description || ''} 
+                onChange={e => setForm({ ...form, description: e.target.value })} 
+                rows={3}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  placeholder="Address" 
+                  value={form.address} 
+                  onChange={e => setForm({ ...form, address: e.target.value })} 
+                  required 
+                />
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  placeholder="City" 
+                  value={form.city} 
+                  onChange={e => setForm({ ...form, city: e.target.value })} 
+                  required 
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  placeholder="Price per Night" 
+                  type="number" 
+                  value={form.price_per_night} 
+                  onChange={e => setForm({ ...form, price_per_night: Number(e.target.value) })} 
+                  required 
+                />
+                <input 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  placeholder="Max Guests" 
+                  type="number" 
+                  value={form.max_guests} 
+                  onChange={e => setForm({ ...form, max_guests: Number(e.target.value) })} 
+                  required 
+                />
+                <select 
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  value={form.property_type} 
+                  onChange={e => setForm({ ...form, property_type: e.target.value as PropertyType })} 
+                  required
+                >
+                  <option value="Homely">Homely</option>
+                  <option value="Boutique">Boutique</option>
+                  <option value="Cottage">Cottage</option>
+                  <option value="Off-Beat">Off-Beat</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  checked={form.is_available} 
+                  onChange={e => setForm({ ...form, is_available: e.target.checked })} 
+                  className="rounded"
+                />
+                <label className="text-sm text-gray-700">Available</label>
+              </div>
+              <div className="flex gap-3 justify-end pt-4">
+                <button 
+                  type="button" 
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" 
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
@@ -870,8 +1206,7 @@ function ErrorBoundary({ error }: { error: Error }) {
 
 export default function AdminDashboardPage() {
   const { user, profile } = useAuth();
-  // const router = useRouter(); // useRouter is removed from imports
-  const [activeSection, setActiveSection] = useState('stays');
+  const [activeSection, setActiveSection] = useState('dashboard');
   const [error, setError] = useState<Error | null>(null);
 
   // Debug logging
@@ -901,31 +1236,88 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col p-6">
-        <div className="text-2xl font-bold mb-8 text-blue-700">Admin Dashboard</div>
-        <nav className="flex-1 space-y-2">
+      {/* Enhanced Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <CogIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+              <p className="text-sm text-gray-500">EJA Homestay</p>
+            </div>
+          </div>
+        </div>
+        
+        <nav className="flex-1 p-4 space-y-2">
           {sidebarLinks.map(link => (
             <button
               key={link.key}
-              className={`w-full text-left px-4 py-2 rounded font-medium transition ${activeSection === link.key ? 'bg-blue-100 text-blue-900' : 'hover:bg-blue-50 text-gray-800'}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                activeSection === link.key 
+                  ? 'bg-blue-100 text-blue-900 shadow-sm' 
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
               onClick={() => setActiveSection(link.key)}
             >
+              <link.icon className="w-5 h-5" />
               {link.label}
             </button>
           ))}
         </nav>
-        <div className="mt-8 text-xs text-gray-400">Logged in as: {profile.email}</div>
+        
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <UsersIcon className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">{profile.full_name || 'Admin'}</p>
+              <p className="text-xs text-gray-500">{profile.email}</p>
+            </div>
+          </div>
+        </div>
       </aside>
-      {/* Main content */}
-      <main className="flex-1 p-10">
-        {activeSection === 'stays' && <StaysSection />}
-        {activeSection === 'rooms' && <RoomsSection />}
-        {activeSection === 'experiences' && <ExperiencesSection />}
-        {activeSection === 'trips' && <RetreatsSection />}
-        {activeSection === 'bookings' && <BookingsSection />}
-        {activeSection === 'calendar' && <CalendarSection />}
-        {activeSection === 'collaborations' && <CollaborationsSection />}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 capitalize">
+                {activeSection === 'dashboard' ? 'Dashboard' : activeSection}
+              </h2>
+              <p className="text-gray-600">
+                {activeSection === 'dashboard' 
+                  ? 'Welcome back! Here\'s what\'s happening with your properties.' 
+                  : `Manage your ${activeSection}`
+                }
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                <BellIcon className="w-5 h-5" />
+              </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                <CogIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="p-6">
+          {activeSection === 'dashboard' && <DashboardStats />}
+          {activeSection === 'properties' && <StaysSection />}
+          {activeSection === 'rooms' && <RoomsSection />}
+          {activeSection === 'experiences' && <ExperiencesSection />}
+          {activeSection === 'trips' && <RetreatsSection />}
+          {activeSection === 'bookings' && <BookingsSection />}
+          {activeSection === 'calendar' && <CalendarSection />}
+          {activeSection === 'collaborations' && <CollaborationsSection />}
+        </div>
       </main>
     </div>
   );

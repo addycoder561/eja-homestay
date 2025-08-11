@@ -197,40 +197,44 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
   const adults = formData.adults;
   const children = formData.children;
 
-  // Pricing calculation (keeping the existing logic)
+  // Enhanced pricing calculation with better error handling
   const calculateTotalPrice = () => {
     if (!formData.checkIn || !formData.checkOut) return 0;
     
-    // If no rooms selected, calculate based on property base price with guest logic
-    if (totalRoomUnits === 0) {
-      const nights = calculateNights();
-      let total = property.price_per_night * nights;
-      
-      // Apply extra adult charges if more than base allowance
-      if (adults > BASE_ADULT_ALLOWANCE) {
-        const extraAdults = adults - BASE_ADULT_ALLOWANCE;
-        total += extraAdults * EXTRA_ADULT_PRICE * nights;
-      }
-      
-      // Apply breakfast charges
-      const chargeableAdultsForBreakfast = Math.max(0, adults - BASE_ADULT_ALLOWANCE);
-      const chargeableChildrenForBreakfast = Math.max(0, children - BASE_CHILD_ALLOWANCE);
-      
-      total += (chargeableAdultsForBreakfast * BREAKFAST_ADULT_PRICE * nights);
-      total += (chargeableChildrenForBreakfast * BREAKFAST_CHILD_PRICE * nights);
-      
-      return total;
-    }
-
+    const nights = calculateNights();
+    if (nights <= 0) return 0;
+    
     try {
-      // Debug logging
-      console.log('Calculating total price:', {
+      // If no rooms selected, calculate based on property base price with guest logic
+      if (totalRoomUnits === 0) {
+        let total = property.price_per_night * nights;
+        
+        // Apply extra adult charges if more than base allowance
+        if (adults > BASE_ADULT_ALLOWANCE) {
+          const extraAdults = adults - BASE_ADULT_ALLOWANCE;
+          total += extraAdults * EXTRA_ADULT_PRICE * nights;
+        }
+        
+        // Apply breakfast charges
+        const chargeableAdultsForBreakfast = Math.max(0, adults - BASE_ADULT_ALLOWANCE);
+        const chargeableChildrenForBreakfast = Math.max(0, children - BASE_CHILD_ALLOWANCE);
+        
+        total += (chargeableAdultsForBreakfast * BREAKFAST_ADULT_PRICE * nights);
+        total += (chargeableChildrenForBreakfast * BREAKFAST_CHILD_PRICE * nights);
+        
+        return Math.max(0, total);
+      }
+
+      // Enhanced debug logging
+      console.log('Enhanced price calculation:', {
         rooms: rooms.length,
         roomSelections,
         adults,
         children,
+        nights,
         checkIn: formData.checkIn,
-        checkOut: formData.checkOut
+        checkOut: formData.checkOut,
+        propertyPrice: property.price_per_night
       });
 
       const bookingData: BookingData = {
@@ -241,24 +245,33 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
 
       const roomGroups: { [basePrice: number]: { roomIds: string[], quantity: number } } = {};
       
+      // Process room selections with validation
       Object.entries(roomSelections).forEach(([roomId, qty]) => {
         if (qty > 0) {
           let basePrice: number;
+          let roomName: string;
           
           if (roomId === 'default') {
             // Use property base price for fallback
             basePrice = property.price_per_night;
-            console.log('Using property base price:', basePrice);
+            roomName = 'Standard Room';
+            console.log('Using property base price for default room:', basePrice);
           } else {
             const room = rooms.find(r => r.id === roomId);
-            console.log('Found room:', room);
             if (room) {
               basePrice = room.price_per_night;
-              console.log('Room base price:', basePrice);
+              roomName = room.name;
+              console.log(`Room found: ${roomName}, price: ${basePrice}`);
             } else {
-              console.log('Room not found, skipping');
+              console.error(`Room not found for ID: ${roomId}, skipping`);
               return;
             }
+          }
+          
+          // Validate price
+          if (!basePrice || basePrice <= 0) {
+            console.error(`Invalid price for room ${roomName}: ${basePrice}`);
+            return;
           }
           
           if (!roomGroups[basePrice]) {
@@ -269,6 +282,7 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
         }
       });
 
+      // Create categories for each price group
       Object.entries(roomGroups).forEach(([basePrice, group]) => {
         const category: RoomCategory = {
           basePrice: parseInt(basePrice),
@@ -296,11 +310,16 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
       });
 
       const total = calculateBookingTotal(bookingData);
-      console.log('Calculated total:', total);
-      return total;
+      console.log('Final calculated total:', total);
+      
+      // Ensure we return a valid positive number
+      return Math.max(0, total);
     } catch (error) {
       console.error('Error calculating total price:', error);
-      return 0;
+      // Fallback to basic calculation
+      const fallbackTotal = property.price_per_night * nights;
+      console.log('Using fallback calculation:', fallbackTotal);
+      return Math.max(0, fallbackTotal);
     }
   };
 
@@ -358,81 +377,140 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
     await processPayment();
   };
 
-  // Payment processing
+  // Enhanced payment processing with better error handling
   const processPayment = async () => {
-    const roomRequests = Object.entries(roomSelections)
-      .filter(([_, qty]) => qty > 0)
-      .map(([room_id, quantity]) => ({
-        room_id,
-        quantity,
-        check_in: formData.checkIn,
-        check_out: formData.checkOut,
-      }));
-
-    setLoading(true);
-    const isAvailable = await checkMultiRoomAvailability(roomRequests);
-    if (!isAvailable) {
-      setLoading(false);
-      toast.error('One or more selected room types are not available for the chosen dates/quantities');
-      setCurrentStep('form');
-      return;
-    }
-
-    const totalPrice = calculateTotalPrice();
-    setPaymentInProgress(true);
-
     try {
-      // Create order on server
+      // Validate inputs
+      if (!formData.checkIn || !formData.checkOut) {
+        toast.error('Please select check-in and check-out dates');
+        return;
+      }
+
+      if (Object.values(roomSelections).every(qty => qty === 0)) {
+        toast.error('Please select at least one room type and quantity');
+        return;
+      }
+
+      const roomRequests = Object.entries(roomSelections)
+        .filter(([_, qty]) => qty > 0)
+        .map(([room_id, quantity]) => ({
+          room_id,
+          quantity,
+          check_in: formData.checkIn,
+          check_out: formData.checkOut,
+        }));
+
+      setLoading(true);
+      
+      // Check availability
+      const isAvailable = await checkMultiRoomAvailability(roomRequests);
+      if (!isAvailable) {
+        setLoading(false);
+        toast.error('One or more selected room types are not available for the chosen dates/quantities');
+        setCurrentStep('form');
+        return;
+      }
+
+      // Calculate total price with validation
+      const totalPrice = calculateTotalPrice();
+      console.log('Payment processing - Total price:', totalPrice);
+      
+      if (!totalPrice || totalPrice <= 0) {
+        setLoading(false);
+        toast.error('Invalid price calculation. Please try again.');
+        setCurrentStep('form');
+        return;
+      }
+
+      setPaymentInProgress(true);
+
+      // Create order on server with enhanced error handling
       const orderRes = await fetch('/api/payments/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(totalPrice * 100), currency: 'INR', notes: { type: 'homestay', propertyId: property.id } }),
+        body: JSON.stringify({ 
+          amount: Math.round(totalPrice * 100), 
+          currency: 'INR', 
+          notes: { 
+            type: 'homestay', 
+            propertyId: property.id,
+            checkIn: formData.checkIn,
+            checkOut: formData.checkOut,
+            guests: adults
+          } 
+        }),
       });
+
+      if (!orderRes.ok) {
+        const errorData = await orderRes.json();
+        throw new Error(errorData.error || `HTTP ${orderRes.status}: ${orderRes.statusText}`);
+      }
+
       const { order, error } = await orderRes.json();
       if (!order) throw new Error(error || 'Failed to initialize payment');
 
+      console.log('Payment order created:', order);
+
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_C7d9Vbcc9JM8dp',
         amount: order.amount,
         currency: order.currency,
         name: property.title,
-        description: 'Booking Payment',
+        description: `Booking for ${nights} night${nights > 1 ? 's' : ''}`,
         order_id: order.id,
         handler: async function (response: { razorpay_payment_id: string }) {
-          const booking = await createMultiRoomBooking({
-            property_id: property.id,
-            guest_id: user!.id!,
-            check_in_date: formData.checkIn,
-            check_out_date: formData.checkOut,
-            guests_count: adults,
-            total_price: totalPrice,
-            special_requests: formData.specialRequests || null,
-            status: 'confirmed' as BookingStatus,
-          }, roomRequests, response.razorpay_payment_id);
+          console.log('Payment successful:', response);
+          
+          try {
+            const booking = await createMultiRoomBooking({
+              property_id: property.id,
+              guest_id: user!.id!,
+              check_in_date: formData.checkIn,
+              check_out_date: formData.checkOut,
+              guests_count: adults,
+              total_price: totalPrice,
+              special_requests: formData.specialRequests || null,
+              status: 'confirmed' as BookingStatus,
+            }, roomRequests, response.razorpay_payment_id);
 
-          setPaymentInProgress(false);
-          setLoading(false);
+            setPaymentInProgress(false);
+            setLoading(false);
 
-          if (booking) {
-            await sendPaymentReceiptEmail({
-              to: user!.email || '',
-              guestName: user!.user_metadata?.full_name || user!.email || '',
-              bookingType: 'Homestay',
-              title: property.title,
-              checkIn: formData.checkIn,
-              checkOut: formData.checkOut,
-              guests: adults,
-              totalPrice,
-              paymentRef: response.razorpay_payment_id
-            });
+            if (booking) {
+              // Send confirmation email
+              try {
+                await sendPaymentReceiptEmail({
+                  to: user!.email || '',
+                  guestName: user!.user_metadata?.full_name || user!.email || '',
+                  bookingType: 'Homestay',
+                  title: property.title,
+                  checkIn: formData.checkIn,
+                  checkOut: formData.checkOut,
+                  guests: adults,
+                  totalPrice,
+                  paymentRef: response.razorpay_payment_id
+                });
+              } catch (emailError) {
+                console.error('Failed to send confirmation email:', emailError);
+                // Don't fail the booking for email errors
+              }
 
-            clearBookingData();
-            toast.success(
-              <span>Booking created and payment successful!<br/><span className="text-xs text-gray-500">Payment Ref: {response.razorpay_payment_id}</span></span>
-            );
-            router.push('/guest/dashboard');
-          } else {
-            toast.error('Failed to create booking after payment');
+              clearBookingData();
+              toast.success(
+                <div>
+                  <div className="font-semibold">Booking confirmed!</div>
+                  <div className="text-xs text-gray-500">Payment Ref: {response.razorpay_payment_id}</div>
+                </div>
+              );
+              router.push('/guest/dashboard');
+            } else {
+              toast.error('Failed to create booking after payment. Please contact support.');
+            }
+          } catch (bookingError) {
+            console.error('Error creating booking:', bookingError);
+            setPaymentInProgress(false);
+            setLoading(false);
+            toast.error('Payment successful but booking creation failed. Please contact support.');
           }
         },
         prefill: {
@@ -454,10 +532,11 @@ export function BookingForm({ property, preselectedRoomId }: BookingFormProps) {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (error) {
+      console.error('Payment processing error:', error);
       setPaymentInProgress(false);
       setLoading(false);
       setCurrentStep('review');
-      toast.error('An error occurred while processing payment');
+      toast.error(`Payment error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
     }
   };
 

@@ -1,263 +1,212 @@
-# EJA Homestay - Online Travel Agency Platform
+# EJA Homestay - Modern Travel Platform
 
-A full-featured online travel agency platform built with Next.js 15, TypeScript, Tailwind CSS, and Supabase. This MVP provides a complete booking system for vacation rentals and accommodations.
+A modern, responsive travel platform built with Next.js 15, TypeScript, and Supabase. Discover amazing properties, book experiences, and plan your next adventure with confidence.
 
-## 🚀 Features
+## ✨ Features
 
-### For Travelers
-- **Property Search & Discovery**: Browse properties with advanced filtering
-- **Property Details**: View detailed information, amenities, and reviews
-- **Booking System**: Reserve properties with date selection and guest count
-- **User Authentication**: Secure sign-up and sign-in functionality
-- **Booking Management**: View and manage your reservations
-- **Reviews & Ratings**: Leave reviews for properties you've stayed at
+- **Modern UI/UX**: Beautiful, responsive design with smooth animations
+- **Property Search**: Advanced search with filters and location autocomplete
+- **Booking System**: Complete booking workflow with payment integration
+- **User Authentication**: Secure authentication with Supabase Auth
+- **Wishlist**: Save and manage favorite properties
+- **Experiences & Retreats**: Book local experiences and wellness retreats
+- **Host Dashboard**: Property management for hosts
+- **Real-time Updates**: Live ratings and availability updates
+- **Mobile Optimized**: Perfect experience on all devices
 
-### For Hosts
-- **Property Management**: Add, edit, and manage your properties
-- **Booking Management**: View and manage incoming bookings
-- **Host Dashboard**: Overview of your hosting business
-
-### Technical Features
-- **Responsive Design**: Works perfectly on desktop, tablet, and mobile
-- **Real-time Database**: Powered by Supabase with PostgreSQL
-- **Type Safety**: Full TypeScript implementation
-- **Modern UI**: Beautiful, accessible interface with Tailwind CSS
-- **Authentication**: Secure user authentication with Supabase Auth
-- **Image Management**: Property image galleries
-- **Search & Filtering**: Advanced search with multiple filters
-
-## 🛠️ Tech Stack
+## 🚀 Tech Stack
 
 - **Frontend**: Next.js 15, React 19, TypeScript
-- **Styling**: Tailwind CSS 4
+- **Styling**: Tailwind CSS, Custom animations
 - **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **UI Components**: Custom component library
+- **Deployment**: Vercel
 - **Icons**: Heroicons
+- **State Management**: React Context + Hooks
 - **Forms**: React Hook Form
 - **Notifications**: React Hot Toast
-- **Date Handling**: date-fns
 
-## 📋 Prerequisites
+## 📦 Installation
 
-Before you begin, ensure you have the following installed:
-- Node.js 18+ 
-- npm or yarn
-- Git
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/eja-homestay.git
+   cd eja-homestay
+   ```
 
-## 🚀 Quick Start
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### 1. Clone the Repository
+3. **Set up environment variables**
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   ```
 
-```bash
-git clone <your-repo-url>
-cd eja-homestay
-```
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-### 2. Install Dependencies
+5. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
-```bash
-npm install
-```
+## 🗄️ Database Setup
 
-### 3. Set Up Supabase
+1. **Create a Supabase project**
+   - Go to [supabase.com](https://supabase.com)
+   - Create a new project
+   - Copy your project URL and anon key
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Get your project URL and anon key from the project settings
-3. Create a `.env.local` file in the root directory:
+2. **Run migrations**
+   ```bash
+   npx supabase db push
+   ```
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_public_key
+3. **Set up Row Level Security (RLS)**
+   The migrations include RLS policies for secure data access.
 
-# Server-side keys (set in your deployment environment, not in client)
-RAZORPAY_KEY_ID=your_razorpay_public_key
-RAZORPAY_KEY_SECRET=your_razorpay_secret_key
-```
+## 🚀 Deployment to Vercel
 
-### 4. Set Up Database
+### Automatic Deployment (Recommended)
 
-1. Install Supabase CLI (optional but recommended):
-```bash
-npm install -g supabase
-```
+1. **Connect to GitHub**
+   - Push your code to GitHub
+   - Connect your repository to Vercel
 
-2. Run the database migrations:
-```bash
-# If using Supabase CLI
-supabase db push
+2. **Configure Environment Variables**
+   In your Vercel project settings, add:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   ```
 
-# Or manually run the SQL in supabase/migrations/001_initial_schema.sql
-```
+3. **Deploy**
+   Vercel will automatically deploy on every push to main branch.
 
-3. Seed the database with sample data:
-```bash
-# If using Supabase CLI
-supabase db reset
+### Manual Deployment
 
-# Or manually run the SQL in supabase/seed.sql
-```
+1. **Install Vercel CLI**
+   ```bash
+   npm i -g vercel
+   ```
 
-### 5. Start the Development Server
+2. **Login to Vercel**
+   ```bash
+   vercel login
+   ```
 
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-## 📁 Project Structure
-
-```
-eja-homestay/
-├── src/
-│   ├── app/                    # Next.js app directory
-│   │   ├── auth/              # Authentication pages
-│   │   ├── property/          # Property detail pages
-│   │   ├── search/            # Search page
-│   │   ├── globals.css        # Global styles
-│   │   ├── layout.tsx         # Root layout
-│   │   └── page.tsx           # Homepage
-│   ├── components/            # Reusable components
-│   │   ├── ui/               # Base UI components
-│   │   ├── Navigation.tsx    # Navigation component
-│   │   ├── Footer.tsx        # Footer component
-│   │   └── ...               # Other components
-│   ├── contexts/             # React contexts
-│   │   └── AuthContext.tsx   # Authentication context
-│   └── lib/                  # Utility functions
-│       ├── database.ts       # Database operations
-│       ├── supabase.ts       # Supabase client
-│       └── types.ts          # TypeScript types
-├── supabase/                 # Supabase configuration
-│   ├── migrations/           # Database migrations
-│   ├── seed.sql             # Sample data
-│   └── config.toml          # Supabase config
-├── public/                   # Static assets
-└── package.json             # Dependencies and scripts
-```
-
-## 🗄️ Database Schema
-
-The application uses the following main tables:
-
-- **profiles**: User profiles and authentication data
-- **properties**: Property listings with details and images
-- **bookings**: Reservation records
-- **reviews**: User reviews and ratings
+3. **Deploy**
+   ```bash
+   vercel --prod
+   ```
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-Create a `.env.local` file with the following variables:
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key | Yes |
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+### Vercel Configuration
+
+The project includes a `vercel.json` file with optimized settings for:
+- Performance optimization
+- Security headers
+- API route configuration
+- Image optimization
+
+## 📱 Features Overview
+
+### For Travelers
+- **Search Properties**: Advanced search with filters
+- **Book Accommodations**: Seamless booking process
+- **Save Favorites**: Wishlist functionality
+- **Book Experiences**: Local activities and tours
+- **Join Retreats**: Wellness and adventure retreats
+- **User Dashboard**: Manage bookings and profile
+
+### For Hosts
+- **Property Management**: Add and manage properties
+- **Booking Management**: Handle guest bookings
+- **Analytics**: View property performance
+- **Host Dashboard**: Comprehensive management tools
+
+## 🎨 Design System
+
+The project uses a comprehensive design system with:
+- **Color Palette**: Blue and indigo primary colors
+- **Typography**: Inter font family
+- **Components**: Reusable UI components
+- **Animations**: Smooth transitions and micro-interactions
+- **Responsive Design**: Mobile-first approach
+
+## 🔒 Security
+
+- **Authentication**: Supabase Auth with email/password
+- **Row Level Security**: Database-level security policies
+- **CORS Protection**: Configured for API routes
+- **Security Headers**: Comprehensive security headers
+- **Input Validation**: Form validation and sanitization
+
+## 📊 Performance
+
+- **Image Optimization**: Next.js Image component with WebP/AVIF
+- **Code Splitting**: Automatic code splitting
+- **Bundle Optimization**: Optimized webpack configuration
+- **Caching**: Strategic caching strategies
+- **CDN**: Vercel's global CDN
+
+## 🧪 Testing
+
+```bash
+# Run linting
+npm run lint
+
+# Run type checking
+npm run type-check
+
+# Build for production
+npm run build
 ```
 
-### Supabase Configuration
+## 📈 Monitoring
 
-The project includes a complete Supabase setup with:
-- Row Level Security (RLS) policies
-- Automatic profile creation on signup
-- Database triggers for timestamps
-- Sample data for testing
-
-## 🎨 Customization
-
-### Styling
-- Modify `src/app/globals.css` for global styles
-- Update Tailwind configuration in `tailwind.config.js`
-- Customize component styles in individual component files
-
-### Components
-- All UI components are in `src/components/ui/`
-- Customize the design system by modifying these base components
-
-### Database
-- Add new tables in `supabase/migrations/`
-- Update types in `src/lib/types.ts`
-- Modify database operations in `src/lib/database.ts`
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy!
-
-### Other Platforms
-
-The application can be deployed to any platform that supports Next.js:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- AWS Amplify
-
-## 📱 Features in Detail
-
-### Authentication
-- Email/password authentication
-- Automatic profile creation
-- Protected routes
-- Session management
-
-### Property Management
-- CRUD operations for properties
-- Image upload and management
-- Amenity management
-- Availability tracking
-
-### Booking System
-- Date range selection
-- Guest count validation
-- Price calculation
-- Availability checking
-- Booking status management
-
-### Search & Filtering
-- Location-based search
-- Date filtering
-- Price range filtering
-- Property type filtering
-- Amenity filtering
+The application includes:
+- **Error Tracking**: Built-in error boundaries
+- **Performance Monitoring**: Core Web Vitals tracking
+- **Analytics**: Ready for Google Analytics integration
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-If you encounter any issues or have questions:
+For support, email support@ejahomestay.com or create an issue in this repository.
 
-1. Check the [Issues](../../issues) page
-2. Create a new issue with detailed information
-3. Contact the development team
+## 🔄 Updates
 
-## 🎯 Roadmap
-
-- [ ] Payment integration (Stripe)
-- [ ] Real-time messaging between hosts and guests
-- [ ] Advanced analytics dashboard
-- [ ] Mobile app (React Native)
-- [ ] Multi-language support
-- [ ] Advanced search with maps
-- [ ] Social login (Google, Facebook)
-- [ ] Email notifications
-- [ ] Calendar integration
+Stay updated with the latest features and improvements by:
+- Following the repository
+- Checking the releases page
+- Reading the changelog
 
 ---
 
-Built with ❤️ using Next.js and Supabase
+**Built with ❤️ by the EJA Homestay team**
