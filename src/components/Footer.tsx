@@ -30,12 +30,6 @@ export function Footer() {
       { name: 'Privacy Policy', href: '/privacy' },
       { name: 'Cookie Policy', href: '/cookie-policy' },
       { name: 'Accessibility', href: '/accessibility' },
-    ],
-    hosting: [
-      { name: 'Become a Host', href: '/host' },
-      { name: 'Host Resources', href: '/host-resources' },
-      { name: 'Community Standards', href: '/community-standards' },
-      { name: 'Host Protection', href: '/host-protection' },
     ]
   };
 
@@ -82,9 +76,9 @@ export function Footer() {
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Company Info */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <div 
               className="flex items-center space-x-2 mb-6 animate-fade-in"
             >
@@ -106,14 +100,6 @@ export function Footer() {
               className="space-y-3 animate-fade-in-delay-2"
             >
               <div className="flex items-center gap-3 text-gray-300">
-                <MapPinIcon className="w-5 h-5 text-blue-400" />
-                <span>Mumbai, Maharashtra, India</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-300">
-                <PhoneIcon className="w-5 h-5 text-blue-400" />
-                <span>+91 98765 43210</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-300">
                 <EnvelopeIcon className="w-5 h-5 text-blue-400" />
                 <span>hello@ejahomestay.com</span>
               </div>
@@ -128,7 +114,7 @@ export function Footer() {
               style={{ animationDelay: `${0.1 + index * 0.1}s` }}
             >
               <h3 className="text-lg font-semibold mb-4 capitalize">
-                {category === 'hosting' ? 'For Hosts' : category}
+                {category}
               </h3>
               <ul className="space-y-3">
                 {links.map((link) => (

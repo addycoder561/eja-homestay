@@ -83,9 +83,9 @@ export interface Room {
   name: string;
   description: string | null;
   room_type: string;
-  price_per_night: number;
+  price: number; // Changed from price_per_night to match actual database
   total_inventory: number;
-  max_guests: number;
+  max_guests?: number; // Made optional since it might not exist in DB
   amenities: string[] | null;
   images: string[]; // per-room images
   extra_adult_price?: number;

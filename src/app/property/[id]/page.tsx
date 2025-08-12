@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
-import { BookingForm } from '@/components/BookingForm';
+import BookingForm from '@/components/BookingForm';
 import { LiveRating } from '@/components/LiveRating';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
 import { getPropertyWithReviews, hasCompletedBooking, getRoomsForProperty } from '@/lib/database';
@@ -297,11 +297,13 @@ export default function PropertyDetailPage() {
   }
 
   // Demo/placeholder data for new fields
-  const usps = property.usps || [
+  // Use actual data from Supabase, with minimal fallbacks only if absolutely necessary
+  const usps = property.usps && property.usps.length > 0 ? property.usps : [
     'Stunning mountain views',
     'Power backup & pure-veg meals',
     'Pet friendly & parking available',
   ];
+  
   const host: Profile = property.host || {
     id: '',
     email: '',
@@ -314,11 +316,12 @@ export default function PropertyDetailPage() {
     host_bio: 'Experienced host passionate about hospitality and local culture.',
     host_usps: ['Warm hospitality', 'Local expertise', 'Quick response'],
   };
-  const houseRules = property.house_rules || 'No smoking. No parties. Check-in after 2pm. Pets allowed.';
-  const cancellationPolicy = property.cancellation_policy || 'Free cancellation up to 7 days before check-in. 50% refund after.';
+  
+  const houseRules = property.house_rules || 'House rules will be provided upon booking.';
+  const cancellationPolicy = property.cancellation_policy || 'Cancellation policy will be provided upon booking.';
 
   const displayedReviews = showAllReviews ? property.reviews : property.reviews.slice(0, 3);
-  const displayedAmenities = showAllAmenities ? property.amenities : property.amenities.slice(0, 6);
+  const displayedAmenities = showAllAmenities ? (property.amenities || []) : (property.amenities || []).slice(0, 6);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -336,15 +339,23 @@ export default function PropertyDetailPage() {
                 </span>
                 <div className="flex items-center text-yellow-500">
                   <StarIcon className="w-4 h-4 fill-current" />
-                  <span className="text-sm text-gray-600 ml-1">{property.average_rating || 4.5}</span>
-                  <span className="text-sm text-gray-500 ml-1">({property.review_count || 0} reviews)</span>
+                  <span className="text-sm text-gray-600 ml-1">
+                    {property.google_rating || property.average_rating || 4.5}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">
+                    ({property.google_reviews_count || property.review_count || 0} reviews)
+                  </span>
                 </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">{property.title}</h1>
               {property.subtitle && <h2 className="text-xl text-gray-600 mb-3">{property.subtitle}</h2>}
               <div className="flex items-center text-gray-600 mb-4">
                 <MapPinIcon className="w-5 h-5 mr-2" />
-                <span>{property.address}, {property.city}, {property.state}</span>
+                <span>
+                  {[property.address, property.city, property.state, property.country]
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -406,10 +417,100 @@ export default function PropertyDetailPage() {
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <StarIcon className="w-6 h-6 text-orange-600" />
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">{property.average_rating || 4.5}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {property.google_rating || property.average_rating || 4.5}
+                    </div>
                     <div className="text-sm text-gray-600">Rating</div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* USPs */}
+            <Card className="bg-white shadow-lg border-0">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <CheckCircleIcon className="w-6 h-6 mr-2 text-green-600" />
+                  Why Book This Stay?
+                </h2>
+                {usps && usps.length > 0 ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {usps.map((usp, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                        </div>
+                        <span className="text-gray-700">{usp}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircleIcon className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No highlights listed</h3>
+                    <p className="text-gray-600">Property highlights will be provided upon booking.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Description */}
+            <Card className="bg-white shadow-lg border-0">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">About this place</h2>
+                <p className="text-gray-700 leading-relaxed text-lg">{property.description}</p>
+              </CardContent>
+            </Card>
+
+            {/* Amenities */}
+            <Card className="bg-white shadow-lg border-0">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <WifiIcon className="w-6 h-6 mr-2 text-blue-600" />
+                  Amenities
+                </h2>
+                {property.amenities && property.amenities.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                      {displayedAmenities.map((amenity, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <WifiIcon className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <span className="text-gray-700 font-medium">{amenity}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {(property.amenities || []).length > 6 && (
+                      <button
+                        onClick={() => setShowAllAmenities(!showAllAmenities)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                      >
+                        {showAllAmenities ? (
+                          <>
+                            <ChevronUpIcon className="w-4 h-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDownIcon className="w-4 h-4" />
+                            Show All Amenities ({(property.amenities || []).length})
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <WifiIcon className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No amenities listed</h3>
+                  <p className="text-gray-600">Amenities information will be provided upon booking.</p>
+                </div>
+              )}
               </CardContent>
             </Card>
 
@@ -446,7 +547,7 @@ export default function PropertyDetailPage() {
                                   </span>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-2xl font-bold text-green-600">₹{room.price_per_night}</div>
+                                  <div className="text-2xl font-bold text-green-600">₹{room.price}</div>
                                   <div className="text-sm text-gray-500">per night</div>
                                 </div>
                               </div>
@@ -494,72 +595,6 @@ export default function PropertyDetailPage() {
                 </CardContent>
               </Card>
             )}
-
-            {/* USPs */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <CheckCircleIcon className="w-6 h-6 mr-2 text-green-600" />
-                  Why Book This Stay?
-                </h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {usps.map((usp, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <CheckCircleIcon className="w-4 h-4 text-green-600" />
-                      </div>
-                      <span className="text-gray-700">{usp}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Description */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">About this place</h2>
-                <p className="text-gray-700 leading-relaxed text-lg">{property.description}</p>
-              </CardContent>
-            </Card>
-
-            {/* Amenities */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <WifiIcon className="w-6 h-6 mr-2 text-blue-600" />
-                  Amenities
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                  {displayedAmenities.map((amenity, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <WifiIcon className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <span className="text-gray-700 font-medium">{amenity}</span>
-                    </div>
-                  ))}
-                </div>
-                {property.amenities.length > 6 && (
-                  <button
-                    onClick={() => setShowAllAmenities(!showAllAmenities)}
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
-                  >
-                    {showAllAmenities ? (
-                      <>
-                        <ChevronUpIcon className="w-4 h-4" />
-                        Show Less
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDownIcon className="w-4 h-4" />
-                        Show All Amenities ({property.amenities.length})
-                      </>
-                    )}
-                  </button>
-                )}
-              </CardContent>
-            </Card>
 
             {/* House Rules & Cancellation Policy */}
             <Card className="bg-white shadow-lg border-0">
@@ -674,15 +709,9 @@ export default function PropertyDetailPage() {
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{host.full_name}</h3>
                     <p className="text-gray-700 mb-4 leading-relaxed">{host.host_bio}</p>
                     
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <PhoneIcon className="w-4 h-4" />
-                        <span>{host.phone || 'Contact via platform'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <EnvelopeIcon className="w-4 h-4" />
-                        <span>{host.email}</span>
-                      </div>
+                    <div className="flex items-center gap-2 text-gray-600 mb-4">
+                      <EnvelopeIcon className="w-4 h-4" />
+                      <span>{host.email}</span>
                     </div>
                     
                     {(host.host_usps || []).length > 0 && (

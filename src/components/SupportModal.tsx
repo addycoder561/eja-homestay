@@ -8,7 +8,7 @@ interface SupportModalProps {
 type SupportAction = 'check-status' | 'raise-ticket';
 
 export function SupportModal({ open, onClose }: SupportModalProps) {
-  const [action, setAction] = useState<SupportAction>('check-status');
+  const [action, setAction] = useState<SupportAction>('raise-ticket');
   const [tripId, setTripId] = useState('');
   const [otp, setOtp] = useState('');
   const [ticketSubject, setTicketSubject] = useState('');
@@ -28,7 +28,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
     setOtp('');
     setTicketSubject('');
     setTicketDescription('');
-    setAction('check-status');
+    setAction('raise-ticket');
     onClose();
   };
 
@@ -47,23 +47,23 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
                   <input
                     type="radio"
                     name="action"
-                    value="check-status"
-                    checked={action === 'check-status'}
-                    onChange={(e) => setAction(e.target.value as SupportAction)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Check Status</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="action"
                     value="raise-ticket"
                     checked={action === 'raise-ticket'}
                     onChange={(e) => setAction(e.target.value as SupportAction)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                   />
                   <span className="ml-2 text-sm text-gray-700">Raise Ticket</span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="action"
+                    value="check-status"
+                    checked={action === 'check-status'}
+                    onChange={(e) => setAction(e.target.value as SupportAction)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Check Status</span>
                 </label>
               </div>
             </div>

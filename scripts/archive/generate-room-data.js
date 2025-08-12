@@ -153,8 +153,9 @@ async function generateRoomData() {
             name: roomType.name,
             description: roomType.description,
             room_type: roomType.room_type,
-            price: roomType.base_price,
+            price_per_night: roomType.base_price,
             total_inventory: roomType.total_inventory,
+            max_guests: 3, // Default to 3 guests per room
             amenities: roomType.amenities,
             images: [] // Will be populated later with property images
           })

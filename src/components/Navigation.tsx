@@ -58,7 +58,7 @@ export function Navigation() {
   // Show search form only on home and search pages
   const showSearchForm = pathname === '/' || pathname?.startsWith('/search');
 
-  const displayName = profile?.full_name?.split(' ')[0] || profile?.full_name || user?.email;
+  const displayName = profile?.full_name?.split(' ')[0] || profile?.full_name || 'User';
   const isHost = profile?.role === 'host' || profile?.is_host;
   const isAdmin = user?.email === 'admin@eja.com';
 
@@ -302,7 +302,6 @@ export function Navigation() {
                               </div>
                               <div>
                                 <div className="font-bold text-gray-900 text-lg">{displayName}</div>
-                                <div className="text-sm text-gray-600">{user.email}</div>
                               </div>
                             </div>
                           </div>

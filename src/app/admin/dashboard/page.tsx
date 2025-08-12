@@ -549,7 +549,7 @@ function RoomsSection() {
     name: '',
     description: '',
     room_type: '',
-    price_per_night: 0,
+    price: 0,
     total_inventory: 1,
     max_guests: 1,
     amenities: [],
@@ -568,15 +568,15 @@ function RoomsSection() {
 
   const handleAdd = () => {
     setForm({
-      property_id: '',
-      name: '',
-      description: '',
-      room_type: '',
-      price_per_night: 0,
-      total_inventory: 1,
-      max_guests: 1,
-      amenities: [],
-      images: [],
+          property_id: '',
+    name: '',
+    description: '',
+    room_type: '',
+    price: 0,
+    total_inventory: 1,
+    max_guests: 1,
+    amenities: [],
+    images: [],
     });
     setEditRoom(null);
     setShowModal(true);
@@ -587,7 +587,7 @@ function RoomsSection() {
       name: room.name,
       description: room.description || '',
       room_type: room.room_type,
-      price_per_night: room.price_per_night,
+      price: room.price,
       total_inventory: room.total_inventory,
       max_guests: room.max_guests,
       amenities: room.amenities || [],
@@ -631,7 +631,7 @@ function RoomsSection() {
               <tr key={room.id} className="border-b">
                 <td className="p-2">{room.name}</td>
                 <td className="p-2">{room.room_type}</td>
-                <td className="p-2">₹{room.price_per_night}</td>
+                <td className="p-2">₹{room.price}</td>
                 <td className="p-2">{room.total_inventory}</td>
                 <td className="p-2">{room.max_guests}</td>
                 <td className="p-2">{properties.find(p => p.id === room.property_id)?.title || ''}</td>
@@ -654,7 +654,7 @@ function RoomsSection() {
             </select>
             <input className="w-full border p-2 rounded" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
             <input className="w-full border p-2 rounded" placeholder="Type" value={form.room_type} onChange={e => setForm({ ...form, room_type: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Price per night" type="number" value={form.price_per_night} onChange={e => setForm({ ...form, price_per_night: Number(e.target.value) })} required />
+            <input className="w-full border p-2 rounded" placeholder="Price per night" type="number" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} required />
             <input className="w-full border p-2 rounded" placeholder="Inventory" type="number" value={form.total_inventory} onChange={e => setForm({ ...form, total_inventory: Number(e.target.value) })} required />
             <input className="w-full border p-2 rounded" placeholder="Max Guests" type="number" value={form.max_guests} onChange={e => setForm({ ...form, max_guests: Number(e.target.value) })} required />
             <input className="w-full border p-2 rounded" placeholder="Amenities (comma separated)" value={form.amenities?.join(',') || ''} onChange={e => setForm({ ...form, amenities: e.target.value.split(',').map(a => a.trim()).filter(Boolean) })} />
