@@ -67,11 +67,11 @@ function SignInInner() {
         <div className="max-w-md w-full">
           <Card>
             <CardHeader className="text-center">
-              <div className="mx-auto w-20 h-20 rounded-lg flex items-center justify-center mb-4">
+              <div className="mx-auto flex items-center justify-center mb-4">
                 <img 
                   src="/eja-og-logo.svg" 
                   alt="EJA Logo" 
-                  className="w-full h-full object-contain"
+                  className="w-20 h-20"
                 />
               </div>
               <h2 className="text-3xl font-bold text-gray-900">Sign in to your account</h2>
