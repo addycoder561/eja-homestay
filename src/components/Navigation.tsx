@@ -175,22 +175,12 @@ export function Navigation() {
             {/* Top Navigation Bar */}
             <div className="flex justify-between items-center h-16 sm:h-20">
               {/* Enhanced Logo */}
-              <Link href="/" className="flex items-center space-x-3 group">
-                <div 
-                  className="relative flex items-center justify-center group-hover:scale-105 active:scale-95 transition-all duration-200"
-                >
-                  <img 
-                    src="/eja-og-logo.svg" 
-                    alt="EJA Logo" 
-                    className="w-12 h-12 sm:w-16 sm:h-16"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xl sm:text-2xl font-bold text-gray-900 group-hover:text-yellow-500 transition-colors">
-                    EJA
-                  </span>
-                  <span className="text-xs sm:text-sm text-gray-500 -mt-1 hidden sm:block">Travel with confidence</span>
-                </div>
+              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200">
+                <img 
+                  src="/eja-og-logo.svg" 
+                  alt="EJA Logo" 
+                  className="w-16 h-16 sm:w-20 sm:h-20"
+                />
               </Link>
 
               {/* Enhanced Desktop Navigation with Dropdowns */}

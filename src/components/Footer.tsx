@@ -80,16 +80,13 @@ export function Footer() {
           {/* Company Info */}
           <div className="lg:col-span-1">
             <div 
-              className="flex items-center space-x-3 mb-6 animate-fade-in"
+              className="flex items-center mb-6 animate-fade-in"
             >
-              <div className="flex items-center justify-center">
-                <img 
-                  src="/eja-og-logo.svg" 
-                  alt="EJA Logo" 
-                  className="w-14 h-14"
-                />
-              </div>
-              <span className="text-2xl font-bold">EJA</span>
+              <img 
+                src="/eja-og-logo.svg" 
+                alt="EJA Logo" 
+                className="w-16 h-16"
+              />
             </div>
             
             <p 
