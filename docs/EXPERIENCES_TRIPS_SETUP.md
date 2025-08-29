@@ -1,6 +1,6 @@
 # Experiences and Trips Setup Guide
 
-This guide explains how to set up the Experiences and Trips functionality in the EJA Homestay application.
+This guide explains how to set up the Experiences and Trips functionality in the EJA application.
 
 ## Overview
 

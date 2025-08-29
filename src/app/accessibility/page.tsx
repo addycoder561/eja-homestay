@@ -27,7 +27,7 @@ export default function AccessibilityPage() {
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Accessibility</h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Making travel accessible for everyone at Eja Homestay
+              Making travel accessible for everyone at EJA
             </p>
           </div>
         </div>
@@ -41,7 +41,7 @@ export default function AccessibilityPage() {
               <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-8 border border-green-200 mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Commitment to Accessibility</h2>
                 <p className="text-gray-700 leading-relaxed mb-6">
-                  At Eja Homestay, we believe that travel should be accessible to everyone. 
+                  At EJA, we believe that travel should be accessible to everyone. 
                   We are committed to providing an inclusive experience for all our guests, 
                   regardless of their abilities or disabilities.
                 </p>
@@ -247,7 +247,7 @@ export default function AccessibilityPage() {
               <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-8 border border-blue-200">
                 <p className="text-gray-700 mb-6">
                   We continuously work to improve the accessibility of our platform. 
-                  Your feedback is invaluable in helping us make Eja Homestay more accessible for everyone.
+                  Your feedback is invaluable in helping us make EJA more accessible for everyone.
                 </p>
                 
                 <div className="grid md:grid-cols-2 gap-8">

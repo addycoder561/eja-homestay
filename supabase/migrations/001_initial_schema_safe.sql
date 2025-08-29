@@ -1,4 +1,4 @@
--- Safe Initial Schema for EJA Homestay
+-- Safe Initial Schema for EJA
 -- This script can be run on existing databases without errors
 
 -- Enable necessary extensions

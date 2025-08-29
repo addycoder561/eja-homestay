@@ -23,7 +23,7 @@ export default function PressPage() {
   const pressReleases = [
     {
       id: 1,
-      title: 'Eja Homestay Raises $5M Series A Funding to Expand Authentic Travel Experiences',
+              title: 'EJA Raises $5M Series A Funding to Expand Authentic Travel Experiences',
       date: 'December 15, 2024',
       category: 'Funding',
       excerpt: 'Leading homestay platform secures funding to enhance technology platform and expand to new markets across India.',
@@ -31,7 +31,7 @@ export default function PressPage() {
     },
     {
       id: 2,
-      title: 'Eja Homestay Launches Local Experiences Platform',
+              title: 'EJA Launches Local Experiences Platform',
       date: 'November 20, 2024',
       category: 'Product Launch',
       excerpt: 'Platform expands beyond homestays to offer curated local experiences, connecting travelers with authentic cultural activities.',
@@ -39,7 +39,7 @@ export default function PressPage() {
     },
     {
       id: 3,
-      title: 'Eja Homestay Partners with 500+ Local Hosts Across India',
+              title: 'EJA Partners with 500+ Local Hosts Across India',
       date: 'October 8, 2024',
       category: 'Partnership',
       excerpt: 'Strategic partnerships bring diverse homestay options to travelers, from mountain retreats to coastal getaways.',
@@ -47,7 +47,7 @@ export default function PressPage() {
     },
     {
       id: 4,
-      title: 'Eja Homestay Introduces Wellness Retreats Program',
+              title: 'EJA Introduces Wellness Retreats Program',
       date: 'September 12, 2024',
       category: 'Product Launch',
       excerpt: 'New wellness-focused retreats offer travelers opportunities for rejuvenation and authentic local experiences.',
@@ -144,7 +144,7 @@ export default function PressPage() {
               Press & Media
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Stay updated with the latest news, announcements, and resources about Eja Homestay. 
+              Stay updated with the latest news, announcements, and resources about EJA. 
               We're transforming how people experience authentic travel in India.
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
@@ -170,9 +170,9 @@ export default function PressPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">About Eja Homestay</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">About EJA</h2>
               <p className="text-lg text-gray-600 mb-6">
-                Eja Homestay is India's leading platform for authentic homestay experiences, 
+                EJA is India's leading platform for authentic homestay experiences, 
                 connecting travelers with local hosts to create meaningful connections and 
                 unforgettable memories.
               </p>
@@ -313,7 +313,7 @@ export default function PressPage() {
               <div className="space-y-3">
                 <div className="flex items-center">
                   <BuildingOfficeIcon className="w-5 h-5 text-blue-600 mr-3" />
-                  <span className="text-gray-600">Eja Homestay Pvt. Ltd.</span>
+                  <span className="text-gray-600">EJA Pvt. Ltd.</span>
                 </div>
                 <div className="flex items-center">
                   <MapPinIcon className="w-5 h-5 text-blue-600 mr-3" />

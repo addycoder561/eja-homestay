@@ -2,7 +2,7 @@
 
 ## Overview
 
-The EJA Homestay platform now includes a booking persistence feature that preserves user booking details (dates, room selections, guest counts) when users are prompted to sign in during the booking process.
+The EJA platform now includes a booking persistence feature that preserves user booking details (dates, room selections, guest counts) when users are prompted to sign in during the booking process.
 
 ## Problem Solved
 

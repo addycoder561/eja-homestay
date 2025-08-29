@@ -2,7 +2,7 @@
 
 ## Overview
 
-The EJA Homestay app now features a comprehensive multi-step booking wizard that provides a better user experience for complex bookings. The wizard breaks down the booking process into manageable steps, reducing cognitive load and improving conversion rates.
+The EJA app now features a comprehensive multi-step booking wizard that provides a better user experience for complex bookings. The wizard breaks down the booking process into manageable steps, reducing cognitive load and improving conversion rates.
 
 ## Features
 

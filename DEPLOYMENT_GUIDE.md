@@ -1,8 +1,8 @@
-# EJA Homestay - Deployment Guide
+# EJA - Deployment Guide
 
 ## 🚀 Vercel Deployment Guide
 
-This guide will help you deploy the EJA Homestay application to Vercel with all optimizations enabled.
+This guide will help you deploy the EJA application to Vercel with all optimizations enabled.
 
 ## 📋 Prerequisites
 
@@ -333,7 +333,7 @@ jobs:
 
 ## 🎉 Success!
 
-Your EJA Homestay application is now deployed and optimized for production! 
+Your EJA application is now deployed and optimized for production! 
 
 The application includes:
 - ✅ Fast loading and optimized performance

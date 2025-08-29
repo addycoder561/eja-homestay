@@ -415,7 +415,7 @@ export default function ExperienceDetailPage() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: order.currency,
-        name: 'EJA Homestay',
+        name: 'EJA',
         description: `Booking for ${experience.title}`,
         order_id: order.id,
         handler: async function (response: any) {

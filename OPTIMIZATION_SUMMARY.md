@@ -1,4 +1,4 @@
-# EJA Homestay - Optimization Summary
+# EJA - Optimization Summary
 
 ## 🚀 Performance Optimizations Implemented
 
@@ -283,7 +283,7 @@ src/
 
 ## 🎉 Results Summary
 
-The EJA Homestay application has been successfully optimized with:
+The EJA application has been successfully optimized with:
 
 ### Performance Improvements
 - **60% reduction** in bundle size

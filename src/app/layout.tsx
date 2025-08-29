@@ -18,18 +18,55 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EJA Homestay - Find Your Perfect Stay",
-  description: "Discover amazing properties and book your next adventure with EJA Homestay. From cozy cabins to luxury villas, find the perfect accommodation for your trip.",
+  title: "EJA - Travel for Everyone",
+  description: "Discover amazing properties and book your next adventure with EJA. From cozy cabins to luxury villas, find the perfect accommodation for your trip.",
+  keywords: ["homestay", "vacation rental", "travel", "accommodation", "booking", "properties"],
+  authors: [{ name: "EJA Team" }],
+  creator: "EJA",
+  publisher: "EJA",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://eja-homestay.vercel.app'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: "EJA - Travel for Everyone",
+    description: "Discover amazing properties and book your next adventure with EJA. From cozy cabins to luxury villas, find the perfect accommodation for your trip.",
+    url: 'https://eja-homestay.vercel.app',
+    siteName: 'EJA',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'EJA - Travel for Everyone',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "EJA - Travel for Everyone",
+    description: "Discover amazing properties and book your next adventure with EJA. From cozy cabins to luxury villas, find the perfect accommodation for your trip.",
+    images: ['/og-image.jpg'],
+    creator: '@eja_travel',
+  },
   manifest: "/manifest.json",
   themeColor: "#f59e0b",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "EJA Homestay",
-  },
-  formatDetection: {
-    telephone: false,
+    statusBarStyle: 'default',
+    title: 'EJA',
   },
 };
 

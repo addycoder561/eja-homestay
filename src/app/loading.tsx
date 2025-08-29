@@ -11,7 +11,7 @@ export default function Loading() {
         </div>
 
         {/* Loading Text */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Loading EJA Homestay</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Loading EJA</h2>
         <p className="text-gray-600 mb-8">Preparing your perfect travel experience...</p>
 
         {/* Loading Spinner */}

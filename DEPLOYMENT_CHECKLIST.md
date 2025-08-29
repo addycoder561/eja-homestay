@@ -1,4 +1,4 @@
-# 🚀 EJA Homestay Deployment Checklist
+# 🚀 EJA Deployment Checklist
 
 This checklist ensures your application is ready for deployment to Vercel.
 

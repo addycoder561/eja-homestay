@@ -47,7 +47,7 @@ export default function PrivacyPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Your Privacy Matters</h2>
               </div>
               <p className="text-gray-700 leading-relaxed">
-                At EJA Homestay, we are committed to protecting your privacy and ensuring the security of your personal information. 
+                At EJA, we are committed to protecting your privacy and ensuring the security of your personal information. 
                 This Privacy Policy explains how we collect, use, disclose, and safeguard your data when you use our platform. 
                 By using our services, you consent to the practices described in this policy.
               </p>

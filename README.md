@@ -1,4 +1,4 @@
-# EJA Homestay - Modern Travel Platform
+# EJA - Modern Travel Platform
 
 A modern, responsive travel platform built with Next.js 15, TypeScript, and Supabase. Discover amazing properties, book experiences, and plan your next adventure with confidence.
 
@@ -209,4 +209,4 @@ Stay updated with the latest features and improvements by:
 
 ---
 
-**Built with ❤️ by the EJA Homestay team**
+**Built with ❤️ by the EJA team**

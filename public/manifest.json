@@ -1,7 +1,7 @@
 {
-  "name": "EJA Homestay",
-  "short_name": "EJA Homestay",
-  "description": "Discover amazing properties and book your next adventure with EJA Homestay",
+  "name": "EJA",
+  "short_name": "EJA",
+  "description": "Discover amazing properties and book your next adventure with EJA",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -1,4 +1,4 @@
-# EJA Homestay - Cleanup & Optimization Plan
+# EJA - Cleanup & Optimization Plan
 
 ## 🎯 **Project Analysis Summary**
 

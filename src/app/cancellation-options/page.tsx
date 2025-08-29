@@ -124,7 +124,7 @@ export default function CancellationOptionsPage() {
                     <ol className="text-gray-700 space-y-3">
                       <li className="flex items-start">
                         <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">1</span>
-                        <span>Log into your Eja Homestay account</span>
+                        <span>Log into your EJA account</span>
                       </li>
                       <li className="flex items-start">
                         <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">2</span>

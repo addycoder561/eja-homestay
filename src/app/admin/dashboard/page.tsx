@@ -1261,7 +1261,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-              <p className="text-sm text-gray-500">EJA Homestay</p>
+              <p className="text-sm text-gray-500">EJA</p>
             </div>
           </div>
         </div>

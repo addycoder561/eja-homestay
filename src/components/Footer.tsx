@@ -85,7 +85,7 @@ export function Footer() {
               <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">E</span>
               </div>
-              <span className="text-2xl font-bold">EJA Homestay</span>
+              <span className="text-2xl font-bold">EJA</span>
             </div>
             
             <p 
@@ -166,7 +166,7 @@ export function Footer() {
              <div 
                className="text-gray-400 text-sm animate-fade-in-delay-4"
              >
-               © {currentYear} EJA Homestay. All rights reserved.
+               © {currentYear} EJA. All rights reserved.
              </div>
 
              {/* Made with Love */}

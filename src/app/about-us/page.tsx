@@ -119,7 +119,7 @@ export default function AboutUsPage() {
             <div className="flex justify-center mb-6">
               <HeartIcon className="w-16 h-16 text-white/90" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">About Eja Homestay</h1>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">About EJA</h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
               Connecting travelers with authentic local experiences through carefully curated homestays, 
               experiences, and retreats across India.
@@ -137,7 +137,7 @@ export default function AboutUsPage() {
                 <div>
                   <h2 className="text-4xl font-bold text-gray-900 mb-6">Our Story</h2>
                   <p className="text-gray-700 leading-relaxed mb-6">
-                    Eja Homestay was born from a simple yet powerful idea: that the best travel experiences 
+                    EJA was born from a simple yet powerful idea: that the best travel experiences 
                     happen when you connect with local communities and immerse yourself in authentic culture. 
                     We believe that every traveler deserves to experience the heart and soul of India, 
                     not just its tourist attractions.
@@ -434,10 +434,10 @@ export default function AboutUsPage() {
             </div>
           </section>
 
-          {/* Why Choose EJA Homestay - Moved from Homepage */}
+          {/* Why Choose EJA - Moved from Homepage */}
           <section className="mb-16">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose EJA Homestay?</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose EJA?</h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                 We're committed to providing you with the best travel experience with safety and trust at the core
               </p>
@@ -523,7 +523,7 @@ export default function AboutUsPage() {
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Team</h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Meet the passionate individuals behind Eja Homestay
+                Meet the passionate individuals behind EJA
               </p>
             </div>
             
@@ -656,7 +656,7 @@ export default function AboutUsPage() {
             <div className="text-center">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Get in Touch</h2>
               <p className="text-gray-700 mb-8 max-w-2xl mx-auto">
-                Have questions about Eja Homestay? Want to become a host? We'd love to hear from you!
+                Have questions about EJA? Want to become a host? We'd love to hear from you!
               </p>
               <div className="grid md:grid-cols-3 gap-6">
                 <div>

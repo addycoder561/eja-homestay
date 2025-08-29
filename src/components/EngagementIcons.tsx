@@ -129,10 +129,10 @@ export function EngagementIcons({ itemId, itemType, itemTitle, itemUrl }: Engage
       
       const shareUrls = {
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(absoluteUrl)}`,
-        twitter: `https://twitter.com/intent/tweet?text=Check out this amazing ${itemType} on EJA Homestay!&url=${encodeURIComponent(absoluteUrl)}`,
+        twitter: `https://twitter.com/intent/tweet?text=Check out this amazing ${itemType} on EJA!&url=${encodeURIComponent(absoluteUrl)}`,
         instagram: `https://www.instagram.com/`,
-        whatsapp: `https://wa.me/?text=Check out this amazing ${itemType} on EJA Homestay! ${encodeURIComponent(absoluteUrl)}`,
-        telegram: `https://t.me/share/url?url=${encodeURIComponent(absoluteUrl)}&text=Check out this amazing ${itemType} on EJA Homestay!`,
+        whatsapp: `https://wa.me/?text=Check out this amazing ${itemType} on EJA! ${encodeURIComponent(absoluteUrl)}`,
+        telegram: `https://t.me/share/url?url=${encodeURIComponent(absoluteUrl)}&text=Check out this amazing ${itemType} on EJA!`,
         copy_link: ''
       };
 

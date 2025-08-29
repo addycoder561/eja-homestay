@@ -43,7 +43,7 @@ export default function SafetyInformationPage() {
               <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-8 border border-red-200 mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Safety Commitment</h2>
                 <p className="text-gray-700 leading-relaxed mb-6">
-                  At Eja Homestay, your safety and well-being are our highest priorities. We have implemented 
+                  At EJA, your safety and well-being are our highest priorities. We have implemented 
                   comprehensive safety measures and protocols to ensure that every guest enjoys a secure and 
                   comfortable stay.
                 </p>
@@ -175,7 +175,7 @@ export default function SafetyInformationPage() {
                     <h4 className="font-semibold text-gray-900 mb-4">Emergency Contacts</h4>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-                        <span className="text-gray-700">Eja Homestay Emergency</span>
+                        <span className="text-gray-700">EJA Emergency</span>
                         <span className="text-red-600 font-semibold">+91 8976662177</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-white rounded-lg">

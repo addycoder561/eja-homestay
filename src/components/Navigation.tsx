@@ -184,7 +184,7 @@ export function Navigation() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-bold text-gray-900 group-hover:text-yellow-500 transition-colors">
-                    EJA Homestay
+                    EJA
                   </span>
                   <span className="text-xs text-gray-500 -mt-1">Travel with confidence</span>
                 </div>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The EJA Homestay platform now includes a destination autocomplete feature that provides intelligent suggestions as users type in the location field. This feature works without requiring any external APIs like Google Places.
+The EJA platform now includes a destination autocomplete feature that provides intelligent suggestions as users type in the location field. This feature works without requiring any external APIs like Google Places.
 
 ## Features
 

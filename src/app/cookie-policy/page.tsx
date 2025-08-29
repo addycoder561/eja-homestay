@@ -18,7 +18,7 @@ export default function CookiePolicyPage() {
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Cookie Policy</h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Learn how we use cookies to enhance your experience on Eja Homestay
+              Learn how we use cookies to enhance your experience on EJA
             </p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function CookiePolicyPage() {
                 analyzing how you use our site, and personalizing content.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                At Eja Homestay, we use cookies to make your booking experience seamless, secure, 
+                At EJA, we use cookies to make your booking experience seamless, secure, 
                 and personalized. This policy explains what cookies we use and why.
               </p>
             </section>

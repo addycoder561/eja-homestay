@@ -1,4 +1,4 @@
--- Database Optimization Script for EJA Homestay
+-- Database Optimization Script for EJA
 -- This script adds performance indexes and optimizations
 
 -- Add indexes for better query performance

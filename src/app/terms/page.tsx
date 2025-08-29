@@ -27,7 +27,7 @@ export default function TermsPage() {
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6">Terms & Conditions</h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              Please read these terms carefully. By using EJA Homestay, you agree to be bound by these terms and conditions.
+              Please read these terms carefully. By using EJA, you agree to be bound by these terms and conditions.
             </p>
           </div>
         </div>
@@ -42,10 +42,10 @@ export default function TermsPage() {
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
                   <ShieldCheckIcon className="w-6 h-6 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Welcome to EJA Homestay</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Welcome to EJA</h2>
               </div>
               <p className="text-gray-700 leading-relaxed">
-                These Terms & Conditions govern your use of the EJA Homestay platform and services. 
+                These Terms & Conditions govern your use of the EJA platform and services. 
                 By accessing or using our platform, you acknowledge that you have read, understood, 
                 and agree to be bound by these terms. If you do not agree with any part of these terms, 
                 please do not use our services.
@@ -194,7 +194,7 @@ export default function TermsPage() {
               </div>
               <div className="text-gray-700 space-y-4">
                 <p>
-                  EJA Homestay acts as a platform connecting guests and hosts. Our liability is limited as follows:
+                  EJA acts as a platform connecting guests and hosts. Our liability is limited as follows:
                 </p>
                 <ul className="space-y-3 ml-6">
                   <li className="flex items-start">

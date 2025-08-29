@@ -282,7 +282,7 @@ export default function GuestDashboard() {
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
-    doc.text('EJA Homestay', 20, 20);
+            doc.text('EJA', 20, 20);
     
     // Title
     doc.setTextColor(0, 0, 0);
