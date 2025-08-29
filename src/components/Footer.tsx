@@ -84,7 +84,7 @@ export function Footer() {
             >
               <div className="w-14 h-14 rounded-xl flex items-center justify-center">
                 <img 
-                  src="/eja-original-logo-small.svg" 
+                  src="/eja-og-logo.svg" 
                   alt="EJA Logo" 
                   className="w-full h-full object-contain"
                 />

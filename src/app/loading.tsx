@@ -6,7 +6,7 @@ export default function Loading() {
         <div className="mb-8">
           <div className="relative w-24 h-24 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
             <img 
-              src="/eja-original-logo.svg" 
+              src="/eja-og-logo.svg" 
               alt="EJA Logo" 
               className="w-full h-full object-contain"
             />

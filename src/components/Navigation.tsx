@@ -180,7 +180,7 @@ export function Navigation() {
                   className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center group-hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl transition-all duration-200"
                 >
                   <img 
-                    src="/eja-original-logo-small.svg" 
+                    src="/eja-og-logo.svg" 
                     alt="EJA Logo" 
                     className="w-full h-full object-contain"
                   />
