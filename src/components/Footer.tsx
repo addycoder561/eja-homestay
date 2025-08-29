@@ -82,8 +82,12 @@ export function Footer() {
             <div 
               className="flex items-center space-x-2 mb-6 animate-fade-in"
             >
-              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">E</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                <img 
+                  src="/eja-logo-small.svg" 
+                  alt="EJA Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-2xl font-bold">EJA</span>
             </div>

@@ -177,9 +177,13 @@ export function Navigation() {
               {/* Enhanced Logo */}
               <Link href="/" className="flex items-center space-x-2 group">
                 <div 
-                  className="relative w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center group-hover:from-yellow-500 group-hover:to-yellow-600 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl"
+                  className="relative w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl transition-all duration-200"
                 >
-                  <span className="text-white font-bold text-xl">E</span>
+                  <img 
+                    src="/eja-logo-small.svg" 
+                    alt="EJA Logo" 
+                    className="w-full h-full object-contain"
+                  />
                   <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </div>
                 <div className="flex flex-col">
