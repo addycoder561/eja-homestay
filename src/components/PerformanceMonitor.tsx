@@ -21,7 +21,7 @@ export function PerformanceMonitor() {
       // FID (First Input Delay)
       new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
-          const fid = entry as PerformanceEntry;
+          const fid = entry as PerformanceEventTiming;
           console.log('FID:', fid.processingStart - fid.startTime);
           // Send to analytics service here
         }
@@ -61,8 +61,8 @@ export function PerformanceMonitor() {
                 dns: navigation.domainLookupEnd - navigation.domainLookupStart,
                 tcp: navigation.connectEnd - navigation.connectStart,
                 ttfb: navigation.responseStart - navigation.requestStart,
-                domContentLoaded: navigation.domContentLoadedEventEnd - navigation.navigationStart,
-                loadComplete: navigation.loadEventEnd - navigation.navigationStart,
+                domContentLoaded: navigation.domContentLoadedEventEnd - navigation.fetchStart,
+                loadComplete: navigation.loadEventEnd - navigation.fetchStart,
               };
               console.log('Page Load Metrics:', metrics);
               // Send to analytics service here

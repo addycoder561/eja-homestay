@@ -27,13 +27,14 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'date-fns'],
-    optimizeCss: true,
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  },
+
+  // Turbopack configuration
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },
@@ -200,9 +201,6 @@ const nextConfig: NextConfig = {
     // Don't fail build on ESLint errors in production
     ignoreDuringBuilds: false,
   },
-
-  // Enable SWC minification
-  swcMinify: true,
 
   // Optimize for production
   poweredByHeader: false,
