@@ -4,9 +4,9 @@ export default function Loading() {
       <div className="text-center">
         {/* Logo Animation */}
         <div className="mb-8">
-          <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
+          <div className="relative w-24 h-24 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
             <img 
-              src="/eja-logo-small.svg" 
+              src="/eja-logo.svg" 
               alt="EJA Logo" 
               className="w-full h-full object-contain"
             />

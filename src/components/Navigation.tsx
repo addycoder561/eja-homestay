@@ -173,24 +173,24 @@ export function Navigation() {
         }`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Top Navigation Bar */}
-            <div className="flex justify-between items-center h-16">
+            <div className="flex justify-between items-center h-16 sm:h-20">
               {/* Enhanced Logo */}
-              <Link href="/" className="flex items-center space-x-2 group">
+              <Link href="/" className="flex items-center space-x-3 group">
                 <div 
-                  className="relative w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl transition-all duration-200"
+                  className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center group-hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl transition-all duration-200"
                 >
                   <img 
-                    src="/eja-logo-small.svg" 
+                    src="/eja-logo.svg" 
                     alt="EJA Logo" 
                     className="w-full h-full object-contain"
                   />
                   <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold text-gray-900 group-hover:text-yellow-500 transition-colors">
+                  <span className="text-xl sm:text-2xl font-bold text-gray-900 group-hover:text-yellow-500 transition-colors">
                     EJA
                   </span>
-                  <span className="text-xs text-gray-500 -mt-1">Travel with confidence</span>
+                  <span className="text-xs sm:text-sm text-gray-500 -mt-1 hidden sm:block">Travel with confidence</span>
                 </div>
               </Link>
 
