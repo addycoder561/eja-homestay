@@ -7,12 +7,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "fix-profiles": "node scripts/run-profile-fix.js --direct"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.0",
+
     "autoprefixer": "^10.4.19",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",

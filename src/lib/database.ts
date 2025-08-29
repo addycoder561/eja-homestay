@@ -14,7 +14,7 @@ import {
   Experience,
   Trip,
   BookingWithPropertyAndGuest,
-  Collaboration
+  CardCollaboration
 } from './types';
 
 // Profile functions
@@ -31,6 +31,65 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   }
 
   return data;
+}
+
+export async function ensureProfile(userId: string, email: string, fullName?: string): Promise<Profile | null> {
+  console.log('🔍 Ensuring profile exists for user:', userId);
+  
+  // First try to get existing profile
+  let profile = await getProfile(userId);
+  
+  if (!profile) {
+    console.log('🔍 Profile not found, creating new profile...');
+    // Create new profile
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        email: email,
+        full_name: fullName || email.split('@')[0],
+        is_host: false,
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating profile:', error);
+      return null;
+    }
+    
+    profile = data;
+    console.log('🔍 New profile created:', profile);
+  } else {
+    console.log('🔍 Existing profile found:', profile);
+    
+    // Update profile if email or name doesn't match
+    const needsUpdate = profile.email !== email || 
+                       (fullName && profile.full_name !== fullName);
+    
+    if (needsUpdate) {
+      console.log('🔍 Updating profile to match auth data...');
+      const updates: Partial<Profile> = {};
+      if (profile.email !== email) updates.email = email;
+      if (fullName && profile.full_name !== fullName) updates.full_name = fullName;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating profile:', error);
+      } else {
+        profile = data;
+        console.log('🔍 Profile updated:', profile);
+      }
+    }
+  }
+  
+  return profile;
 }
 
 export async function updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
@@ -305,6 +364,8 @@ export async function checkAvailability(
 
 // Search properties
 export async function searchProperties(filters: SearchFilters): Promise<PropertyWithHost[]> {
+  console.log('🔍 DEBUG - searchProperties called with filters:', filters);
+  
   let query = supabase
     .from('properties')
     .select(`
@@ -326,10 +387,12 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   if (filters.propertyType) {
-    query = query.eq('property_type', filters.propertyType);
+    console.log('🔍 DEBUG - Applying propertyType filter:', filters.propertyType);
+    query = query.eq('property_type', filters.propertyType.toLowerCase());
   }
 
   if (filters.amenities && filters.amenities.length > 0) {
+    console.log('🔍 DEBUG - Applying amenities filter:', filters.amenities);
     // Convert amenity IDs to actual amenity names for database query
     const amenityMap: Record<string, string> = {
       'pet-friendly': 'Pet Friendly',
@@ -337,14 +400,67 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     };
     
     const dbAmenities = filters.amenities.map(id => amenityMap[id]).filter(Boolean);
+    console.log('🔍 DEBUG - Converted amenities:', dbAmenities);
     if (dbAmenities.length > 0) {
       query = query.overlaps('amenities', dbAmenities);
+    }
+  }
+
+  // Handle filter chips
+  if (filters.selectedChips && filters.selectedChips.length > 0) {
+    console.log('🔍 DEBUG - Processing selectedChips:', filters.selectedChips);
+    
+    const propertyTypeChips = filters.selectedChips.filter(chip => 
+              ['Boutique', 'Homely', 'Off-Beat'].includes(chip)
+    );
+    const tagChips = filters.selectedChips.filter(chip => 
+      ['Families-only', 'Females-only', 'Pet Friendly', 'Pure-Veg'].includes(chip)
+    );
+    const amenityChips = filters.selectedChips.filter(chip => 
+      ['WiFi', 'Mountain View'].includes(chip)
+    );
+
+    console.log('🔍 DEBUG - Property type chips:', propertyTypeChips);
+    console.log('🔍 DEBUG - Tag chips:', tagChips);
+    console.log('🔍 DEBUG - Amenity chips:', amenityChips);
+
+    // Filter by property type chips (case-insensitive)
+    if (propertyTypeChips.length > 0) {
+      console.log('🔍 DEBUG - Applying property type chips filter:', propertyTypeChips);
+      // Convert to lowercase for case-insensitive matching
+      const dbPropertyTypes = propertyTypeChips.map(chip => chip.toLowerCase());
+      query = query.in('property_type', dbPropertyTypes);
+    }
+
+    // Filter by tag chips (handle different formats)
+    if (tagChips.length > 0) {
+      console.log('🔍 DEBUG - Applying tag chips filter:', tagChips);
+      // Tags are already in the correct format (Families-only, Females-only)
+      query = query.overlaps('tags', tagChips);
+    }
+
+    // Filter by amenity chips (convert to database format)
+    if (amenityChips.length > 0) {
+      const amenityMap: Record<string, string> = {
+        'WiFi': 'WiFi',
+        'Mountain View': 'Mountain View'
+      };
+      const dbAmenities = amenityChips.map(chip => amenityMap[chip]).filter(Boolean);
+      console.log('🔍 DEBUG - Converted amenity chips:', dbAmenities);
+      if (dbAmenities.length > 0) {
+        query = query.overlaps('amenities', dbAmenities);
+      }
     }
   }
 
   // Filter by max adult capacity
   if (filters.adults) {
     query = query.gte('max_guests', filters.adults);
+  }
+
+  // Filter by total guest capacity (adults + children)
+  if (filters.guests) {
+    query = query.gte('max_guests', filters.guests);
   }
 
   // Filter by max rooms (bedrooms)
@@ -358,6 +474,9 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     console.error('Error searching properties:', error);
     return [];
   }
+
+  console.log('🔍 DEBUG - Query results:', data?.length || 0, 'properties found');
+  console.log('🔍 DEBUG - First few properties:', data?.slice(0, 3).map(p => ({ id: p.id, title: p.title, property_type: p.property_type, amenities: p.amenities, tags: p.tags })));
 
   let filteredProperties = data || [];
 
@@ -446,45 +565,7 @@ export async function createTripBooking({ tripId, email, name, date, guests, tot
   return data;
 } 
 
-export async function submitCollaboration({ type, name, email, role, details }: {
-  type: 'create' | 'retreat' | 'campaign',
-  name: string,
-  email: string,
-  role: string,
-  details: string,
-}) {
-  try {
-    const { data, error } = await supabase.from('collaborations').insert([
-      { type, name, email, role, details }
-    ]);
-    return { data, error };
-  } catch (error) {
-    console.error('Error submitting collaboration:', error);
-    // Return a specific error for missing table
-    if (error instanceof Error && error.message.includes('relation "collaborations" does not exist')) {
-      return { 
-        data: null, 
-        error: { 
-          message: 'Collaborations table not found. Please run the database migration first.',
-          details: 'The collaborations table needs to be created in the database.'
-        } 
-      };
-    }
-    return { data: null, error };
-  }
-} 
 
-export async function getAllCollaborations(): Promise<Collaboration[]> {
-  const { data, error } = await supabase
-    .from('collaborations')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.error('Error fetching collaborations:', error);
-    return [];
-  }
-  return data || [];
-}
 
 export async function hasCompletedBooking(userId: string, propertyId: string): Promise<boolean> {
   const today = new Date().toISOString().split('T')[0];
@@ -500,6 +581,108 @@ export async function hasCompletedBooking(userId: string, propertyId: string): P
     return false;
   }
   return (data || []).length > 0;
+}
+
+// Engagement features functions
+
+// Like functions
+export async function isLiked(userId: string, itemId: string, itemType: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('likes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('item_id', itemId)
+    .eq('item_type', itemType)
+    .single();
+  return !!data;
+}
+
+export async function addLike(userId: string, itemId: string, itemType: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('likes')
+    .insert([{ user_id: userId, item_id: itemId, item_type: itemType }]);
+  return !error;
+}
+
+export async function removeLike(userId: string, itemId: string, itemType: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('likes')
+    .delete()
+    .eq('user_id', userId)
+    .eq('item_id', itemId)
+    .eq('item_type', itemType);
+  return !error;
+}
+
+export async function getLikesCount(itemId: string, itemType: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('item_id', itemId)
+    .eq('item_type', itemType);
+  return error ? 0 : (count || 0);
+}
+
+// Share functions
+export async function addShare(userId: string, itemId: string, itemType: string, platform: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('shares')
+    .insert([{ user_id: userId, item_id: itemId, item_type: itemType, platform }]);
+  return !error;
+}
+
+export async function getSharesCount(itemId: string, itemType: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('shares')
+    .select('*', { count: 'exact', head: true })
+    .eq('item_id', itemId)
+    .eq('item_type', itemType);
+  return error ? 0 : (count || 0);
+}
+
+
+
+// Collaboration functions
+export async function addCardCollaboration(
+  userId: string, 
+  itemId: string, 
+  itemType: string, 
+  collaborationType: string,
+  userData: {
+    name: string;
+    email: string;
+    phone?: string;
+    instagram?: string;
+    youtube?: string;
+    tiktok?: string;
+    proposal: string;
+  }
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('card_collaborations')
+    .insert([{
+      user_id: userId,
+      item_id: itemId,
+      item_type: itemType,
+      collaboration_type: collaborationType,
+      user_name: userData.name,
+      user_email: userData.email,
+      user_phone: userData.phone,
+      user_instagram: userData.instagram,
+      user_youtube: userData.youtube,
+      user_tiktok: userData.tiktok,
+      proposal: userData.proposal
+    }]);
+  return !error;
+}
+
+export async function getUserCollaborations(userId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('card_collaborations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return error ? [] : (data || []);
 } 
 
 // Wishlist functions
@@ -790,23 +973,46 @@ export async function getTrips(): Promise<Trip[]> {
 
 // New: Retreat functions
 export async function getRetreats(): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('retreats')
-    .select('*')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
+  try {
+    // First try to fetch from retreats table
+    const { data, error } = await supabase
+      .from('retreats')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching retreats:', error);
+    if (error) {
+      console.error('Error fetching from retreats table:', error);
+      // Fallback to trips table if retreats table doesn't exist
+      const { data: tripsData, error: tripsError } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (tripsError) {
+        console.error('Error fetching from trips table:', tripsError);
+        return [];
+      }
+
+      const trips = (tripsData || []).map((row: any) => ({
+        ...row,
+        image: row.cover_image || (Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null),
+      }));
+
+      return trips;
+    }
+
+    const retreats = (data || []).map((row: any) => ({
+      ...row,
+      image: row.cover_image || (Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null),
+    }));
+
+    return retreats;
+  } catch (error) {
+    console.error('Unexpected error in getRetreats:', error);
     return [];
   }
-
-  const retreats = (data || []).map((row: any) => ({
-    ...row,
-    image: row.cover_image || (Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null),
-  }));
-
-  return retreats;
 }
 
 export async function getTrip(id: string): Promise<Trip | null> {
@@ -874,4 +1080,48 @@ export async function setRoomInventory(roomId: string, date: string, available: 
     return false;
   }
   return true;
+}
+
+// Function to check database content for debugging
+export async function checkDatabaseContent(): Promise<void> {
+  console.log('🔍 DEBUG - Checking database content...');
+  
+  const { data, error } = await supabase
+    .from('properties')
+    .select('id, title, property_type, amenities, tags')
+    .eq('is_available', true)
+    .limit(10);
+  
+  if (error) {
+    console.error('🔍 DEBUG - Error fetching data:', error);
+    return;
+  }
+  
+  console.log('🔍 DEBUG - Total properties found:', data?.length || 0);
+  
+  // Check property types
+  const propertyTypes = [...new Set(data?.map(p => p.property_type).filter(Boolean))];
+  console.log('🔍 DEBUG - Available property types:', propertyTypes);
+  
+  // Check amenities
+  const allAmenities = data?.flatMap(p => p.amenities || []).filter(Boolean);
+  const uniqueAmenities = [...new Set(allAmenities)];
+  console.log('🔍 DEBUG - Available amenities:', uniqueAmenities);
+  
+  // Check tags
+  const allTags = data?.flatMap(p => p.tags || []).filter(Boolean);
+  const uniqueTags = [...new Set(allTags)];
+  console.log('🔍 DEBUG - Available tags:', uniqueTags);
+  
+  // Show sample properties
+  console.log('🔍 DEBUG - Sample properties:');
+  data?.slice(0, 3).forEach((property, index) => {
+    console.log(`  Property ${index + 1}:`, {
+      id: property.id,
+      title: property.title,
+      property_type: property.property_type,
+      amenities: property.amenities,
+      tags: property.tags
+    });
+  });
 } 

@@ -21,10 +21,10 @@ const filterData = {
     'Sikkim', 'Asaam', 'Meghalaya', 'Nagaland', 'Arunachal'
   ],
   propertyType: [
-    { id: 'homely', label: 'Homely', icon: '🏠' },
-    { id: 'boutique', label: 'Boutique', icon: '🏨' },
-    { id: 'unique', label: 'Unique', icon: '✨' },
-    { id: 'cottage', label: 'Cottage', icon: '🏡' }
+    { id: 'Homely', label: 'Homely', icon: '🏠' },
+    { id: 'Boutique', label: 'Boutique', icon: '🏨' },
+    { id: 'Off-Beat', label: 'Off-Beat', icon: '✨' },
+    { id: 'Cottage', label: 'Cottage', icon: '🏡' }
   ],
   price: [
     { id: 'under2500', label: 'Under ₹2,500', icon: '💰' },
@@ -87,10 +87,10 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
     if (selectedFilters.propertyType.length > 0) {
       const propertyType = selectedFilters.propertyType[0];
       // Map our custom types to the PropertyType enum
-      if (propertyType === 'homely') newFilters.propertyType = 'Homely';
-      else if (propertyType === 'boutique') newFilters.propertyType = 'Boutique';
-      else if (propertyType === 'cottage') newFilters.propertyType = 'Cottage';
-      else if (propertyType === 'unique') newFilters.propertyType = 'Off-Beat'; // Map unique to Off-Beat
+      if (propertyType === 'Homely') newFilters.propertyType = 'Homely';
+      else if (propertyType === 'Boutique') newFilters.propertyType = 'Boutique';
+      else if (propertyType === 'Cottage') newFilters.propertyType = 'Cottage';
+      else if (propertyType === 'Off-Beat') newFilters.propertyType = 'Off-Beat';
     }
     if (selectedFilters.price.length > 0) {
       // Handle multiple price selections - use the highest selected price

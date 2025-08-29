@@ -13,6 +13,48 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Impact page scroll isolation */
+.impact-column {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  padding-bottom: 2rem;
+}
+
+.impact-column::-webkit-scrollbar {
+  width: 6px;
+}
+
+.impact-column::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.impact-column::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.impact-column::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Ensure content doesn't get cut off */
+.impact-column > *:last-child {
+  margin-bottom: 2rem;
+}
+
+/* Prevent scroll bleeding */
+.impact-container {
+  overscroll-behavior: none;
+}
+
+/* Mobile scroll optimization */
+@media (max-width: 1023px) {
+  .impact-mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -73,6 +115,86 @@ body {
   }
 }
 
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Ensure touch targets are at least 44px */
+  button, 
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve touch scrolling */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Optimize text for mobile reading */
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+  
+  /* Improve mobile navigation */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    z-index: 50;
+  }
+  
+  /* Add bottom padding for mobile bottom navigation */
+  body {
+    padding-bottom: 80px;
+  }
+  
+  /* Optimize mobile performance */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Improve mobile scrolling */
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Optimize mobile images */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Mobile-specific spacing */
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Mobile grid optimizations */
+  .mobile-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Safe area support for devices with home indicator */
+@supports (padding: max(0px)) {
+  .h-safe-area-inset-bottom {
+    height: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -101,6 +223,40 @@ body {
   }
   100% {
     background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Image optimization */
+.image-lazy {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.image-lazy.loaded {
+  opacity: 1;
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Critical CSS for above-the-fold content */
+.critical-content {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* Optimize animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

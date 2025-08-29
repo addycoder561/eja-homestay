@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import Script from 'next/script';
 import { 
   CalendarIcon, 
   UserGroupIcon, 
@@ -17,7 +18,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { getRoomsForProperty, checkMultiRoomAvailability, createMultiRoomBooking } from '@/lib/database';
+import { DatePicker } from './DatePicker';
+import { getRoomsForProperty, checkMultiRoomAvailability, createMultiRoomBooking, ensureProfile } from '@/lib/database';
 import { Room, Property } from '@/lib/types';
 import { format, addDays, differenceInDays } from 'date-fns';
 
@@ -48,7 +50,10 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
   const [roomSelections, setRoomSelections] = useState<RoomSelection[]>([]);
   const [specialRequests, setSpecialRequests] = useState('');
 
-    useEffect(() => {
+  // Test button at the very top
+  console.log('🔍 BookingForm component is rendering');
+
+  useEffect(() => {
     const loadRooms = async () => {
       const propertyRooms = await getRoomsForProperty(property.id);
       setRooms(propertyRooms);
@@ -196,10 +201,27 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
   };
 
   const processBooking = async () => {
+    console.log('🔍 Starting payment process...');
+    console.log('🔍 User:', user);
+    console.log('🔍 Property:', property.id);
+    
     if (!user) {
       toast.error('Please sign in to book');
       router.push('/auth/signin');
       return;
+    }
+
+    // Debug: Check user profile
+    try {
+      const profileRes = await fetch('/api/user/profile');
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        console.log('🔍 Profile check:', profileData);
+      } else {
+        console.error('🔍 Profile check failed:', await profileRes.text());
+      }
+    } catch (error) {
+      console.error('🔍 Profile check error:', error);
     }
 
     if (!checkIn || !checkOut) {
@@ -215,6 +237,8 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
     setLoading(true);
 
     try {
+      console.log('🔍 Room selections:', roomSelections);
+      
       const roomRequests = roomSelections.map(rs => ({
         room_id: rs.roomId,
         quantity: rs.quantity,
@@ -222,7 +246,10 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
         check_out: checkOut,
       }));
 
+      console.log('🔍 Checking availability...');
       const isAvailable = await checkMultiRoomAvailability(roomRequests);
+      console.log('🔍 Availability result:', isAvailable);
+      
       if (!isAvailable) {
         toast.error('Selected rooms are not available for the chosen dates');
         setLoading(false);
@@ -230,7 +257,9 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
       }
 
       const totalPrice = calculateTotalPrice();
+      console.log('🔍 Total price:', totalPrice);
       
+      console.log('🔍 Creating Razorpay order...');
       const orderRes = await fetch('/api/payments/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -247,12 +276,35 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
         }),
       });
 
+      console.log('🔍 Order response status:', orderRes.status);
+      
       if (!orderRes.ok) {
-        throw new Error('Failed to create payment order');
+        const errorText = await orderRes.text();
+        console.error('🔍 Order creation failed:', errorText);
+        throw new Error(`Failed to create payment order: ${errorText}`);
       }
 
-      const { order } = await orderRes.json();
+      const orderData = await orderRes.json();
+      console.log('🔍 Order created successfully:', orderData);
+      const { order } = orderData;
 
+      // Ensure profile exists and is up to date
+      console.log('🔍 Ensuring profile is up to date...');
+      const profile = await ensureProfile(
+        user.id!, 
+        user.email!, 
+        user.user_metadata?.full_name
+      );
+      
+      if (!profile) {
+        toast.error('Failed to create/update user profile');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔍 Profile ensured:', profile);
+
+      console.log('🔍 Setting up Razorpay options...');
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_C7d9Vbcc9JM8dp',
         amount: order.amount,
@@ -261,6 +313,7 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
         description: `Booking for ${calculateNights()} night${calculateNights() > 1 ? 's' : ''}`,
         order_id: order.id,
         handler: async function (response: { razorpay_payment_id: string }) {
+          console.log('🔍 Payment successful! Response:', response);
           try {
             const roomRequests = roomSelections.map(rs => ({
               room_id: rs.roomId,
@@ -269,6 +322,7 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
               check_out: checkOut,
             }));
 
+            console.log('🔍 Creating booking after payment...');
             const booking = await createMultiRoomBooking({
               property_id: property.id,
               guest_id: user.id!,
@@ -280,6 +334,8 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
               status: 'confirmed',
             }, roomRequests, response.razorpay_payment_id);
 
+            console.log('🔍 Booking result:', booking);
+            
             if (booking) {
               toast.success('Booking confirmed! Payment successful.');
               router.push('/guest/dashboard');
@@ -287,34 +343,68 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
               toast.error('Failed to create booking after payment');
             }
           } catch (error) {
-            console.error('Error creating booking:', error);
+            console.error('🔍 Error creating booking:', error);
             toast.error('Payment successful but booking creation failed');
           }
         },
         prefill: {
-          email: user.email || '',
-          name: user.user_metadata?.full_name || '',
+          email: profile.email || user.email || '',
+          name: profile.full_name || user.user_metadata?.full_name || '',
         },
         theme: { color: '#2563eb' },
         modal: {
           ondismiss: function () {
+            console.log('🔍 Payment modal dismissed');
             setLoading(false);
             toast.error('Payment was cancelled');
           }
         }
       };
 
-      // @ts-expect-error: Razorpay is a global injected by the script
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      console.error('Booking error:', error);
-      toast.error('An error occurred while processing your booking');
+      console.log('🔍 Razorpay options:', options);
+      console.log('🔍 Checking if Razorpay is loaded...');
+      
+      // Check if Razorpay is loaded
+      if (typeof window !== 'undefined' && (window as any).Razorpay) {
+        console.log('🔍 Razorpay is loaded, opening payment modal...');
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      } else {
+        console.error('🔍 Razorpay not loaded');
+        toast.error('Payment gateway not loaded. Please refresh the page.');
+        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error('🔍 Booking error:', error);
+      toast.error(`An error occurred while processing your booking: ${error.message}`);
       setLoading(false);
     }
   };
 
   return (
+    <>
+    {/* TEST BUTTON - Should be visible */}
+    <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 9999 }}>
+      <button
+        onClick={() => {
+          console.log('🔍 TEST BUTTON CLICKED!');
+          console.log('🔍 User:', user);
+          console.log('🔍 Property:', property);
+        }}
+        style={{
+          backgroundColor: 'red',
+          color: 'white',
+          padding: '10px',
+          border: 'none',
+          borderRadius: '5px',
+          fontSize: '16px',
+          fontWeight: 'bold'
+        }}
+      >
+        🔴 TEST BUTTON
+      </button>
+    </div>
+
     <Card className="bg-white shadow-xl border-0 sticky top-8">
       <CardContent className="p-6">
         {/* Header */}
@@ -338,22 +428,24 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Check-in</label>
-              <input
-                type="date"
+              <DatePicker
                 value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-                min={format(addDays(new Date(), 1), 'yyyy-MM-dd')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={setCheckIn}
+                placeholder="Select check-in date"
+                minDate={format(addDays(new Date(), 1), 'yyyy-MM-dd')}
+                className="w-full"
+                variant="default"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Check-out</label>
-              <input
-                type="date"
+              <DatePicker
                 value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
-                min={checkIn || format(addDays(new Date(), 1), 'yyyy-MM-dd')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={setCheckOut}
+                placeholder="Select check-out date"
+                minDate={checkIn || format(addDays(new Date(), 1), 'yyyy-MM-dd')}
+                className="w-full"
+                variant="default"
               />
             </div>
           </div>
@@ -549,6 +641,92 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
           Book Now
         </Button>
 
+        {/* Simple Debug Button */}
+        <button
+          onClick={async () => {
+            console.log('🔍 Debug: Testing payment flow...');
+            console.log('🔍 Debug: User:', user);
+            console.log('🔍 Debug: Environment variables:', {
+              NEXT_PUBLIC_RAZORPAY_KEY_ID: !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+              RAZORPAY_KEY_ID: '***hidden***',
+              RAZORPAY_KEY_SECRET: '***hidden***'
+            });
+            
+            // Test profile API
+            try {
+              const res = await fetch('/api/user/profile');
+              const data = await res.json();
+              console.log('🔍 Debug: Profile API response:', data);
+            } catch (error) {
+              console.error('🔍 Debug: Profile API error:', error);
+            }
+            
+            // Test payment order API
+            try {
+              const res = await fetch('/api/payments/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  amount: 10000, // ₹100
+                  currency: 'INR',
+                  notes: { type: 'test' }
+                }),
+              });
+              const data = await res.json();
+              console.log('🔍 Debug: Payment order API response:', data);
+            } catch (error) {
+              console.error('🔍 Debug: Payment order API error:', error);
+            }
+          }}
+          className="w-full mt-2 p-2 bg-yellow-400 text-black rounded-md font-bold"
+        >
+          🐛 DEBUG PAYMENT FLOW
+        </button>
+
+        {/* Debug Button - Always visible for testing */}
+        <Button
+          onClick={async () => {
+            console.log('🔍 Debug: Testing payment flow...');
+            console.log('🔍 Debug: User:', user);
+            console.log('🔍 Debug: Environment variables:', {
+              NEXT_PUBLIC_RAZORPAY_KEY_ID: !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+              RAZORPAY_KEY_ID: '***hidden***',
+              RAZORPAY_KEY_SECRET: '***hidden***'
+            });
+            
+            // Test profile API
+            try {
+              const res = await fetch('/api/user/profile');
+              const data = await res.json();
+              console.log('🔍 Debug: Profile API response:', data);
+            } catch (error) {
+              console.error('🔍 Debug: Profile API error:', error);
+            }
+            
+            // Test payment order API
+            try {
+              const res = await fetch('/api/payments/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  amount: 10000, // ₹100
+                  currency: 'INR',
+                  notes: { type: 'test' }
+                }),
+              });
+              const data = await res.json();
+              console.log('🔍 Debug: Payment order API response:', data);
+            } catch (error) {
+              console.error('🔍 Debug: Payment order API error:', error);
+            }
+          }}
+          variant="outline"
+          size="sm"
+          className="w-full mt-2"
+        >
+          🐛 Debug Payment Flow
+        </Button>
+
         {/* Additional Info */}
         <div className="mt-4 text-center">
           <p className="text-xs text-gray-500">
@@ -557,5 +735,9 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
         </div>
       </CardContent>
     </Card>
+    
+    {/* Razorpay Script */}
+    <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+  </>
   );
 }

@@ -1,12 +1,20 @@
 "use client";
 
+// TypeScript declaration for Razorpay
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import Script from "next/script";
+
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { Navigation } from "@/components/Navigation";
@@ -22,27 +30,18 @@ import {
   CalendarIcon,
   ShareIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  UserIcon,
+  SparklesIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
 import Image from 'next/image';
 import Link from 'next/link';
-
-interface Retreat {
-  id: string;
-  title: string;
-  description?: string;
-  location: string;
-  price: number;
-  duration?: string;
-  images: string[];
-  cover_image?: string;
-  image?: string | null;
-  categories?: string | string[];
-  created_at?: string;
-  updated_at?: string;
-}
+import { Retreat } from '@/lib/types';
 
 interface Review {
   id: string;
@@ -143,14 +142,12 @@ export default function RetreatDetailPage() {
   const [isWishlistedState, setIsWishlistedState] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [showRetreatDetails, setShowRetreatDetails] = useState(true);
   const [bookingForm, setBookingForm] = useState({
     date: '',
     guests: 1,
-    name: '',
-    email: '',
-    phone: ''
+    specialRequests: ''
   });
 
   const fetchRetreat = async () => {
@@ -298,37 +295,136 @@ export default function RetreatDetailPage() {
     }
   };
 
-  const openBooking = () => {
-    if (!user || !profile) {
-      router.push(`/auth/signin?redirect=/retreats/${retreatId}`);
-      return;
-    }
-    setBookingOpen(true);
-  };
 
-  const closeBooking = () => {
-    setBookingOpen(false);
-    setBookingForm({
-      date: '',
-      guests: 1,
-      name: '',
-      email: '',
-      phone: ''
-    });
-  };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !profile || !retreat) return;
+    console.log('🔍 Retreat booking submit called');
+    console.log('🔍 Retreat:', retreat);
+    console.log('🔍 User:', user);
+    console.log('🔍 Profile:', profile);
+    
+    if (!user || !profile || !retreat) {
+      toast.error('Please sign in to book this retreat');
+      return;
+    }
 
     setBookingLoading(true);
     try {
-      // Here you would integrate with your booking system
-      // For now, we'll just show a success message
-      toast.success('Booking request submitted! We\'ll contact you soon.');
-      closeBooking();
+      const totalPrice = retreat.price * bookingForm.guests;
+      console.log('🔍 Total price:', totalPrice);
+      
+      // Create Razorpay order
+      console.log('🔍 Creating payment order...');
+      const orderRes = await fetch('/api/payments/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          amount: totalPrice * 100, 
+          currency: 'INR', 
+          notes: { type: 'retreat', retreatId: retreat.id } 
+        }),
+      });
+      
+      console.log('🔍 Payment order response status:', orderRes.status);
+      
+      if (!orderRes.ok) {
+        const errorText = await orderRes.text();
+        console.error('🔍 Payment order failed:', errorText);
+        throw new Error('Failed to create payment order');
+      }
+      
+      const orderData = await orderRes.json();
+      console.log('🔍 Payment order response:', orderData);
+      
+      const { order } = orderData;
+      if (!order) {
+        console.error('🔍 No order in response');
+        throw new Error('Failed to initialize payment');
+      }
+
+      console.log('🔍 Setting up Razorpay options...');
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'EJA Homestay',
+        description: `Booking for ${retreat.title}`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          console.log('🔍 Payment successful, creating booking...');
+          try {
+            // Create booking after successful payment
+            const { data, error } = await supabase
+              .from('retreat_bookings')
+              .insert({
+                retreat_id: retreat.id,
+                guest_id: user.id,
+                guest_name: profile?.full_name || user.email?.split('@')[0] || 'Guest',
+                guest_email: user.email || '',
+                guest_phone: profile?.phone || '',
+                date: bookingForm.date,
+                guests: bookingForm.guests,
+                special_requests: bookingForm.specialRequests,
+                total_price: totalPrice,
+                status: 'confirmed',
+                payment_id: response.razorpay_payment_id
+              })
+              .select()
+              .single();
+
+            if (error) {
+              console.error('🔍 Booking creation error:', error);
+              toast.error('Payment successful but booking creation failed');
+              return;
+            }
+
+            console.log('🔍 Booking created successfully:', data);
+            toast.success('Retreat booked and payment successful!');
+            
+            // Reset form
+            setBookingForm({
+              date: '',
+              guests: 1,
+              specialRequests: ''
+            });
+            
+            // Redirect to dashboard
+            router.push('/guest/dashboard');
+          } catch (error) {
+            console.error('🔍 Error creating booking:', error);
+            toast.error('Payment successful but booking creation failed');
+          }
+        },
+        prefill: {
+          name: profile?.full_name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          contact: profile?.phone || '',
+        },
+        theme: {
+          color: '#3B82F6',
+        },
+      } as any;
+
+      console.log('🔍 Razorpay options:', options);
+
+      // Check if Razorpay is loaded
+      console.log('🔍 Checking if Razorpay is loaded...');
+      console.log('🔍 window.Razorpay:', typeof window !== 'undefined' ? (window as any).Razorpay : 'undefined');
+      
+      if (typeof window !== 'undefined' && (window as any).Razorpay) {
+        console.log('🔍 Opening Razorpay modal...');
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      } else {
+        console.error('🔍 Razorpay not loaded');
+        toast.error('Payment gateway not loaded. Please refresh the page.');
+        setBookingLoading(false);
+      }
+      
     } catch (err) {
-      console.error('Booking error:', err);
+      console.error('🔍 Booking error:', err);
       toast.error('Failed to submit booking');
     } finally {
       setBookingLoading(false);
@@ -398,26 +494,25 @@ export default function RetreatDetailPage() {
     );
   }
 
-  const images = buildCoverFirstImages(retreat.image || retreat.cover_image, retreat.images);
+  const images = buildCoverFirstImages(retreat.cover_image, retreat.images);
   const averageRating = calculateAverageRating();
 
   try {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
         
-        {/* Hero Section with PropertyImageGallery */}
-        <div className="relative">
-          <PropertyImageGallery 
-            images={images.length ? images : ["/placeholder-experience.jpg"]} 
-            propertyTitle={retreat.title} 
-          />
-          
-          {/* Floating Action Buttons */}
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
+        {/* Title and Actions Above Gallery */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{retreat.title}</h1>
+            </div>
+            <div className="flex gap-2 ml-4">
             <button
               onClick={handleShare}
-              className="p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-all duration-200"
+                className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-all duration-200 border border-gray-200"
               aria-label="Share retreat"
             >
               <ShareIcon className="w-5 h-5 text-gray-700" />
@@ -425,7 +520,7 @@ export default function RetreatDetailPage() {
             {user && (
               <button
                 onClick={handleWishlistToggle}
-                className="p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-all duration-200"
+                  className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-all duration-200 border border-gray-200"
                 aria-label={isWishlistedState ? 'Remove from wishlist' : 'Add to wishlist'}
               >
                 {isWishlistedState ? (
@@ -435,36 +530,48 @@ export default function RetreatDetailPage() {
                 )}
               </button>
             )}
+            </div>
           </div>
+        </div>
+
+        {/* Hero Section with PropertyImageGallery */}
+        <div className="relative">
+          <PropertyImageGallery 
+            images={images.length ? images : ["/placeholder-experience.jpg"]} 
+            propertyTitle={retreat.title} 
+          />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Details */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Header Section */}
-              <div>
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{retreat.title}</h1>
-                  </div>
-                </div>
-
-                {/* Meta Information */}
-                <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Section A: Compact Property Info */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    {/* First line: subtitle, location */}
+                    <div className="flex items-center gap-4 text-gray-600">
+                      {retreat.subtitle && (
+                        <span className="text-lg font-medium">{retreat.subtitle}</span>
+                      )}
                   <div className="flex items-center gap-2">
-                    <MapPinIcon className="w-5 h-5" />
+                        <MapPinIcon className="w-4 h-4" />
                     <span>{retreat.location}</span>
                   </div>
+                    </div>
+                    
+                    {/* Second line: duration, category */}
+                    <div className="flex items-center gap-4 text-gray-600">
               {retreat.duration && (
                     <div className="flex items-center gap-2">
-                      <ClockIcon className="w-5 h-5" />
+                          <ClockIcon className="w-4 h-4" />
                       <span>{retreat.duration}</span>
                     </div>
                   )}
                   {retreat.categories && (
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{getCategoryIcon(Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories)}</span>
+                          <span className="text-xl">{getCategoryIcon(Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories)}</span>
                       <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
                         {Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories}
                       </span>
@@ -472,90 +579,228 @@ export default function RetreatDetailPage() {
                   )}
                 </div>
 
-                {/* Rating */}
+                    {/* Third line: rating */}
                 {reviews.length > 0 && (
-                  <div className="flex items-center gap-3 mb-6">
-                    <StarRating rating={averageRating} readonly size="lg" />
-                    <span className="text-lg font-semibold text-gray-900">{averageRating}</span>
+                      <div className="flex items-center gap-3">
+                        <StarRating rating={averageRating} readonly size="md" />
+                        <span className="font-semibold text-gray-900">{averageRating}</span>
                     <span className="text-gray-600">({reviews.length} reviews)</span>
                   </div>
               )}
             </div>
+                </CardContent>
+              </Card>
 
-              {/* About Section */}
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">About this retreat</h2>
+              {/* Collapsible Retreat Details Section */}
+              <Card className="bg-white shadow-lg border-0">
+                <CardContent className="p-0">
+                  <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                        <InformationCircleIcon className="w-6 h-6 mr-2 text-blue-600" />
+                        Retreat Details
+                      </h2>
+                      <button
+                        onClick={() => setShowRetreatDetails(!showRetreatDetails)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                      >
+                        {showRetreatDetails ? (
+                          <>
+                            <ChevronUpIcon className="w-4 h-4" />
+                            Hide Details
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDownIcon className="w-4 h-4" />
+                            Show Details
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {showRetreatDetails && (
+                    <div className="p-6 space-y-8">
+                      {/* Section A: Subtitle, Location, Duration, Category, Rating */}
+                      <div>
+                        {/* Subtitle */}
+                        {retreat.subtitle && (
+                          <h3 className="text-xl font-semibold text-gray-800 mb-4">{retreat.subtitle}</h3>
+                        )}
+                        
+                        {/* Location, Duration, Category */}
+                        <div className="flex items-center space-x-6 mb-4 text-sm">
+                          <div className="flex items-center space-x-1">
+                            <MapPinIcon className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-700">{retreat.location}</span>
+                          </div>
+                          {retreat.duration && (
+                            <div className="flex items-center space-x-1">
+                              <ClockIcon className="w-4 h-4 text-gray-500" />
+                              <span className="text-gray-700">{retreat.duration}</span>
+                            </div>
+                          )}
+                          {retreat.categories && (
+                            <div className="flex items-center space-x-1">
+                              <span className="text-2xl">{getCategoryIcon(Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories)}</span>
+                              <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                {Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Rating */}
+                        {reviews.length > 0 && (
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center text-yellow-500">
+                              <StarIcon className="w-4 h-4 fill-current" />
+                              <span className="text-sm text-gray-600 ml-1">
+                                {averageRating}
+                              </span>
+                              <span className="text-sm text-gray-500 ml-1">
+                                ({reviews.length} reviews)
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Section B: About, What's Included, Important Info, Host, USP */}
+                      
+                      {/* About this retreat */}
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">About this retreat</h3>
                   <div className="prose prose-gray max-w-none">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">
                       {retreat.description || 'Details coming soon.'}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                      </div>
 
-              {/* What's Included Section */}
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">What's Included</h2>
+                        {/* What's Included Section - Hardcoded as requested */}
+                        <div className="border-t pt-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">What's included</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">Accommodation</span>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <span className="text-gray-700 text-sm">Accommodation</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">All meals included</span>
+                              <div className="flex items-center gap-2">
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <span className="text-gray-700 text-sm">All meals included</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">Guided activities</span>
+                              <div className="flex items-center gap-2">
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <span className="text-gray-700 text-sm">Guided activities</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">Wellness sessions</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">Transportation</span>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <span className="text-gray-700 text-sm">Wellness sessions</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">24/7 support</span>
+                              <div className="flex items-center gap-2">
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <span className="text-gray-700 text-sm">Transportation</span>
                     </div>
+                              <div className="flex items-center gap-2">
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <span className="text-gray-700 text-sm">24/7 support</span>
                   </div>
-                </CardContent>
-              </Card>
+                            </div>
+                          </div>
+                        </div>
 
-              {/* Important Information Section */}
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Important Information</h2>
+                        {/* Important Information Section - Hardcoded as requested */}
+                        <div className="border-t pt-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Important Information</h3>
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Cancellation Policy</h3>
+                                <h4 className="font-semibold text-gray-900">Cancellation Policy</h4>
                         <p className="text-gray-600 text-sm">Free cancellation up to 7 days before the retreat start date.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">What to Bring</h3>
+                                <h4 className="font-semibold text-gray-900">What to Bring</h4>
                         <p className="text-gray-600 text-sm">Comfortable clothing, personal items, and any specific requirements will be communicated before arrival.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Health & Safety</h3>
+                                <h4 className="font-semibold text-gray-900">Health & Safety</h4>
                         <p className="text-gray-600 text-sm">All retreats follow strict health and safety protocols. Please inform us of any special requirements.</p>
                       </div>
                     </div>
                   </div>
+                        </div>
+
+                        {/* Host Information */}
+                        <div className="border-t pt-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Information</h3>
+                          <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                              <Image
+                                src={retreat.host_image || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80"}
+                                alt={retreat.host_name || "Host"}
+                                width={64}
+                                height={64}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-gray-900">Hosted by {retreat.host_name || "EJA"}</h4>
+                                <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                  {retreat.host_type || "Retreat Guide"}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">{retreat.host_tenure || "4 years"} hosting</p>
+                              <p className="text-sm text-gray-700 line-clamp-2">
+                                {retreat.host_description || "EJA is a trusted wellness partner committed to providing exceptional retreat experiences."}
+                              </p>
+                              {retreat.host_usps && retreat.host_usps.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {retreat.host_usps.slice(0, 3).map((usp, index) => (
+                                    <span key={index} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                      {usp}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Unique Propositions */}
+                        {retreat.unique_propositions && retreat.unique_propositions.length > 0 && (
+                          <div className="border-t pt-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                              <SparklesIcon className="w-5 h-5 text-yellow-500" />
+                              What makes this retreat special
+                            </h3>
+                            <div className="space-y-3">
+                              {retreat.unique_propositions.map((proposition, index) => (
+                                <div key={index} className="flex items-start gap-3">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                  <p className="text-gray-700 text-sm">{proposition}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
+
 
               {/* Reviews Section */}
             <Card>
@@ -647,9 +892,8 @@ export default function RetreatDetailPage() {
             </Card>
           </div>
 
-            {/* Right: Booking Summary & Widgets */}
-            <div className="space-y-6">
-              {/* Booking Summary */}
+            {/* Right: Booking Widget */}
+            <div>
               <Card className="sticky top-6">
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
@@ -658,98 +902,9 @@ export default function RetreatDetailPage() {
                     </div>
                     <div className="text-gray-600">per person</div>
                   </div>
-                <Button 
-                  variant="primary" 
-                    size="lg"
-                    onClick={openBooking}
-                    className="w-full mb-4"
-                >
-                    <CalendarIcon className="w-5 h-5 mr-2" />
-                  Book Now
-                </Button>
-                  <div className="text-center text-sm text-gray-500">
-                    Free cancellation • Secure booking
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Contact Host */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Host</h3>
-                  <div className="space-y-3">
-                    <a
-                      href="https://wa.me/918976662177"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                    >
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
-                        </svg>
-                      </div>
-                      <span className="font-medium text-green-700">Message Host</span>
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Retreat Details */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Retreat Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Duration</span>
-                      <span className="font-medium">{retreat.duration || 'Flexible'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Category</span>
-                      <span className="font-medium">
-                        {Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories || 'General'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Location</span>
-                      <span className="font-medium">{retreat.location}</span>
-                    </div>
-                  </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-        {/* Enhanced Booking Modal */}
-        <Modal open={bookingOpen} onClose={closeBooking}>
-          <div className="space-y-6">
-            {/* Retreat Summary */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                  <Image
-                    src={images[0] || "/placeholder-experience.jpg"}
-                    alt={retreat.title}
-                    width={48}
-                    height={48}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm truncate">{retreat.title}</h3>
-                  <p className="text-gray-600 text-xs truncate">{retreat.location}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-lg font-bold text-blue-600">₹{retreat.price?.toLocaleString()}</span>
-                    <span className="text-gray-500 text-xs">per person</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <form onSubmit={handleBookingSubmit} className="space-y-5">
-              {/* Date and Guests Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={handleBookingSubmit} className="space-y-4">
+                    {/* Preferred Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <CalendarIcon className="w-4 h-4 inline mr-1" />
@@ -765,6 +920,7 @@ export default function RetreatDetailPage() {
                   />
                 </div>
                 
+                    {/* Number of Guests */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <UsersIcon className="w-4 h-4 inline mr-1" />
@@ -773,45 +929,25 @@ export default function RetreatDetailPage() {
                   <Input
                     type="number"
                     min={1}
+                        max={20}
                     value={bookingForm.guests}
                     onChange={e => setBookingForm(prev => ({ ...prev, guests: Number(e.target.value) }))}
                     required
                     className="w-full"
                   />
-                </div>
               </div>
               
-              {/* Contact Information */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                  Contact Information
-                </h4>
-                
-                <Input
-                  label="Full Name"
-                  type="text"
-                  value={bookingForm.name}
-                  onChange={e => setBookingForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter your full name"
-                  required
-                />
-                
-                <Input
-                  label="Email Address"
-                  type="email"
-                  value={bookingForm.email}
-                  onChange={e => setBookingForm(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Enter your email address"
-                  required
-                />
-                
-                <Input
-                  label="Phone Number"
-                  type="tel"
-                  value={bookingForm.phone}
-                  onChange={e => setBookingForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Enter your phone number"
-                  required
+                    {/* Special Requests */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Special Requests
+                      </label>
+                      <textarea
+                        value={bookingForm.specialRequests}
+                        onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Any special requirements or requests..."
                 />
               </div>
 
@@ -845,31 +981,30 @@ export default function RetreatDetailPage() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
+                    {/* Book Now Button */}
                 <Button 
                   type="submit" 
-                  loading={bookingLoading} 
-                  disabled={bookingLoading || !bookingForm.date || !bookingForm.name || !bookingForm.email || !bookingForm.phone || bookingForm.guests < 1}
-                  className="flex-1"
+                      variant="primary" 
                   size="lg"
+                      loading={bookingLoading} 
+                      disabled={bookingLoading || !bookingForm.date || bookingForm.guests < 1}
+                      className="w-full"
                 >
                   <CalendarIcon className="w-5 h-5 mr-2" />
-                  Confirm Booking
+                      Book Now
                 </Button>
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={closeBooking}
-                  className="px-6"
-                  size="lg"
-                >
-                  Cancel
-                </Button>
+
+                    <div className="text-center text-sm text-gray-500">
+                      Free cancellation • Secure booking
               </div>
             </form>
+                </CardContent>
+              </Card>
           </div>
-        </Modal>
+        </div>
+      </div>
+
+
         
         <Footer />
       </div>

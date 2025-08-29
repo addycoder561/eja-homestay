@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProperties, getExperiences, getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
-import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, BookingWithPropertyAndGuest, RoomInventory, Collaboration } from '@/lib/types';
-import { getAllCollaborations } from '@/lib/database';
+import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, BookingWithPropertyAndGuest, RoomInventory } from '@/lib/types';
 import { 
   HomeIcon,
   BuildingOfficeIcon,
@@ -27,7 +26,11 @@ import {
   MapPinIcon,
   StarIcon,
   ArrowUpIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  HeartIcon,
+  TrophyIcon,
+  FireIcon,
+  ShareIcon
 } from '@heroicons/react/24/outline';
 
 const sidebarLinks = [
@@ -38,7 +41,9 @@ const sidebarLinks = [
   { label: 'Retreats', key: 'trips', icon: CalendarIcon },
   { label: 'Bookings', key: 'bookings', icon: UserGroupIcon },
   { label: 'Calendar', key: 'calendar', icon: CalendarIcon },
-  { label: 'Collaborations', key: 'collaborations', icon: UserGroupIcon },
+
+
+  { label: 'Engagement', key: 'engagement', icon: HeartIcon },
 ];
 
 // Dashboard Statistics Component
@@ -48,7 +53,6 @@ function DashboardStats() {
     totalBookings: 0,
     totalRevenue: 0,
     activeExperiences: 0,
-    pendingCollaborations: 0,
     averageRating: 0
   });
 
@@ -65,7 +69,6 @@ function DashboardStats() {
           totalBookings: 0, // Will be fetched from bookings
           totalRevenue: 0, // Will be calculated from bookings
           activeExperiences: experiences.filter(e => e.is_active).length,
-          pendingCollaborations: 0, // Will be fetched from collaborations
           averageRating: 4.5 // Placeholder
         });
       } catch (error) {
@@ -172,23 +175,7 @@ function DashboardStats() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Collaborations</h3>
-          <div className="space-y-3">
-            {[1, 2, 3].map((_, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <UserGroupIcon className="w-5 h-5 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">New collaboration request</p>
-                  <p className="text-sm text-gray-600">5 minutes ago</p>
-                </div>
-                <ClockIcon className="w-5 h-5 text-orange-500" />
-              </div>
-            ))}
-          </div>
-        </div>
+
       </div>
     </div>
   );
@@ -1053,6 +1040,80 @@ function BookingsSection() {
   );
 }
 
+function EngagementSection() {
+  const [likes, setLikes] = useState<any[]>([]);
+  const [shares, setShares] = useState<any[]>([]);
+
+  const [collaborations, setCollaborations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    // Fetch engagement data
+    // This would be implemented with actual database calls
+    setLoading(false);
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Engagement Analytics</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+              <HeartIcon className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">0</div>
+              <div className="text-sm text-gray-600">Total Likes</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+              <ShareIcon className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">0</div>
+              <div className="text-sm text-gray-600">Total Shares</div>
+            </div>
+          </div>
+        </div>
+
+
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+              <SparklesIcon className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-gray-900">0</div>
+              <div className="text-sm text-gray-600">Collaborations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Collaborations</h3>
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-600">
+            No collaborations yet
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CalendarSection() {
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -1144,52 +1205,7 @@ function CalendarSection() {
   );
 }
 
-function CollaborationsSection() {
-  const [collabs, setCollabs] = useState<Collaboration[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    // getAllCollaborations().then(data => { // getAllCollaborations is removed from imports
-    //   setCollabs((data || []).filter((c): c is Collaboration => !!c));
-    //   setLoading(false);
-    // });
-  }, []);
-
-  return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Collaboration Ideas</h2>
-      {loading ? (
-        <div>Loading...</div>
-      ) : (
-        <table className="w-full border text-left">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2">Type</th>
-              <th className="p-2">Name</th>
-              <th className="p-2">Email</th>
-              <th className="p-2">Role</th>
-              <th className="p-2">Details</th>
-              <th className="p-2">Submitted</th>
-            </tr>
-          </thead>
-          <tbody>
-            {collabs.map(c => (
-              <tr key={c.id} className="border-b">
-                <td className="p-2">{c.type}</td>
-                <td className="p-2">{c.name}</td>
-                <td className="p-2">{c.email}</td>
-                <td className="p-2">{c.role}</td>
-                <td className="p-2">{c.details}</td>
-                <td className="p-2">{new Date(c.created_at).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
 
 function SectionPlaceholder({ title }: { title: string }) {
   return (
@@ -1316,7 +1332,9 @@ export default function AdminDashboardPage() {
           {activeSection === 'trips' && <RetreatsSection />}
           {activeSection === 'bookings' && <BookingsSection />}
           {activeSection === 'calendar' && <CalendarSection />}
-          {activeSection === 'collaborations' && <CollaborationsSection />}
+
+          
+          {activeSection === 'engagement' && <EngagementSection />}
         </div>
       </main>
     </div>

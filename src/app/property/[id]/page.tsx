@@ -1,17 +1,22 @@
 'use client';
 
+// TypeScript declaration for Razorpay
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
-import BookingForm from '@/components/BookingForm';
-import { LiveRating } from '@/components/LiveRating';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
 import { getPropertyWithReviews, hasCompletedBooking, getRoomsForProperty } from '@/lib/database';
 import { updatePropertyRating } from '@/lib/rating-calculator';
 import { PropertyWithReviews, Profile, Room } from '@/lib/types';
-import { addDays, format, isSameDay } from 'date-fns';
+import { addDays, format, isSameDay, differenceInDays } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -39,8 +44,494 @@ import {
   ChatBubbleLeftRightIcon,
   ArrowRightIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  UserIcon,
+  XMarkIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
+import { LiveRating } from '@/components/LiveRating';
+
+// Host Info Modal Component
+function HostInfoModal({ isOpen, onClose, property }: { isOpen: boolean; onClose: () => void; property: PropertyWithReviews }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">About {property.host_name || 'EJA'}</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="flex items-start gap-6 mb-6">
+            {property.host_image ? (
+              <div className="w-20 h-20 rounded-full overflow-hidden">
+                <Image 
+                  src={property.host_image} 
+                  alt={property.host_name || 'Host'} 
+                  width={80} 
+                  height={80} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+                {(property.host_name || 'E').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{property.host_name || 'EJA'} Host</h3>
+              <p className="text-gray-600 mb-2">{property.host_tenure || '5 years'} hosting</p>
+              <p className="text-gray-700 leading-relaxed">
+                {property.host_description || 'EJA is a trusted hospitality partner committed to providing exceptional homestay experiences. We specialize in curating unique properties that offer authentic local experiences while ensuring comfort and safety for our guests. Our hosts are carefully selected and trained to deliver warm, personalized service that makes every stay memorable.'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900">Host Highlights:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(property.host_usps || ['Warm Hospitality', 'Local Expertise', 'Quick Response']).map((usp, index) => (
+                <div key={index} className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                  <CheckCircleIcon className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium">{usp}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Description Modal Component
+function DescriptionModal({ isOpen, onClose, description }: { isOpen: boolean; onClose: () => void; description: string }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">About this place</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="prose prose-lg max-w-none">
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {description}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Room Type Component
+function RoomTypeCard({ 
+  room, 
+  property,
+  onQuantityChange, 
+  selectedQuantity = 0,
+  maxAvailable = 1
+}: { 
+  room: Room; 
+  property: PropertyWithReviews;
+  onQuantityChange: (quantity: number) => void;
+  selectedQuantity?: number;
+  maxAvailable?: number;
+}) {
+  return (
+    <div className="border border-gray-200 rounded-2xl p-6 bg-white hover:shadow-lg transition-all duration-300">
+      <div className="flex gap-6">
+        <div className="w-1/3">
+          <div className="relative h-32 rounded-lg overflow-hidden">
+            <Image 
+              src={
+                room.images && room.images.length > 0 
+                  ? room.images[0] 
+                  : property.images && property.images.length > 0 
+                    ? property.images[0] 
+                    : '/placeholder-experience.jpg'
+              } 
+              alt={room.name} 
+              fill 
+              className="object-cover" 
+            />
+          </div>
+        </div>
+        <div className="w-2/3">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">{room.name}</h3>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                {room.room_type}
+              </span>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-green-600">₹{room.price}</div>
+              <div className="text-sm text-gray-500">per night</div>
+            </div>
+          </div>
+          
+          {room.description && (
+            <p className="text-gray-700 mb-4 text-sm line-clamp-2">{room.description}</p>
+          )}
+          
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              <span className="font-semibold">Capacity:</span> Up to {room.max_guests} guests
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Quantity:</span>
+              <select
+                value={selectedQuantity}
+                onChange={(e) => onQuantityChange(Number(e.target.value))}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+              >
+                {Array.from({ length: maxAvailable + 1 }, (_, i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Simplified Booking Form Component
+function SimplifiedBookingForm({ 
+  property, 
+  rooms, 
+  roomSelections,
+  onRoomQuantityChange
+}: { 
+  property: PropertyWithReviews;
+  rooms: Room[];
+  roomSelections: Record<string, number>;
+  onRoomQuantityChange: (roomId: string, quantity: number) => void;
+}) {
+  console.log('🔍 SimplifiedBookingForm is rendering!');
+  console.log('🔍 Property:', property);
+  console.log('🔍 Rooms:', rooms);
+  
+  const { user, profile } = useAuth();
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [specialRequests, setSpecialRequests] = useState('');
+
+  useEffect(() => {
+    const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+    const dayAfter = format(addDays(new Date(), 2), 'yyyy-MM-dd');
+    setCheckIn(tomorrow);
+    setCheckOut(dayAfter);
+  }, []);
+
+  const calculateNights = () => {
+    if (!checkIn || !checkOut) return 0;
+    return differenceInDays(new Date(checkOut), new Date(checkIn));
+  };
+
+  // Calculate selected room price (price A from left side)
+  const calculateSelectedRoomPrice = () => {
+    let totalPrice = 0;
+    Object.entries(roomSelections).forEach(([roomId, quantity]) => {
+      const room = rooms.find(r => r.id === roomId);
+      if (room && quantity > 0) {
+        totalPrice += room.price * quantity;
+      }
+    });
+    return totalPrice;
+  };
+
+  // Calculate final total price (selected rooms × nights)
+  const calculateTotalPrice = () => {
+    const selectedRoomPrice = calculateSelectedRoomPrice();
+    const nights = calculateNights();
+    if (nights <= 0 || selectedRoomPrice <= 0) return 0;
+    return selectedRoomPrice * nights;
+  };
+
+  // Get display price (selected room price or base property price)
+  const getDisplayPrice = () => {
+    const selectedRoomPrice = calculateSelectedRoomPrice();
+    return selectedRoomPrice > 0 ? selectedRoomPrice : (property.price_per_night || 0);
+  };
+
+  return (
+    <Card className="sticky top-8 bg-white shadow-xl border-0">
+      {/* TEST BUTTON - Should be visible */}
+      <div style={{ position: 'fixed', top: '10px', left: '10px', zIndex: 9999 }}>
+        <button
+          onClick={() => {
+            console.log('🔍 SIMPLIFIED BOOKING FORM TEST BUTTON CLICKED!');
+            console.log('🔍 User:', user);
+            console.log('🔍 Property:', property);
+            console.log('🔍 Rooms:', rooms);
+          }}
+          style={{
+            backgroundColor: 'green',
+            color: 'white',
+            padding: '10px',
+            border: 'none',
+            borderRadius: '5px',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          🟢 SIMPLIFIED TEST
+        </button>
+      </div>
+
+      <CardContent className="p-6">
+        <div className="text-center mb-6">
+          <div className="text-3xl font-bold text-gray-900">₹{getDisplayPrice()?.toLocaleString()}</div>
+          <div className="text-gray-600">per night</div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Room Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Rooms</label>
+            <div className="space-y-2">
+              {rooms.map(room => (
+                <div key={room.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                  <div>
+                    <div className="font-medium text-gray-900">{room.name}</div>
+                    <div className="text-sm text-gray-600">₹{room.price}/night</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        const currentQty = roomSelections[room.id] || 0;
+                        if (currentQty > 0) {
+                          onRoomQuantityChange(room.id, currentQty - 1);
+                        }
+                      }}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                      disabled={(roomSelections[room.id] || 0) <= 0}
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center font-medium">{roomSelections[room.id] || 0}</span>
+                    <button
+                      onClick={() => {
+                        const currentQty = roomSelections[room.id] || 0;
+                        onRoomQuantityChange(room.id, currentQty + 1);
+                      }}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
+              <input
+                type="date"
+                value={checkIn}
+                onChange={(e) => setCheckIn(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
+              <input
+                type="date"
+                value={checkOut}
+                onChange={(e) => setCheckOut(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Guests */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
+              <select
+                value={adults}
+                onChange={(e) => setAdults(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {Array.from({ length: 10 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
+              <select
+                value={children}
+                onChange={(e) => setChildren(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {Array.from({ length: 6 }, (_, i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Special Requests */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
+            <textarea
+              value={specialRequests}
+              onChange={(e) => setSpecialRequests(e.target.value)}
+              placeholder="Any special requests..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Total */}
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-gray-700">Total for {calculateNights()} nights</span>
+              <span className="text-xl font-bold text-gray-900">₹{calculateTotalPrice().toLocaleString()}</span>
+            </div>
+            
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl"
+              disabled={!user || calculateTotalPrice() === 0}
+              onClick={async () => {
+                console.log('🔍 Book Now button clicked!');
+                console.log('🔍 User:', user);
+                console.log('🔍 Property:', property);
+                console.log('🔍 Check-in:', checkIn);
+                console.log('🔍 Check-out:', checkOut);
+                console.log('🔍 Adults:', adults);
+                console.log('🔍 Children:', children);
+                console.log('🔍 Total price:', calculateTotalPrice());
+                
+                if (!user) {
+                  toast.error('Please sign in to book');
+                  return;
+                }
+
+                if (calculateTotalPrice() === 0) {
+                  toast.error('Please select at least one room');
+                  return;
+                }
+
+                // Test profile API - Use auth context instead of API
+                try {
+                  console.log('🔍 Profile data from auth context:', {
+                    user: user,
+                    profile: profile // This comes from useAuth context
+                  });
+                  
+                  // Also try the API as backup
+                  const res = await fetch('/api/user/profile', {
+                    credentials: 'include'
+                  });
+                  const data = await res.json();
+                  console.log('🔍 Profile API response:', data);
+                } catch (error) {
+                  console.error('🔍 Profile API error:', error);
+                }
+                
+                // Create Razorpay order
+                try {
+                  console.log('🔍 Creating Razorpay order...');
+                  const orderRes = await fetch('/api/payments/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                      amount: Math.round(calculateTotalPrice() * 100), // Convert to paise
+                      currency: 'INR',
+                      notes: {
+                        type: 'homestay',
+                        propertyId: property.id,
+                        checkIn,
+                        checkOut,
+                        guests: adults + children
+                      }
+                    }),
+                  });
+                  
+                  if (!orderRes.ok) {
+                    throw new Error('Failed to create payment order');
+                  }
+                  
+                  const { order } = await orderRes.json();
+                  console.log('🔍 Razorpay order created:', order);
+                  
+                  // Initialize Razorpay
+                  const options = {
+                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: property.title,
+                    description: `Booking for ${calculateNights()} night${calculateNights() > 1 ? 's' : ''}`,
+                    order_id: order.id,
+                    handler: async function (response: any) {
+                      console.log('🔍 Payment successful!', response);
+                      toast.success('Payment successful! Booking confirmed.');
+                      // Here you would create the booking in the database
+                    },
+                    prefill: {
+                      email: user.email || '',
+                      name: profile?.full_name || user.user_metadata?.full_name || '',
+                    },
+                    theme: { color: '#2563eb' },
+                    modal: {
+                      ondismiss: function () {
+                        console.log('🔍 Payment modal dismissed');
+                        toast.error('Payment was cancelled');
+                      }
+                    }
+                  };
+
+                  // Check if Razorpay is loaded
+                  if (typeof window !== 'undefined' && (window as any).Razorpay) {
+                    console.log('🔍 Opening Razorpay payment modal...');
+                    const rzp = new (window as any).Razorpay(options);
+                    rzp.open();
+                  } else {
+                    console.error('🔍 Razorpay not loaded');
+                    toast.error('Payment gateway not loaded. Please refresh the page.');
+                  }
+                  
+                } catch (error) {
+                  console.error('🔍 Payment error:', error);
+                  toast.error('Failed to process payment. Please try again.');
+                }
+              }}
+            >
+              {user ? 'Book Now' : 'Sign in to Book'}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function GoogleMap({ lat, lng }: { lat: number; lng: number }) {
   return (
@@ -56,6 +547,8 @@ function GoogleMap({ lat, lng }: { lat: number; lng: number }) {
 }
 
 export default function PropertyDetailPage() {
+  console.log('🔍 PropertyDetailPage is loading!');
+  
   const params = useParams();
   const propertyId = params.id as string;
   const { user, profile } = useAuth();
@@ -64,16 +557,15 @@ export default function PropertyDetailPage() {
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [lastBooking, setLastBooking] = useState<{ id: string; status: string; total_price?: number } | null>(null);
-  const [canReview, setCanReview] = useState(false);
-  const [hasReviewed, setHasReviewed] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [preselectedRoomId, setPreselectedRoomId] = useState<string | null>(null);
-  const [showAllAmenities, setShowAllAmenities] = useState(false);
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const bookingFormRef = useRef<HTMLDivElement | null>(null);
+
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showAllRoomTypes, setShowAllRoomTypes] = useState(false);
+  const [showPropertyDetails, setShowPropertyDetails] = useState(true);
+  const [hostModalOpen, setHostModalOpen] = useState(false);
+  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [roomSelections, setRoomSelections] = useState<Record<string, number>>({});
 
   console.log('PropertyDetailPage propertyId:', propertyId);
 
@@ -93,35 +585,6 @@ export default function PropertyDetailPage() {
       fetchProperty();
     }
   }, [propertyId]);
-
-  useEffect(() => {
-    // Check if user can review (has completed booking)
-    const checkEligibility = async () => {
-      if (user && propertyId) {
-        const eligible = await hasCompletedBooking(user.id, propertyId);
-        setCanReview(eligible);
-      } else {
-        setCanReview(false);
-      }
-    };
-    checkEligibility();
-  }, [user, propertyId]);
-
-  useEffect(() => {
-    if (lastBooking) {
-      console.log('lastBooking set:', lastBooking);
-    }
-  }, [lastBooking]);
-
-  useEffect(() => {
-    // Check if user has already reviewed this property
-    if (user && property && property.reviews) {
-      const alreadyReviewed = property.reviews.some(r => r.guest_id === user.id);
-      setHasReviewed(alreadyReviewed);
-    } else {
-      setHasReviewed(false);
-    }
-  }, [user, property]);
 
   useEffect(() => {
     // Fetch rooms for this property
@@ -185,71 +648,22 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !profile) return;
-    setSubmitting(true);
-    try {
-      const { data, error } = await supabase.from('reviews').insert({
-        property_id: propertyId,
-        guest_id: profile.id,
-        rating: reviewRating,
-        comment: reviewText,
-      }).select().single();
-      if (error) throw error;
-      setReviewText('');
-      setReviewRating(5);
-      // Update property rating in database
-      await updatePropertyRating(propertyId);
-      
-      // Refresh property data to get updated ratings
-      const updatedProperty = await getPropertyWithReviews(propertyId);
-      if (updatedProperty) {
-        setProperty(updatedProperty);
+  const handleRoomQuantityChange = (roomId: string, quantity: number) => {
+    setRoomSelections(prev => ({
+      ...prev,
+      [roomId]: quantity
+    }));
+  };
+
+  const calculateTotalPrice = () => {
+    let total = 0;
+    Object.entries(roomSelections).forEach(([roomId, quantity]) => {
+      const room = rooms.find(r => r.id === roomId);
+      if (room && quantity > 0) {
+        total += room.price * quantity;
       }
-      toast.success('Review submitted successfully!');
-    } catch (err) {
-      toast.error('Failed to submit review');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePayNow = async () => {
-    if (!lastBooking) return;
-    setPaymentLoading(true);
-    const options = {
-      key: 'rzp_test_C7d9Vbcc9JM8dp',
-      amount: Math.round((lastBooking.total_price || 0) * 100), // in paise
-      currency: 'INR',
-      name: property?.title || 'Property Booking',
-      description: 'Booking Payment',
-      handler: async function (response: { razorpay_payment_id: string }) {
-            // Mark booking as confirmed (aligned with booking_status enum)
-            await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', lastBooking.id);
-        toast.success('Payment successful! Your booking is confirmed.');
-        window.location.href = '/guest/dashboard';
-      },
-      prefill: {
-        email: profile?.email,
-        name: profile?.full_name,
-      },
-      theme: { color: '#2563eb' },
-    };
-    // @ts-expect-error: Razorpay is a global injected by the script
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-    setPaymentLoading(false);
-  };
-
-  // Helper: get next 30 days
-  const getNext30Days = () => {
-    const days = [];
-    const today = new Date();
-    for (let i = 0; i < 30; i++) {
-      days.push(addDays(today, i));
-    }
-    return days;
+    });
+    return total;
   };
 
   if (loading) {
@@ -296,67 +710,29 @@ export default function PropertyDetailPage() {
     );
   }
 
-  // Demo/placeholder data for new fields
-  // Use actual data from Supabase, with minimal fallbacks only if absolutely necessary
-  const usps = property.usps && property.usps.length > 0 ? property.usps : [
-    'Stunning mountain views',
-    'Power backup & pure-veg meals',
-    'Pet friendly & parking available',
-  ];
-  
-  const host: Profile = property.host || {
-    id: '',
-    email: '',
-    full_name: 'Host Name',
-    phone: '',
-    avatar_url: '',
-    is_host: true,
-    created_at: '',
-    updated_at: '',
-    host_bio: 'Experienced host passionate about hospitality and local culture.',
-    host_usps: ['Warm hospitality', 'Local expertise', 'Quick response'],
-  };
-  
-  const houseRules = property.house_rules || 'House rules will be provided upon booking.';
-  const cancellationPolicy = property.cancellation_policy || 'Cancellation policy will be provided upon booking.';
+  // Use actual data from database with fallbacks
+  const uniquePropositions = property.unique_propositions && property.unique_propositions.length > 0 
+    ? property.unique_propositions 
+    : [
+        'Stunning mountain views from every room',
+        'Authentic local cuisine prepared fresh daily',
+        'Exclusive access to hidden hiking trails'
+      ];
 
   const displayedReviews = showAllReviews ? property.reviews : property.reviews.slice(0, 3);
-  const displayedAmenities = showAllAmenities ? (property.amenities || []) : (property.amenities || []).slice(0, 6);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Navigation />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
+        
+        {/* Property Title and Actions */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                  {property.property_type}
-                </span>
-                <div className="flex items-center text-yellow-500">
-                  <StarIcon className="w-4 h-4 fill-current" />
-                  <span className="text-sm text-gray-600 ml-1">
-                    {property.google_rating || property.average_rating || 4.5}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-1">
-                    ({property.google_reviews_count || property.review_count || 0} reviews)
-                  </span>
-                </div>
-              </div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">{property.title}</h1>
-              {property.subtitle && <h2 className="text-xl text-gray-600 mb-3">{property.subtitle}</h2>}
-              <div className="flex items-center text-gray-600 mb-4">
-                <MapPinIcon className="w-5 h-5 mr-2" />
-                <span>
-                  {[property.address, property.city, property.state, property.country]
-                    .filter(Boolean)
-                    .join(', ')}
-                </span>
-              </div>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -388,239 +764,289 @@ export default function PropertyDetailPage() {
           {/* Property Details */}
           <div className="lg:col-span-2 space-y-8">
             
-            {/* Quick Stats */}
+            {/* Property Details - Collapsible Section */}
             <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <HomeIcon className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">{property.bedrooms}</div>
-                    <div className="text-sm text-gray-600">Bedrooms</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <UsersIcon className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">{property.max_guests}</div>
-                    <div className="text-sm text-gray-600">Max Guests</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <CalendarIcon className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">{property.bathrooms}</div>
-                    <div className="text-sm text-gray-600">Bathrooms</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <StarIcon className="w-6 h-6 text-orange-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">
-                      {property.google_rating || property.average_rating || 4.5}
-                    </div>
-                    <div className="text-sm text-gray-600">Rating</div>
+              <CardContent className="p-0">
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <InformationCircleIcon className="w-6 h-6 mr-2 text-blue-600" />
+                      Property Details
+                </h2>
+                      <button
+                      onClick={() => setShowPropertyDetails(!showPropertyDetails)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                      >
+                      {showPropertyDetails ? (
+                          <>
+                            <ChevronUpIcon className="w-4 h-4" />
+                          Hide Details
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDownIcon className="w-4 h-4" />
+                          Show Details
+                          </>
+                        )}
+                      </button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* USPs */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <CheckCircleIcon className="w-6 h-6 mr-2 text-green-600" />
-                  Why Book This Stay?
-                </h2>
-                {usps && usps.length > 0 ? (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {usps.map((usp, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                
+                {showPropertyDetails && (
+                  <div className="p-6 space-y-8">
+                    {/* Property Info Section - Compact Layout */}
+                    <div>
+                      {/* First Line: Subtitle and Location */}
+                      <div className="mb-4">
+                        {property.subtitle && (
+                          <h3 className="text-xl font-semibold text-gray-800 mb-1">{property.subtitle}</h3>
+                        )}
+                        <div className="flex items-center text-gray-600 text-sm">
+                          <MapPinIcon className="w-4 h-4 mr-1" />
+                          <span>
+                            {[property.address, property.city, property.state, property.country]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </span>
                         </div>
-                        <span className="text-gray-700">{usp}</span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircleIcon className="w-8 h-8 text-gray-400" />
+
+                      {/* Second Line: Property Stats */}
+                      <div className="flex items-center space-x-6 mb-4 text-sm">
+                        <div className="flex items-center space-x-1">
+                          <UsersIcon className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-700">Up to {property.max_guests} guests</span>
+                                  </div>
+                        <div className="flex items-center space-x-1">
+                          <HomeIcon className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-700">{property.bedrooms} room{property.bedrooms !== 1 ? 's' : ''}</span>
+                              </div>
+                        <div className="flex items-center space-x-1">
+                          <HomeIcon className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-700">{property.beds || property.bedrooms} bed{(property.beds || property.bedrooms) !== 1 ? 's' : ''}</span>
+                            </div>
+                        <div className="flex items-center space-x-1">
+                          <WifiIcon className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-700">{property.bathrooms} bathroom{property.bathrooms !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Third Line: Category and Rating */}
+                      <div className="flex items-center space-x-4">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                          {property.property_type}
+                        </span>
+                        <div className="flex items-center text-yellow-500">
+                          <StarIcon className="w-4 h-4 fill-current" />
+                          <span className="text-sm text-gray-600 ml-1">
+                            {property.google_rating || property.average_rating || 4.5}
+                          </span>
+                          <span className="text-sm text-gray-500 ml-1">
+                            ({property.google_reviews_count || property.review_count || 0} reviews)
+                                  </span>
+                                </div>
+                                </div>
+                              </div>
+                              
+                    {/* Host Information */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Information</h3>
+                      <div className="flex items-start gap-6">
+                        <div className="flex-shrink-0">
+                          {property.host_image ? (
+                            <div className="w-16 h-16 rounded-full overflow-hidden">
+                              <Image 
+                                src={property.host_image} 
+                                alt={property.host_name || 'Host'} 
+                                width={64} 
+                                height={64} 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                              {(property.host_name || 'E').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-base font-semibold text-gray-900 mb-1">
+                            Hosted by {property.host_name || 'EJA'}
+                          </h4>
+                          <p className="text-gray-600 mb-3 text-sm">
+                            {property.host_type || 'EJA Host'} • {property.host_tenure || '5 years'} hosting
+                          </p>
+                          <p className="text-gray-700 mb-4 text-sm">
+                            {(property.host_description || 'Experienced host passionate about hospitality and local culture.').slice(0, 120)}
+                            <button 
+                              onClick={() => setHostModalOpen(true)}
+                              className="text-blue-600 hover:text-blue-700 font-medium ml-1"
+                            >
+                              more
+                            </button>
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {(property.host_usps || ['Warm Hospitality', 'Local Expertise', 'Quick Response']).map((usp, index) => (
+                              <span 
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {usp}
+                                  </span>
+                                ))}
+                          </div>
+                        </div>
+                      </div>
+                              </div>
+                              
+                    {/* Unique Propositions */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <CheckCircleIcon className="w-5 h-5 mr-2 text-green-600" />
+                        What makes this place special
+                      </h3>
+                      <div className="space-y-3">
+                        {uniquePropositions.map((proposition, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <CheckCircleIcon className="w-3 h-3 text-green-600" />
+                                </div>
+                            <span className="text-gray-700 text-sm">{proposition}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No highlights listed</h3>
-                    <p className="text-gray-600">Property highlights will be provided upon booking.</p>
+
+                    {/* Property Description */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">About this place</h3>
+                      <div className="prose prose-gray max-w-none">
+                        <p className="text-gray-700 leading-relaxed text-sm">
+                          {property.description?.slice(0, 180)}
+                          {property.description && property.description.length > 180 && (
+                            <>
+                              ...
+                                <button
+                                onClick={() => setDescriptionModalOpen(true)}
+                                className="text-blue-600 hover:text-blue-700 font-medium ml-1"
+                              >
+                                more
+                                </button>
+                            </>
+                          )}
+                        </p>
+                              </div>
+                            </div>
+
+                    {/* Amenities */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <WifiIcon className="w-5 h-5 mr-2 text-blue-600" />
+                        Amenities
+                      </h3>
+                      {property.amenities && property.amenities.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {property.amenities.map((amenity, i) => (
+                            <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <WifiIcon className="w-3 h-3 text-blue-600" />
+                          </div>
+                              <span className="text-gray-700 text-sm font-medium">{amenity}</span>
+                        </div>
+                          ))}
+                  </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <WifiIcon className="w-6 h-6 text-gray-400" />
+                          </div>
+                          <h4 className="text-base font-semibold text-gray-900 mb-1">No amenities listed</h4>
+                          <p className="text-gray-600 text-sm">Amenities information will be provided upon booking.</p>
+                        </div>
+                      )}
+                    </div>
+
+            {/* House Rules & Cancellation Policy */}
+                    <div className="border-t pt-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                          <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                            <ShieldCheckIcon className="w-4 h-4 mr-2 text-green-600" />
+                      House Rules
+                    </h3>
+                          <div className="bg-green-50 p-3 rounded-lg">
+                            <p className="text-gray-700 text-sm">{property.house_rules || 'House rules will be provided upon booking.'}</p>
+                    </div>
+                  </div>
+                  <div>
+                          <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                            <ClockIcon className="w-4 h-4 mr-2 text-blue-600" />
+                      Cancellation Policy
+                    </h3>
+                          <div className="bg-blue-50 p-3 rounded-lg">
+                            <p className="text-gray-700 text-sm">{property.cancellation_policy || 'Cancellation policy will be provided upon booking.'}</p>
+                    </div>
+                  </div>
+                </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Description */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">About this place</h2>
-                <p className="text-gray-700 leading-relaxed text-lg">{property.description}</p>
-              </CardContent>
-            </Card>
-
-            {/* Amenities */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <WifiIcon className="w-6 h-6 mr-2 text-blue-600" />
-                  Amenities
-                </h2>
-                {property.amenities && property.amenities.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                      {displayedAmenities.map((amenity, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <WifiIcon className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <span className="text-gray-700 font-medium">{amenity}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {(property.amenities || []).length > 6 && (
-                      <button
-                        onClick={() => setShowAllAmenities(!showAllAmenities)}
-                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
-                      >
-                        {showAllAmenities ? (
-                          <>
-                            <ChevronUpIcon className="w-4 h-4" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDownIcon className="w-4 h-4" />
-                            Show All Amenities ({(property.amenities || []).length})
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <WifiIcon className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No amenities listed</h3>
-                  <p className="text-gray-600">Amenities information will be provided upon booking.</p>
-                </div>
-              )}
-              </CardContent>
-            </Card>
-
-            {/* Room Types List */}
-            {property && rooms.length > 0 && (
+            {/* Available Room Types */}
+            {rooms.length > 0 && (
               <Card className="bg-white shadow-lg border-0">
                 <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                    <HomeIcon className="w-6 h-6 mr-2 text-blue-600" />
-                    Available Room Types
-                  </h2>
-                  <div className="space-y-6">
-                    {rooms.map(room => {
-                      // Use per-room images if available, else fallback to property images
-                      const roomImages = room.images && room.images.length > 0 ? room.images : property.images.slice(0, 2);
-                      return (
-                        <div key={room.id} className="border border-gray-200 rounded-2xl p-6 bg-gradient-to-r from-gray-50 to-white hover:shadow-lg transition-all duration-300">
-                          <div className="flex flex-col lg:flex-row gap-6">
-                            <div className="lg:w-1/3">
-                              <div className="grid grid-cols-2 gap-2 mb-4">
-                                {roomImages.slice(0, 4).map((img, i) => (
-                                  <div key={i} className="relative h-20 rounded-lg overflow-hidden">
-                                    <Image src={img} alt={`${room.name} image ${i + 1}`} fill className="object-cover" />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="lg:w-2/3">
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <h3 className="text-xl font-bold text-gray-900 mb-1">{room.name}</h3>
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                                    {room.room_type}
-                                  </span>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-2xl font-bold text-green-600">₹{room.price}</div>
-                                  <div className="text-sm text-gray-500">per night</div>
-                                </div>
-                              </div>
-                              
-                              {room.description && (
-                                <p className="text-gray-700 mb-4 text-sm">{room.description}</p>
-                              )}
-                              
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                {room.amenities && room.amenities.slice(0, 4).map((amenity, i) => (
-                                  <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                                    {amenity}
-                                  </span>
-                                ))}
-                                {room.amenities && room.amenities.length > 4 && (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                                    +{room.amenities.length - 4} more
-                                  </span>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-600">
-                                  <span className="font-semibold">Capacity:</span> Up to {room.max_guests} guests
-                                </div>
-                                <button
-                                  className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold flex items-center"
-                                  onClick={() => {
-                                    setPreselectedRoomId(room.id);
-                                    setTimeout(() => {
-                                      bookingFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    }, 100);
-                                  }}
-                                >
-                                  Book This Room
-                                  <ArrowRightIcon className="w-4 h-4 ml-2" />
-                                </button>
-                              </div>
-                            </div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <HomeIcon className="w-6 h-6 mr-2 text-blue-600" />
+                      Available Room Types
+                    </h2>
+                    <button
+                      onClick={() => setShowAllRoomTypes(!showAllRoomTypes)}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      {showAllRoomTypes ? (
+                        <>
+                          <ChevronUpIcon className="w-4 h-4" />
+                          Show Less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDownIcon className="w-4 h-4" />
+                          Show All ({rooms.length})
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {showAllRoomTypes && (
+                    <>
+                      <div className="space-y-4">
+                        {rooms.map(room => (
+                          <RoomTypeCard
+                            key={room.id}
+                            room={room}
+                            property={property}
+                            selectedQuantity={roomSelections[room.id] || 0}
+                            maxAvailable={room.total_inventory || 1}
+                            onQuantityChange={(quantity) => handleRoomQuantityChange(room.id, quantity)}
+                          />
+                        ))}
+                      </div>
+                      {Object.values(roomSelections).some(qty => qty > 0) && (
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-gray-900">Total Price:</span>
+                            <span className="text-2xl font-bold text-blue-600">₹{calculateTotalPrice().toLocaleString()}</span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}
-
-            {/* House Rules & Cancellation Policy */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                      <ShieldCheckIcon className="w-5 h-5 mr-2 text-green-600" />
-                      House Rules
-                    </h3>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <p className="text-gray-700">{houseRules}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                      <ClockIcon className="w-5 h-5 mr-2 text-blue-600" />
-                      Cancellation Policy
-                    </h3>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-gray-700">{cancellationPolicy}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Reviews */}
             <Card className="bg-white shadow-lg border-0">
@@ -688,49 +1114,6 @@ export default function PropertyDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Host Info */}
-            <Card className="bg-white shadow-lg border-0">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <UsersIcon className="w-6 h-6 mr-2 text-blue-600" />
-                  Meet Your Host
-                </h2>
-                <div className="flex flex-col md:flex-row gap-6 items-start">
-                  <div className="flex-shrink-0">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                      {host.avatar_url ? (
-                        <Image src={host.avatar_url} alt={host.full_name || 'Host'} width={96} height={96} className="rounded-full" />
-                      ) : (
-                        host.full_name?.[0] || 'H'
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{host.full_name}</h3>
-                    <p className="text-gray-700 mb-4 leading-relaxed">{host.host_bio}</p>
-                    
-                    <div className="flex items-center gap-2 text-gray-600 mb-4">
-                      <EnvelopeIcon className="w-4 h-4" />
-                      <span>{host.email}</span>
-                    </div>
-                    
-                    {(host.host_usps || []).length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Host Highlights:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {(host.host_usps || []).map((usp, i) => (
-                            <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                              {usp}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Google Map */}
             {property.latitude && property.longitude && (
               <Card className="bg-white shadow-lg border-0">
@@ -745,75 +1128,37 @@ export default function PropertyDetailPage() {
                 </CardContent>
               </Card>
             )}
-          </div>
 
-          {/* Right Sidebar - Booking Form */}
-          <div className="lg:col-span-1" ref={bookingFormRef}>
-            <BookingForm property={property} preselectedRoomId={preselectedRoomId} />
-          </div>
         </div>
 
-        {/* Review Form Section */}
-        {user && profile && (
-          <section className="mt-12">
-            {canReview && !hasReviewed && (
-              <Card className="bg-white shadow-lg border-0">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-blue-600" />
-                    Leave a Review
-                  </h3>
-                  <form onSubmit={handleReviewSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
-                      <select
-                        value={reviewRating}
-                        onChange={e => setReviewRating(Number(e.target.value))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      >
-                        {[5,4,3,2,1].map(r => <option key={r} value={r}>{r} stars</option>)}
-                      </select>
+          {/* Right Sidebar - Simplified Booking Form */}
+          <div className="lg:col-span-1">
+            <SimplifiedBookingForm 
+              property={property} 
+              rooms={rooms}
+              roomSelections={roomSelections}
+              onRoomQuantityChange={handleRoomQuantityChange}
+            />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
-                      <textarea
-                        value={reviewText}
-                        onChange={e => setReviewText(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        rows={4}
-                        placeholder="Share your experience with this property..."
-                      />
-                    </div>
-                    <Button 
-                      type="submit" 
-                      variant="primary" 
-                      size="lg" 
-                      loading={submitting} 
-                      disabled={submitting || !reviewText}
-                      className="w-full"
-                    >
-                      Submit Review
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-            {hasReviewed && user && (
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="p-6 text-center">
-                  <CheckCircleIcon className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-green-800 mb-2">Review Submitted</h3>
-                  <p className="text-green-700">You have already reviewed this property. Thank you for your feedback!</p>
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        )}
+        </div>
       </main>
       
+      {/* Modals */}
+      <HostInfoModal 
+        isOpen={hostModalOpen} 
+        onClose={() => setHostModalOpen(false)} 
+        property={property}
+      />
+      <DescriptionModal 
+        isOpen={descriptionModalOpen} 
+        onClose={() => setDescriptionModalOpen(false)} 
+        description={property.description || ''}
+      />
+      
       <Footer />
+      
+      {/* Razorpay Script */}
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
     </div>
   );
 } 

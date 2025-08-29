@@ -77,7 +77,7 @@ function EmptyWishlistState({ activeFilter }: { activeFilter: FilterType }) {
           message: "Discover unique experiences and add them to your wishlist",
           icon: "🌟",
           buttonText: "Take Experiences",
-          buttonLink: "/experiences"
+          buttonLink: "/discover"
         };
       case 'retreat':
         return {
@@ -85,7 +85,7 @@ function EmptyWishlistState({ activeFilter }: { activeFilter: FilterType }) {
           message: "Find perfect retreats and save them for later",
           icon: "🧘‍♀️",
           buttonText: "Find Retreats",
-          buttonLink: "/retreats"
+          buttonLink: "/discover"
         };
       default:
         return {
@@ -121,6 +121,7 @@ export default function MyWishlistPage() {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -130,6 +131,12 @@ export default function MyWishlistPage() {
     if (!user) {
       setLoading(false);
       setItems([]);
+      setDataLoaded(false);
+      return;
+    }
+
+    // If data is already loaded, don't fetch again
+    if (dataLoaded) {
       return;
     }
 
@@ -144,6 +151,7 @@ export default function MyWishlistPage() {
         if (!wishlistRecords || wishlistRecords.length === 0) {
           setItems([]);
           setLoading(false);
+          setDataLoaded(true);
           return;
         }
       
@@ -260,6 +268,7 @@ export default function MyWishlistPage() {
           retreats: allItems.filter(item => item._type === 'retreat').length
         });
         setItems(allItems);
+        setDataLoaded(true);
       } catch (err) {
         console.error('Error fetching wishlist:', err);
         setError('Failed to load your wishlist. Please try again.');
@@ -269,7 +278,7 @@ export default function MyWishlistPage() {
     };
 
     fetchWishlist();
-  }, [user]);
+  }, [user]); // Remove dataLoaded from dependencies to prevent infinite loop
 
   useEffect(() => {
     if (activeFilter === 'all') {
@@ -359,7 +368,7 @@ export default function MyWishlistPage() {
         <Navigation />
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading your wishlist...</p>
           </div>
         </main>

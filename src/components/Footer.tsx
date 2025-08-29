@@ -82,28 +82,35 @@ export function Footer() {
             <div 
               className="flex items-center space-x-2 mb-6 animate-fade-in"
             >
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">E</span>
               </div>
               <span className="text-2xl font-bold">EJA Homestay</span>
             </div>
             
             <p 
-              className="text-gray-300 mb-6 max-w-md leading-relaxed animate-fade-in-delay-1"
+              className="text-gray-300 mb-4 max-w-md leading-relaxed animate-fade-in-delay-1"
             >
-              Discover amazing properties around the world. From cozy cabins to luxury villas, 
-              find the perfect accommodation for your next adventure.
+              Discover amazing properties for your next adventure.
             </p>
 
-            {/* Contact Info */}
+            {/* Social Links */}
             <div 
-              className="space-y-3 animate-fade-in-delay-2"
+              className="flex items-center gap-4 mb-4 animate-fade-in-delay-2"
             >
-              <div className="flex items-center gap-3 text-gray-300">
-                <EnvelopeIcon className="w-5 h-5 text-blue-400" />
-                <span>hello@ejahomestay.com</span>
-              </div>
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  className="text-gray-400 hover:text-white transition-colors duration-200"
+                  aria-label={social.name}
+                >
+                  {social.icon}
+                </a>
+              ))}
             </div>
+
+            
           </div>
 
           {/* Footer Links */}
@@ -143,61 +150,45 @@ export function Footer() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               />
-              <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
+              <button className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg transition-colors duration-200">
                 Subscribe
               </button>
             </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            {/* Copyright */}
-            <div 
-              className="text-gray-400 text-sm animate-fade-in-delay-4"
-            >
-              © {currentYear} EJA Homestay. All rights reserved.
-            </div>
+                 {/* Bottom Section */}
+         <div className="border-t border-gray-800 pt-8">
+           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+             {/* Copyright */}
+             <div 
+               className="text-gray-400 text-sm animate-fade-in-delay-4"
+             >
+               © {currentYear} EJA Homestay. All rights reserved.
+             </div>
 
-            {/* Social Links */}
-            <div 
-              className="flex items-center gap-4 animate-fade-in-delay-4"
-            >
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  className="text-gray-400 hover:text-white transition-colors duration-200"
-                  aria-label={social.name}
-                >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
+             {/* Made with Love */}
+             <div 
+               className="text-gray-500 text-sm animate-fade-in-delay-4"
+             >
+               Made with <HeartIcon className="w-4 h-4 inline text-red-500" /> in India
+             </div>
 
-            {/* Language Selector */}
-            <div 
-              className="flex items-center gap-2 text-gray-400 text-sm animate-fade-in-delay-4"
-            >
-              <GlobeAltIcon className="w-4 h-4" />
-              <select className="bg-transparent border-none text-gray-400 focus:outline-none">
-                <option value="en">English</option>
-                <option value="hi">हिंदी</option>
-                <option value="mr">मराठी</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Made with Love */}
-          <div 
-            className="text-center mt-6 text-gray-500 text-sm animate-fade-in-delay-5"
-          >
-            Made with <HeartIcon className="w-4 h-4 inline text-red-500" /> in India
-          </div>
-        </div>
+             {/* Language Selector */}
+             <div 
+               className="flex items-center gap-2 text-gray-400 text-sm animate-fade-in-delay-4"
+             >
+               <GlobeAltIcon className="w-4 h-4" />
+               <select className="bg-transparent border-none text-gray-400 focus:outline-none">
+                 <option value="en">English</option>
+                 <option value="hi">हिंदी</option>
+                 <option value="mr">मराठी</option>
+               </select>
+             </div>
+           </div>
+         </div>
       </div>
     </footer>
   );

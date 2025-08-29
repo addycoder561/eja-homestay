@@ -255,9 +255,9 @@ export default function GuestDashboard() {
     // Type filter
     if (typeFilter !== 'all') {
       filtered = filtered.filter(b => {
-        if (typeFilter === 'homestay') return b.property_id;
-        if (typeFilter === 'experience') return b.experience_id;
-        if (typeFilter === 'trip') return b.trip_id;
+        if (typeFilter === 'properties') return b.property_id;
+        if (typeFilter === 'experiences') return b.experience_id;
+        if (typeFilter === 'retreats') return b.trip_id;
         return true;
       });
     }
@@ -340,16 +340,16 @@ export default function GuestDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-orange-50 flex flex-col">
       <Navigation />
       
       <main className="flex-1">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
+        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">My Dashboard</h1>
-              <p className="text-xl text-blue-100">
+              <p className="text-xl text-yellow-100">
                 Welcome back, {profile?.full_name?.split(' ')[0] || 'Guest'}! Manage your bookings and travel plans.
               </p>
             </div>
@@ -358,19 +358,19 @@ export default function GuestDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
                 <div className="text-3xl font-bold mb-2">{dashboardStats.totalBookings}</div>
-                <div className="text-blue-100">Total Bookings</div>
+                <div className="text-yellow-100">Total Bookings</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
                 <div className="text-3xl font-bold mb-2">{dashboardStats.confirmedBookings}</div>
-                <div className="text-blue-100">Confirmed</div>
+                <div className="text-yellow-100">Confirmed</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
                 <div className="text-3xl font-bold mb-2">{dashboardStats.pendingBookings}</div>
-                <div className="text-blue-100">Pending</div>
+                <div className="text-yellow-100">Pending</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
                 <div className="text-3xl font-bold mb-2">₹{dashboardStats.totalSpent.toLocaleString()}</div>
-                <div className="text-blue-100">Total Spent</div>
+                <div className="text-yellow-100">Total Spent</div>
               </div>
             </div>
           </div>
@@ -389,14 +389,14 @@ export default function GuestDashboard() {
                   placeholder="Search bookings..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 />
               </div>
 
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                className="flex items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-900 font-medium"
               >
                 <FunnelIcon className="w-5 h-5 mr-2" />
                 Filters
@@ -409,7 +409,7 @@ export default function GuestDashboard() {
                     key={status}
                     className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                       statusFilter === status 
-                        ? 'bg-blue-600 text-white shadow-lg' 
+                        ? 'bg-yellow-500 text-white shadow-lg' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                     onClick={() => setStatusFilter(status)}
@@ -425,17 +425,17 @@ export default function GuestDashboard() {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex flex-wrap gap-4 items-center">
                   <span className="text-sm font-semibold text-gray-700">Type:</span>
-                  {['all', 'homestay', 'experience', 'trip'].map((type) => (
+                  {['all', 'properties', 'experiences', 'retreats'].map((type) => (
                     <button
                       key={type}
                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                         typeFilter === type 
-                          ? 'bg-purple-600 text-white' 
+                          ? 'bg-yellow-500 text-white' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                       onClick={() => setTypeFilter(type)}
                     >
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                      {type === 'all' ? 'All' : type.charAt(0).toUpperCase() + type.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -447,17 +447,17 @@ export default function GuestDashboard() {
           {getUpcomingBookings().length > 0 && (
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <CalendarIcon className="w-6 h-6 mr-2 text-blue-600" />
+                <CalendarIcon className="w-6 h-6 mr-2 text-yellow-500" />
                 Upcoming Trips
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {getUpcomingBookings().map((booking) => {
                   const details = getBookingDetails(booking);
                   return (
-                    <Card key={`upcoming-${booking.id}`} className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200 hover:shadow-xl transition-all duration-300">
+                    <Card key={`upcoming-${booking.id}`} className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 hover:shadow-xl transition-all duration-300">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
                             <CheckCircleIcon className="w-4 h-4 mr-1" />
                             {details.type}
                           </span>
@@ -471,10 +471,10 @@ export default function GuestDashboard() {
                           <span className="text-sm">{details.location}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-green-600">₹{booking.total_price}</span>
+                          <span className="text-lg font-bold text-yellow-600">₹{booking.total_price}</span>
                           <button
                             onClick={() => router.push(`/${details.type.toLowerCase()}s/${booking.property_id || booking.experience_id || booking.trip_id}`)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                            className="px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-colors"
                           >
                             View Details
                           </button>
@@ -490,27 +490,27 @@ export default function GuestDashboard() {
           {/* All Bookings */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <DocumentTextIcon className="w-6 h-6 mr-2 text-blue-600" />
+              <DocumentTextIcon className="w-6 h-6 mr-2 text-yellow-500" />
               All Bookings ({filteredBookings.length})
             </h2>
 
             {!user ? (
               <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UsersIcon className="w-8 h-8 text-blue-600" />
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UsersIcon className="w-8 h-8 text-yellow-500" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign in to view your bookings</h3>
                 <p className="text-gray-600 mb-6">Please sign in to access your booking history and manage your trips.</p>
                 <button
                   onClick={() => router.push('/auth/signin')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+                  className="px-6 py-3 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition-colors font-semibold"
                 >
                   Sign In
                 </button>
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
                 <span className="ml-3 text-gray-600">Loading your bookings...</span>
               </div>
             ) : filteredBookings.length === 0 ? (
@@ -526,7 +526,7 @@ export default function GuestDashboard() {
                 </p>
                 <button
                   onClick={() => router.push('/')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+                  className="px-6 py-3 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition-colors font-semibold"
                 >
                   Explore Now
                 </button>
@@ -559,7 +559,7 @@ export default function GuestDashboard() {
                             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
                                     {details.type}
                                   </span>
                                   <div className="flex items-center text-yellow-500">
@@ -612,7 +612,7 @@ export default function GuestDashboard() {
                               )}
 
                               <button
-                                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold"
+                                className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition-colors text-sm font-semibold"
                                 onClick={() => {
                                   if (booking.property_id) {
                                     router.push(`/property/${booking.property_id}`);
@@ -628,7 +628,7 @@ export default function GuestDashboard() {
                               </button>
 
                               <button
-                                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors text-sm font-semibold"
+                                className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors text-sm font-semibold"
                                 onClick={() => router.push('/contact-us')}
                               >
                                 <ChatBubbleLeftRightIcon className="w-4 h-4 mr-2" />

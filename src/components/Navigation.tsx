@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,14 +22,16 @@ import {
   HeartIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  SparklesIcon,
   GlobeAltIcon,
   CalendarIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  MapPinIcon,
+  BuildingOfficeIcon,
+  PhoneIcon,
+  ChevronDownIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { SupportModal } from '@/components/SupportModal';
-import { DestinationAutocomplete } from './DestinationAutocomplete';
-import { SearchFilters as SearchFiltersType } from '@/lib/types';
 
 export function Navigation() {
   const { user, profile, signOut } = useAuth();
@@ -36,31 +39,27 @@ export function Navigation() {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [searchData, setSearchData] = useState({
-    location: '',
-    checkIn: '',
-    checkOut: '',
-    rooms: 1,
-    adults: 1,
-    children: 0,
-  });
-  const [guestsOpen, setGuestsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const guestsRef = useRef<HTMLDivElement>(null);
-  const [filters, setFilters] = useState<SearchFiltersType>({});
+  const [destinationsOpen, setDestinationsOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   // Hide header on auth pages
   const isAuthPage = pathname?.startsWith('/auth/');
-  
-  // Show search form only on home and search pages
-  const showSearchForm = pathname === '/' || pathname?.startsWith('/search');
 
   const displayName = profile?.full_name?.split(' ')[0] || profile?.full_name || 'User';
   const isHost = profile?.role === 'host' || profile?.is_host;
   const isAdmin = user?.email === 'admin@eja.com';
+
+  // Popular destinations for dropdown
+  const popularDestinations = [
+    { name: 'Rishikesh', state: 'Uttarakhand', url: '/discover?location=Rishikesh' },
+{ name: 'Mussoorie', state: 'Uttarakhand', url: '/discover?location=Mussoorie' },
+{ name: 'Manali', state: 'Himachal Pradesh', url: '/discover?location=Manali' },
+{ name: 'Ladakh', state: 'Ladakh', url: '/discover?location=Ladakh' },
+{ name: 'Kanatal', state: 'Uttarakhand', url: '/discover?location=Kanatal' },
+  ];
 
   // Fetch wishlist count when user is logged in
   useEffect(() => {
@@ -129,53 +128,45 @@ export function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close hamburger menu on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      
+      // Handle menu dropdown
       const menuButton = document.querySelector('[aria-label="Menu"]');
       const menuPopup = document.querySelector('[data-menu-popup]');
       
       if (menuOpen && 
-          menuButton && !menuButton.contains(e.target as Node) &&
-          menuPopup && !menuPopup.contains(e.target as Node)) {
+          menuButton && !menuButton.contains(target) &&
+          menuPopup && !menuPopup.contains(target)) {
         setMenuOpen(false);
+      }
+
+      // Handle about dropdown
+      if (destinationsOpen) {
+        setDestinationsOpen(false);
       }
     }
     
-    if (menuOpen) {
+    if (menuOpen || destinationsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [menuOpen]);
+  }, [menuOpen, destinationsOpen]);
 
   const handleSignOut = async () => {
     await signOut();
     setMenuOpen(false);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (searchData.location) params.append('location', searchData.location);
-    if (searchData.checkIn) params.append('checkIn', searchData.checkIn);
-    if (searchData.checkOut) params.append('checkOut', searchData.checkOut);
-    if (searchData.rooms) params.append('rooms', String(searchData.rooms));
-    if (searchData.adults) params.append('adults', String(searchData.adults));
-    if (searchData.children) params.append('children', String(searchData.children));
-    if (filters.minPrice) params.append('minPrice', String(filters.minPrice));
-    if (filters.maxPrice) params.append('maxPrice', String(filters.maxPrice));
-    if (filters.propertyType) params.append('propertyType', filters.propertyType);
-    if (filters.amenities && filters.amenities.length > 0) params.append('amenities', filters.amenities.join(','));
-    router.push(`/search?${params.toString()}`);
-  };
-
   return (
     <>
       {!isAuthPage && (
-        <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+        <nav className={`sticky top-0 z-50 transition-all duration-300 hidden lg:block ${
           isScrolled 
             ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
             : 'bg-white shadow-sm border-b border-gray-200'
@@ -186,56 +177,62 @@ export function Navigation() {
               {/* Enhanced Logo */}
               <Link href="/" className="flex items-center space-x-2 group">
                 <div 
-                  className="relative w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center group-hover:from-blue-700 group-hover:to-indigo-800 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl"
+                  className="relative w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center group-hover:from-yellow-500 group-hover:to-yellow-600 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg group-hover:shadow-xl"
                 >
                   <span className="text-white font-bold text-xl">E</span>
                   <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  <span className="text-xl font-bold text-gray-900 group-hover:text-yellow-500 transition-colors">
                     EJA Homestay
                   </span>
                   <span className="text-xs text-gray-500 -mt-1">Travel with confidence</span>
                 </div>
               </Link>
 
-              {/* Enhanced Desktop Navigation */}
-              <div className="hidden md:flex items-center space-x-8">
+              {/* Enhanced Desktop Navigation with Dropdowns */}
+              <div className="hidden lg:flex items-center space-x-1">
                 <Link 
                   href="/" 
-                  className={`text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 group ${
-                    pathname === '/' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'hover:bg-gray-50'
+                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
+                    pathname === '/' ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
                   }`}
                 >
                   <HomeIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   Home
                 </Link>
+
                 <Link 
-                  href="/experiences" 
-                  className={`text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 group ${
-                    pathname?.startsWith('/experiences') ? 'text-blue-600 bg-blue-50 shadow-sm' : 'hover:bg-gray-50'
+                  href="/discover" 
+                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
+                    pathname?.startsWith('/discover') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <MagnifyingGlassIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Discover
+                </Link>
+
+                <Link 
+                  href="/delight" 
+                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
+                    pathname?.startsWith('/delight') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
                   }`}
                 >
                   <SparklesIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Experiences
+                  Delight
                 </Link>
-                <Link 
-                  href="/retreats" 
-                  className={`text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 group ${
-                    pathname?.startsWith('/retreats') ? 'text-blue-600 bg-blue-50 shadow-sm' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <GlobeAltIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Retreats
-                </Link>
+
+                {/* About Dropdown */}
+                {/* Removed About dropdown as requested */}
+
                 {user && isHost && (
                   <Link 
                     href="/host/dashboard" 
-                    className={`text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 group ${
-                      pathname?.startsWith('/host') ? 'text-blue-600 bg-blue-50 shadow-sm' : 'hover:bg-gray-50'
+                    className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
+                      pathname?.startsWith('/host') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
                     }`}
                   >
-                    <UserCircleIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <BuildingOfficeIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     Host Dashboard
                   </Link>
                 )}
@@ -243,12 +240,6 @@ export function Navigation() {
 
               {/* Enhanced User Menu */}
               <div className="flex items-center gap-3">
-                <Link href="/collaborate">
-                  <Button size="md" className="px-6 font-medium bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white hidden sm:flex shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
-                    <SparklesIcon className="w-4 h-4 mr-2" />
-                    Collaborate
-                  </Button>
-                </Link>
                 
                 {user && (
                   <>
@@ -275,11 +266,11 @@ export function Navigation() {
                     aria-label="Menu"
                   >
                     {user ? (
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-sm">
-                        <span className="text-white font-semibold text-sm">
-                          {displayName?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
+                                          <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-sm">
+                      <span className="text-white font-semibold text-sm">
+                        {displayName?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
                     ) : (
                       <UserIcon className="w-5 h-5 text-gray-700" />
                     )}
@@ -293,9 +284,9 @@ export function Navigation() {
                     >
                       {user ? (
                         <>
-                          <div className="px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <div className="px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-yellow-50 to-orange-50">
                             <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-lg">
+                              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
                                 <span className="text-white font-semibold text-lg">
                                   {displayName?.charAt(0)?.toUpperCase() || 'U'}
                                 </span>
@@ -310,7 +301,7 @@ export function Navigation() {
                             <Link
                               href="/guest/dashboard"
                               onClick={() => setMenuOpen(false)}
-                              className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-blue-50 transition-colors group"
+                              className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-yellow-50 transition-colors group"
                             >
                               <UserCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                               <span className="font-medium">Dashboard</span>
@@ -319,7 +310,7 @@ export function Navigation() {
                             <Link
                               href="/guest/profile"
                               onClick={() => setMenuOpen(false)}
-                              className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-blue-50 transition-colors group"
+                              className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-yellow-50 transition-colors group"
                             >
                               <Cog6ToothIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                               <span className="font-medium">Profile Settings</span>
@@ -330,7 +321,7 @@ export function Navigation() {
                                 setMenuOpen(false);
                                 setSupportOpen(true);
                               }}
-                              className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors group"
+                              className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-yellow-50 transition-colors group"
                             >
                               <QuestionMarkCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                               <span className="font-medium">Support</span>
@@ -354,7 +345,7 @@ export function Navigation() {
                               setMenuOpen(false);
                               router.push('/auth/signin');
                             }}
-                            className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors group"
+                            className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-yellow-50 transition-colors group"
                           >
                             <UserIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                             <span className="font-medium">Sign in / Sign up</span>
@@ -364,7 +355,7 @@ export function Navigation() {
                               setMenuOpen(false);
                               setSupportOpen(true);
                             }}
-                            className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors group"
+                            className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-yellow-50 transition-colors group"
                           >
                             <QuestionMarkCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                             <span className="font-medium">Support</span>
@@ -377,10 +368,10 @@ export function Navigation() {
               </div>
 
               {/* Enhanced Mobile menu button */}
-              <div className="md:hidden">
+              <div className="lg:hidden">
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="text-gray-700 hover:text-blue-600 p-2 transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="text-gray-700 hover:text-yellow-500 p-2 transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   {isMobileMenuOpen ? (
                     <XMarkIcon className="w-6 h-6" />
@@ -391,255 +382,106 @@ export function Navigation() {
               </div>
             </div>
 
-            {/* Enhanced Search Form Section - Only show on home and search pages */}
-            {showSearchForm && (
-              <div 
-                className="py-6 border-t border-gray-100 animate-fade-in"
-              >
-                <form onSubmit={handleSearch} className="max-w-5xl mx-auto relative">
-                  <div className="bg-white rounded-2xl shadow-xl border border-gray-200 flex items-center overflow-hidden hover:shadow-2xl transition-shadow duration-300">
-                    {/* Where Section */}
-                    <div className="flex-1 px-6 py-4 border-r border-gray-200">
-                      <div className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                        <GlobeAltIcon className="w-4 h-4" />
-                        Where
-                      </div>
-                      <DestinationAutocomplete
-                        value={searchData.location}
-                        onChange={(value) => setSearchData({ ...searchData, location: value })}
-                        placeholder="Search destinations"
-                        className="w-full text-gray-600 placeholder-gray-400 text-sm border-none p-0 m-0 focus:ring-0 focus:outline-none bg-transparent"
-                      />
-                    </div>
-
-                    {/* Check-in Section */}
-                    <div className="flex-1 px-6 py-4 border-r border-gray-200">
-                      <div className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                        <CalendarIcon className="w-4 h-4" />
-                        Check in
-                      </div>
-                      <input
-                        type="date"
-                        id="check-in"
-                        name="check-in"
-                        value={searchData.checkIn}
-                        onChange={(e) => setSearchData({ ...searchData, checkIn: e.target.value })}
-                        className="w-full text-gray-600 placeholder-gray-400 text-sm border-none p-0 m-0 focus:ring-0 focus:outline-none bg-transparent"
-                        placeholder="Add dates"
-                      />
-                    </div>
-
-                    {/* Check-out Section */}
-                    <div className="flex-1 px-6 py-4 border-r border-gray-200">
-                      <div className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                        <CalendarIcon className="w-4 h-4" />
-                        Check out
-                      </div>
-                      <input
-                        type="date"
-                        id="check-out"
-                        name="check-out"
-                        value={searchData.checkOut}
-                        onChange={(e) => setSearchData({ ...searchData, checkOut: e.target.value })}
-                        min={searchData.checkIn ? new Date(new Date(searchData.checkIn).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined}
-                        className="w-full text-gray-600 placeholder-gray-400 text-sm border-none p-0 m-0 focus:ring-0 focus:outline-none bg-transparent"
-                        placeholder="Add dates"
-                      />
-                    </div>
-
-                    {/* Who Section */}
-                    <div className="flex-1 px-6 py-4 border-r border-gray-200 relative" ref={guestsRef} data-guest-dropdown>
-                      <div className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                        <UserGroupIcon className="w-4 h-4" />
-                        Guests
-                      </div>
-                      <div
-                        className="flex items-center justify-between cursor-pointer"
-                        onClick={() => setGuestsOpen((v) => !v)}
-                        onKeyDown={(e) => { if (e.key === 'Escape') setGuestsOpen(false); }}
-                        tabIndex={0}
-                      >
-                        <span className="text-gray-600 text-sm">
-                          {searchData.adults} Adult{searchData.adults !== 1 ? 's' : ''}, {searchData.children} Child{searchData.children !== 1 ? 'ren' : ''}
-                        </span>
-                        <ChevronUpDownIcon className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </div>
-
-                    {/* Enhanced Search Button */}
-                    <div className="px-3 py-2">
-                      <button 
-                        type="submit" 
-                        className="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white flex items-center justify-center p-0 shadow-lg rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-                      >
-                        <MagnifyingGlassIcon className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Guest Selector Dropdown */}
-                  {guestsOpen && (
-                    <div 
-                      className="absolute z-[9999] bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 space-y-4 min-w-[320px] animate-scale-in"
-                      style={{
-                        left: '75%',
-                        transform: 'translateX(-50%)',
-                        top: 'calc(100% + 8px)'
-                      }}
-                      data-guest-dropdown
+            {/* Enhanced Mobile Navigation Menu */}
+            {isMobileMenuOpen && (
+              <div className="lg:hidden border-t border-gray-100 bg-white animate-slide-down">
+                <div className="px-4 py-6 space-y-4">
+                  {/* Mobile Navigation Links */}
+                  <div className="space-y-2">
+                    <Link
+                      href="/"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                        pathname === '/' ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
                     >
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="text-gray-900 font-bold text-lg">Select Guests</div>
-                        <button 
-                          onClick={() => setGuestsOpen(false)}
-                          className="text-blue-600 hover:text-blue-700 font-medium text-sm bg-blue-50 px-3 py-1 rounded-lg hover:bg-blue-100 transition-colors"
+                      <HomeIcon className="w-5 h-5" />
+                      Home
+                    </Link>
+
+                    <Link
+                      href="/discover"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                        pathname?.startsWith('/discover') ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                      Discover
+                    </Link>
+
+
+                    
+
+
+                  </div>
+                  
+                  {/* Mobile About Links */}
+                  {/* Removed About section as requested */}
+                  
+                  {/* Mobile User Actions */}
+                  <div className="border-t border-gray-100 pt-4">
+                    {user ? (
+                      <div className="space-y-2">
+                        <Link
+                          href="/guest/dashboard"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                          Done
+                          <UserCircleIcon className="w-5 h-5" />
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/guest/wishlist"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <HeartIcon className="w-5 h-5" />
+                          Wishlist ({wishlistCount})
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setSupportOpen(true);
+                          }}
+                          className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <QuestionMarkCircleIcon className="w-5 h-5" />
+                          Support
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleSignOut();
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                          Sign out
                         </button>
                       </div>
-                      
-                      {/* Adults */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm">Adults</div>
-                          <div className="text-xs text-gray-500">Ages 13 or above</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button 
-                            type="button" 
-                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95" 
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSearchData(prev => ({ ...prev, adults: Math.max(1, prev.adults - 1) }));
-                            }} 
-                            disabled={searchData.adults <= 1}
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-gray-900 font-medium">{searchData.adults}</span>
-                          <button 
-                            type="button" 
-                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95" 
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSearchData(prev => ({ ...prev, adults: Math.min(20, prev.adults + 1) }));
-                            }} 
-                            disabled={searchData.adults >= 20}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Children */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm">Children</div>
-                          <div className="text-xs text-gray-500">Ages 0 to 12</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button 
-                            type="button" 
-                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95" 
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSearchData(prev => ({ ...prev, children: Math.max(0, prev.children - 1) }));
-                            }} 
-                            disabled={searchData.children <= 0}
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-gray-900 font-medium">{searchData.children}</span>
-                          <button 
-                            type="button" 
-                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95" 
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSearchData(prev => ({ ...prev, children: Math.min(20, prev.children + 1) }));
-                            }} 
-                            disabled={searchData.children >= 20}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </form>
-              </div>
-            )}
-
-            {/* Enhanced Mobile Navigation */}
-            {isMobileMenuOpen && (
-              <div 
-                className="md:hidden border-t border-gray-200 py-4 animate-fade-in"
-              >
-                <div className="space-y-2">
-                  <Link 
-                    href="/" 
-                    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-base font-medium transition-colors hover:bg-gray-50"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <HomeIcon className="w-5 h-5 inline mr-2" />
-                    Home
-                  </Link>
-                  <Link 
-                    href="/experiences" 
-                    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-base font-medium transition-colors hover:bg-gray-50"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <SparklesIcon className="w-5 h-5 inline mr-2" />
-                    Local Experiences
-                  </Link>
-                  <Link 
-                    href="/retreats" 
-                    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-base font-medium transition-colors hover:bg-gray-50"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <GlobeAltIcon className="w-5 h-5 inline mr-2" />
-                    Retreats
-                  </Link>
-                  {user && (
-                    <>
-                      <Link 
-                        href="/guest/wishlist" 
-                        className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-base font-medium transition-colors hover:bg-gray-50"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <BookmarkIcon className="w-5 h-5 inline mr-2" />
-                        Wishlist
-                        {wishlistCount > 0 && (
-                          <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                            {wishlistCount}
-                          </span>
-                        )}
-                      </Link>
-                      {isHost && (
-                        <Link 
-                          href="/host/dashboard" 
-                          className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-lg text-base font-medium transition-colors hover:bg-gray-50"
+                    ) : (
+                      <div className="space-y-2">
+                        <Link
+                          href="/auth/signin"
                           onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                          <UserCircleIcon className="w-5 h-5 inline mr-2" />
-                          Host Dashboard
+                          <UserIcon className="w-5 h-5" />
+                          Sign in / Sign up
                         </Link>
-                      )}
-                    </>
-                  )}
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <div className="text-sm text-gray-700 px-3 py-2">
-                      Welcome, {displayName}
-                    </div>
-                    <button
-                      onClick={handleSignOut}
-                      className="block w-full text-left text-gray-700 hover:text-red-600 px-3 py-2 rounded-lg text-base font-medium transition-colors hover:bg-red-50"
-                    >
-                      Sign Out
-                    </button>
+                        <button
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setSupportOpen(true);
+                          }}
+                          className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <QuestionMarkCircleIcon className="w-5 h-5" />
+                          Support
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -647,6 +489,7 @@ export function Navigation() {
           </div>
         </nav>
       )}
+      
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
     </>
   );

@@ -207,11 +207,6 @@ export function DestinationAutocomplete({
   return (
     <div className="relative">
       <div className="relative">
-        {!value.trim() && isOpen ? (
-          <span className="absolute left-0 top-1/2 transform -translate-y-1/2 text-lg">🔍</span>
-        ) : (
-          <MapPinIcon className="absolute left-0 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        )}
         <input
           ref={inputRef}
           type="text"
@@ -222,7 +217,7 @@ export function DestinationAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={handleInputFocus}
           placeholder={placeholder}
-          className={`pl-6 ${className}`}
+          className={`pl-3 ${className}`}
         />
       </div>
       
@@ -250,11 +245,11 @@ export function DestinationAutocomplete({
                   {TRENDING_DESTINATIONS.map((destination) => (
                     <div
                       key={`trending-${destination.name}`}
-                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="flex items-start p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => handleDestinationClick(destination)}
                     >
-                      <span className="text-lg mr-2">{destination.icon}</span>
-                      <div className="min-w-0 flex-1">
+                      <span className="text-lg mr-2 mt-0.5">{destination.icon}</span>
+                      <div className="min-w-0 flex-1 text-left">
                         <div className="font-medium text-gray-900 text-sm truncate">{destination.name}</div>
                         <div className="text-xs text-gray-500 truncate">{destination.state}</div>
                       </div>
@@ -275,9 +270,9 @@ export function DestinationAutocomplete({
                     }`}
                     onClick={() => handleDestinationClick(destination)}
                   >
-                    <div className="flex items-center">
-                      <span className="text-lg mr-3">{destination.icon}</span>
-                      <div>
+                    <div className="flex items-start">
+                      <span className="text-lg mr-3 mt-0.5">{destination.icon}</span>
+                      <div className="text-left">
                         <div className="font-medium text-gray-900">{destination.name}</div>
                         <div className="text-sm text-gray-500">{destination.state}, {destination.country}</div>
                         <div className="text-xs text-blue-600 font-medium">{destination.category}</div>

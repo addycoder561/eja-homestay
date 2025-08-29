@@ -1,12 +1,20 @@
 "use client";
 
+// TypeScript declaration for Razorpay
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import Script from "next/script";
+
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { Navigation } from "@/components/Navigation";
@@ -25,7 +33,10 @@ import {
   ShareIcon,
   BookmarkIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  InformationCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
@@ -35,17 +46,24 @@ import Link from 'next/link';
 interface Experience {
   id: string;
   title: string;
+  subtitle?: string;
   description?: string;
   location: string;
   date: string;
   price: number;
-  max_guests: number;
   images: string | string[];
   cover_image?: string;
   duration?: string;
   categories?: string;
   is_active: boolean;
   host_id?: string;
+  host_name?: string;
+  host_type?: string;
+  host_tenure?: string;
+  host_description?: string;
+  host_image?: string;
+  host_usps?: string[];
+  unique_propositions?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -155,16 +173,14 @@ export default function ExperienceDetailPage() {
   });
   const [canReview, setCanReview] = useState(false);
   const [isWishlistedState, setIsWishlistedState] = useState(false);
+  const [showExperienceDetails, setShowExperienceDetails] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: '',
     guests: 1,
-    name: '',
-    email: '',
-    phone: ''
+    specialRequests: ''
   });
 
   useEffect(() => {
@@ -345,65 +361,136 @@ export default function ExperienceDetailPage() {
     }
   };
 
-  const openBooking = () => {
-    setBookingOpen(true);
-    // Pre-fill form with user data if available
-    if (user && profile) {
-      setBookingForm(prev => ({
-        ...prev,
-        name: profile.full_name || '',
-        email: user.email || ''
-      }));
-    }
-  };
 
-  const closeBooking = () => {
-    setBookingOpen(false);
-    setBookingForm({
-      date: '',
-      guests: 1,
-      name: '',
-      email: '',
-      phone: ''
-    });
-  };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!experience) return;
+    console.log('🔍 Experience booking submit called');
+    console.log('🔍 Experience:', experience);
+    console.log('🔍 User:', user);
+    console.log('🔍 Profile:', profile);
+    
+    if (!experience || !user) {
+      toast.error('Please sign in to book this experience');
+      return;
+    }
 
     setBookingLoading(true);
     try {
       const totalPrice = experience.price * bookingForm.guests;
+      console.log('🔍 Total price:', totalPrice);
       
-      // Create experience booking
-      const { data, error } = await supabase
-        .from('experience_bookings')
-        .insert({
-          experience_id: experience.id,
-          guest_name: bookingForm.name,
-          guest_email: bookingForm.email,
-          guest_phone: bookingForm.phone,
-          date: bookingForm.date,
-          guests: bookingForm.guests,
-          total_price: totalPrice,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success('Booking submitted successfully! We will contact you soon.');
-      closeBooking();
+      // Create Razorpay order
+      console.log('🔍 Creating payment order...');
+      const orderRes = await fetch('/api/payments/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          amount: totalPrice * 100, 
+          currency: 'INR', 
+          notes: { type: 'experience', experienceId: experience.id } 
+        }),
+      });
       
-      // Redirect to WhatsApp for payment/confirmation
-      const message = `Hi! I just booked "${experience.title}" for ${bookingForm.date} with ${bookingForm.guests} guests. Total: ₹${totalPrice.toLocaleString()}. Booking ID: ${data.id}`;
-      const whatsappUrl = `https://wa.me/918976662177?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      console.log('🔍 Payment order response status:', orderRes.status);
+      
+      if (!orderRes.ok) {
+        const errorText = await orderRes.text();
+        console.error('🔍 Payment order failed:', errorText);
+        throw new Error('Failed to create payment order');
+      }
+      
+      const orderData = await orderRes.json();
+      console.log('🔍 Payment order response:', orderData);
+      
+      const { order } = orderData;
+      if (!order) {
+        console.error('🔍 No order in response');
+        throw new Error('Failed to initialize payment');
+      }
+
+      console.log('🔍 Setting up Razorpay options...');
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'EJA Homestay',
+        description: `Booking for ${experience.title}`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          console.log('🔍 Payment successful, creating booking...');
+          try {
+            // Create booking after successful payment
+            const { data, error } = await supabase
+              .from('experience_bookings')
+              .insert({
+                experience_id: experience.id,
+                guest_id: user.id,
+                guest_name: profile?.full_name || user.email?.split('@')[0] || 'Guest',
+                guest_email: user.email || '',
+                guest_phone: profile?.phone || '',
+                date: bookingForm.date,
+                guests: bookingForm.guests,
+                special_requests: bookingForm.specialRequests,
+                total_price: totalPrice,
+                status: 'confirmed',
+                payment_id: response.razorpay_payment_id
+              })
+              .select()
+              .single();
+
+            if (error) {
+              console.error('🔍 Booking creation error:', error);
+              toast.error('Payment successful but booking creation failed');
+              return;
+            }
+
+            console.log('🔍 Booking created successfully:', data);
+            toast.success('Booking confirmed! Check your email for details.');
+            
+            // Reset form
+            setBookingForm({
+              date: '',
+              guests: 1,
+              specialRequests: ''
+            });
+            
+            // Redirect to dashboard
+            router.push('/guest/dashboard');
+          } catch (error) {
+            console.error('🔍 Error creating booking:', error);
+            toast.error('Payment successful but booking creation failed');
+          }
+        },
+        prefill: {
+          name: profile?.full_name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          contact: profile?.phone || '',
+        },
+        theme: {
+          color: '#3B82F6',
+        },
+      } as any;
+
+      console.log('🔍 Razorpay options:', options);
+
+      // Check if Razorpay is loaded
+      console.log('🔍 Checking if Razorpay is loaded...');
+      console.log('🔍 window.Razorpay:', typeof window !== 'undefined' ? (window as any).Razorpay : 'undefined');
+      
+      if (typeof window !== 'undefined' && (window as any).Razorpay) {
+        console.log('🔍 Opening Razorpay modal...');
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      } else {
+        console.error('🔍 Razorpay not loaded');
+        toast.error('Payment gateway not loaded. Please refresh the page.');
+        setBookingLoading(false);
+      }
       
     } catch (err) {
-      console.error('Booking error:', err);
+      console.error('🔍 Booking error:', err);
       toast.error('Failed to submit booking. Please try again.');
     } finally {
       setBookingLoading(false);
@@ -486,16 +573,15 @@ export default function ExperienceDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
         
-        {/* Hero Section with PropertyImageGallery */}
-        <div className="relative">
-          <PropertyImageGallery 
-            images={images.length ? images : ["/placeholder-experience.jpg"]} 
-            propertyTitle={experience.title} 
-          />
-          
-          {/* Floating Action Buttons */}
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
+        {/* Title and Action Buttons */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{experience.title}</h1>
+            </div>
+            <div className="flex gap-2 ml-4">
             <button
               onClick={handleShare}
               className="p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-all duration-200"
@@ -516,41 +602,76 @@ export default function ExperienceDetailPage() {
                 )}
               </button>
             )}
+            </div>
           </div>
+        </div>
+
+        {/* Hero Section with PropertyImageGallery */}
+        <div className="relative">
+          <PropertyImageGallery 
+            images={images.length ? images : ["/placeholder-experience.jpg"]} 
+            propertyTitle={experience.title} 
+          />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Details */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Header Section */}
-              <div>
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{experience.title}</h1>
+              
+              {/* Experience Details - Collapsible Section */}
+              <Card className="bg-white shadow-lg border-0">
+                <CardContent className="p-0">
+                  <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                        <InformationCircleIcon className="w-6 h-6 mr-2 text-blue-600" />
+                        Experience Details
+                      </h2>
+                      <button
+                        onClick={() => setShowExperienceDetails(!showExperienceDetails)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                      >
+                        {showExperienceDetails ? (
+                          <>
+                            <ChevronUpIcon className="w-4 h-4" />
+                            Hide Details
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDownIcon className="w-4 h-4" />
+                            Show Details
+                          </>
+                        )}
+                      </button>
                   </div>
                 </div>
 
-                {/* Meta Information - All fetched from Supabase */}
-                <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-6">
-                  <div className="flex items-center gap-2">
-                    <MapPinIcon className="w-5 h-5" />
-                    <span>{experience.location}</span>
+                  {showExperienceDetails && (
+                    <div className="p-6 space-y-8">
+                      {/* Section A: Subtitle, Location, Duration, Category, Rating */}
+                      <div>
+                        {/* Subtitle */}
+                        {experience.subtitle && (
+                          <h3 className="text-xl font-semibold text-gray-800 mb-4">{experience.subtitle}</h3>
+                        )}
+                        
+                        {/* Location, Duration, Category */}
+                        <div className="flex items-center space-x-6 mb-4 text-sm">
+                          <div className="flex items-center space-x-1">
+                            <MapPinIcon className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-700">{experience.location}</span>
                   </div>
               {experience.duration && (
-                    <div className="flex items-center gap-2">
-                      <ClockIcon className="w-5 h-5" />
-                      <span>{experience.duration}</span>
+                            <div className="flex items-center space-x-1">
+                              <ClockIcon className="w-4 h-4 text-gray-500" />
+                              <span className="text-gray-700">{experience.duration}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <UsersIcon className="w-5 h-5" />
-                    <span>Up to {experience.max_guests} guests</span>
-                  </div>
                   {experience.categories && (
-                    <div className="flex items-center gap-2">
+                            <div className="flex items-center space-x-1">
                       <span className="text-2xl">{getCategoryIcon(experience.categories)}</span>
-                      <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                              <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                         {experience.categories}
                       </span>
                     </div>
@@ -559,94 +680,167 @@ export default function ExperienceDetailPage() {
 
                 {/* Rating */}
                 {reviews.length > 0 && (
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="flex items-center gap-1">
-                      <StarIcon className="w-5 h-5 text-yellow-400 fill-current" />
-                      <span className="font-semibold text-gray-900">{averageRating}</span>
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center text-yellow-500">
+                              <StarIcon className="w-4 h-4 fill-current" />
+                              <span className="text-sm text-gray-600 ml-1">
+                                {averageRating}
+                              </span>
+                              <span className="text-sm text-gray-500 ml-1">
+                                ({reviews.length} reviews)
+                              </span>
                       </div>
-                    <span className="text-gray-600">({reviews.length} reviews)</span>
                   </div>
                 )}
               </div>
 
-              {/* About Section - Description fetched from Supabase */}
-              <Card className="overflow-hidden">
-                <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">About this experience</h2>
+                      {/* Section B: About, What's Included, Important Info, Host, USP */}
+                      
+                      {/* About this experience */}
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">About this experience</h3>
                   <div className="prose prose-gray max-w-none">
-                    <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-wrap">
+                          <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">
                       {experience.description || "Details coming soon."}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                      </div>
 
               {/* What's Included Section - Hardcoded as requested */}
-              <Card className="overflow-hidden">
-                <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">What's included</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">Professional guide</span>
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">What's included</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-gray-700 text-sm">Professional guide</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">All necessary equipment</span>
+                            <div className="flex items-center gap-2">
+                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-gray-700 text-sm">All necessary equipment</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">Safety briefing</span>
+                            <div className="flex items-center gap-2">
+                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-gray-700 text-sm">Safety briefing</span>
                       </div>
                     </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">Local insights</span>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-gray-700 text-sm">Local insights</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">Memorable photos</span>
+                            <div className="flex items-center gap-2">
+                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-gray-700 text-sm">Memorable photos</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">Insurance coverage</span>
+                            <div className="flex items-center gap-2">
+                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-gray-700 text-sm">Insurance coverage</span>
                       </div>
                     </div>
                   </div>
-              </CardContent>
-            </Card>
+                      </div>
 
               {/* Important Information Section */}
-              <Card>
-              <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Important Information</h2>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Important Information</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-2">
+                            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Cancellation Policy</h3>
-                        <p className="text-gray-600 text-sm">Free cancellation up to 24 hours before the experience start time.</p>
+                              <h4 className="font-semibold text-gray-900 text-sm">Cancellation Policy</h4>
+                              <p className="text-gray-600 text-xs">Free cancellation up to 24 hours before the experience start time.</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex items-start gap-2">
+                            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">What to Bring</h3>
-                        <p className="text-gray-600 text-sm">Comfortable clothing and any specific requirements will be communicated before the experience.</p>
+                              <h4 className="font-semibold text-gray-900 text-sm">What to Bring</h4>
+                              <p className="text-gray-600 text-xs">Comfortable clothing and any specific requirements will be communicated before the experience.</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex items-start gap-2">
+                            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Health & Safety</h3>
-                        <p className="text-gray-600 text-sm">All experiences follow strict health and safety protocols. Please inform us of any special requirements.</p>
+                              <h4 className="font-semibold text-gray-900 text-sm">Health & Safety</h4>
+                              <p className="text-gray-600 text-xs">All experiences follow strict health and safety protocols. Please inform us of any special requirements.</p>
                       </div>
                     </div>
                   </div>
+                      </div>
+
+                      {/* Host Information */}
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Information</h3>
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            {experience.host_image ? (
+                              <div className="w-16 h-16 rounded-full overflow-hidden">
+                                <Image 
+                                  src={experience.host_image} 
+                                  alt={experience.host_name || 'Host'} 
+                                  width={64} 
+                                  height={64} 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                                {(experience.host_name || 'E').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-base font-semibold text-gray-900 mb-1">
+                              Hosted by {experience.host_name || 'EJA'}
+                            </h4>
+                            <p className="text-gray-600 mb-3 text-sm">
+                              {experience.host_type || 'Experience Guide'} • {experience.host_tenure || '3 years'} hosting
+                            </p>
+                            <p className="text-gray-700 mb-4 text-sm">
+                              {(experience.host_description || 'Experienced guide passionate about sharing local culture and creating memorable experiences.').slice(0, 120)}...
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {(experience.host_usps || ['Local Expertise', 'Safety First', 'Personalized Experience']).map((usp, index) => (
+                                <span 
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {usp}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Unique Propositions */}
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                          <CheckCircleIcon className="w-5 h-5 mr-2 text-green-600" />
+                          What makes this experience special
+                        </h3>
+                        <div className="space-y-3">
+                          {(experience.unique_propositions || [
+                            'Exclusive access to hidden local spots',
+                            'Authentic cultural immersion experience',
+                            'Professional photography included'
+                          ]).map((proposition, i) => (
+                            <div key={i} className="flex items-start gap-3">
+                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <CheckCircleIcon className="w-3 h-3 text-green-600" />
+                              </div>
+                              <span className="text-gray-700 text-sm">{proposition}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
+
 
               {/* Reviews Section - Moved to Left Column */}
               <Card>
@@ -760,111 +954,17 @@ export default function ExperienceDetailPage() {
             </Card>
           </div>
 
-            {/* Right: Booking Summary & Widgets */}
-            <div className="space-y-6">
-              {/* Booking Summary */}
-              <Card className="sticky top-6">
+            {/* Right: Optimized Booking Widget */}
+            <div className="lg:col-span-1">
+              <Card className="sticky top-8 bg-white shadow-xl border-0">
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
-                    <div className="text-3xl font-bold text-gray-900 mb-1">
-                      ₹{experience.price?.toLocaleString()}
-                    </div>
+                    <div className="text-3xl font-bold text-gray-900">₹{experience.price?.toLocaleString()}</div>
                     <div className="text-gray-600">per person</div>
                   </div>
-                <Button
-                  variant="primary"
-                    size="lg"
-                    onClick={openBooking}
-                    className="w-full mb-4"
-                >
-                    <CalendarIcon className="w-5 h-5 mr-2" />
-                  Book Now
-                </Button>
-                  <div className="text-center text-sm text-gray-500">
-                    Free cancellation • Secure booking
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Contact Host */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Host</h3>
-                  <div className="space-y-3">
-                    <a
-                      href="https://wa.me/918976662177"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                    >
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
-                        </svg>
-                      </div>
-                      <span className="font-medium text-green-700">Message Host</span>
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Experience Details */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Experience Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Duration</span>
-                      <span className="font-medium">{experience.duration || 'Flexible'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Group Size</span>
-                      <span className="font-medium">Up to {experience.max_guests} guests</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Language</span>
-                      <span className="font-medium">English, Hindi</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Experience Type</span>
-                      <span className="font-medium">{experience.categories || 'General'}</span>
-                    </div>
-                  </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-        {/* Enhanced Booking Modal */}
-        <Modal open={bookingOpen} onClose={closeBooking}>
-          <div className="space-y-6">
-            {/* Experience Summary */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                  <Image
-                    src={images[0] || "/placeholder-experience.jpg"}
-                    alt={experience?.title}
-                    width={48}
-                    height={48}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm truncate">{experience?.title}</h3>
-                  <p className="text-gray-600 text-xs truncate">{experience?.location}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-lg font-bold text-blue-600">₹{experience?.price?.toLocaleString()}</span>
-                    <span className="text-gray-500 text-xs">per person</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <form onSubmit={handleBookingSubmit} className="space-y-5">
-              {/* Date and Guests Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={handleBookingSubmit} className="space-y-4">
+                    {/* Preferred Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <CalendarIcon className="w-4 h-4 inline mr-1" />
@@ -878,121 +978,76 @@ export default function ExperienceDetailPage() {
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Select your preferred date</p>
                 </div>
                 
+                    {/* Number of Guests */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <UsersIcon className="w-4 h-4 inline mr-1" />
                     Number of Guests
                   </label>
-                  <div className="relative">
                     <Input
                       type="number"
                       min={1}
-                      max={experience?.max_guests || 10}
+                        max={10}
                       value={bookingForm.guests}
                       onChange={e => setBookingForm(prev => ({ ...prev, guests: Number(e.target.value) }))}
                       required
-                      className="w-full pr-12"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                      max {experience?.max_guests || 10}
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Up to {experience?.max_guests || 10} guests</p>
-                </div>
+                        className="w-full"
+                      />
               </div>
               
-              {/* Contact Information */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                  Contact Information
-                </h4>
-                
-                <Input
-                  label="Full Name"
-                  type="text"
-                  value={bookingForm.name}
-                  onChange={e => setBookingForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter your full name"
-                  required
-                />
-                
-                <Input
-                  label="Email Address"
-                  type="email"
-                  value={bookingForm.email}
-                  onChange={e => setBookingForm(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Enter your email address"
-                  required
-                />
-                
-                <Input
-                  label="Phone Number"
-                  type="tel"
-                  value={bookingForm.phone}
-                  onChange={e => setBookingForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Enter your phone number"
-                  required
+                    {/* Special Requests */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Special Requests
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={bookingForm.specialRequests}
+                        onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Any special requirements or requests..."
                 />
               </div>
 
-              {/* Price Calculation */}
-              {experience && bookingForm.date && bookingForm.guests > 0 && (
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Booking Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Price per person:</span>
-                      <span>₹{experience.price.toLocaleString()}</span>
+                    {/* Total Price */}
+                    <div className="border-t pt-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-gray-700">Total Price</span>
+                        <span className="text-xl font-bold text-gray-900">₹{(experience.price * bookingForm.guests).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Number of guests:</span>
-                      <span>{bookingForm.guests}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Experience date:</span>
-                      <span>{new Date(bookingForm.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}</span>
-                    </div>
-                    <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-lg">
-                      <span className="text-gray-900">Total Amount:</span>
-                      <span className="text-blue-600">₹{(experience.price * bookingForm.guests).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
+                    {/* Book Now Button */}
                 <Button 
                   type="submit" 
-                  loading={bookingLoading} 
-                  disabled={bookingLoading || !bookingForm.date || !bookingForm.name || !bookingForm.email || !bookingForm.phone || bookingForm.guests < 1}
-                  className="flex-1"
+                      variant="primary"
                   size="lg"
+                      disabled={bookingLoading || !bookingForm.date || bookingForm.guests < 1}
+                      className="w-full"
                 >
+                      {bookingLoading ? (
+                        'Processing...'
+                      ) : (
+                        <>
                   <CalendarIcon className="w-5 h-5 mr-2" />
-                  Confirm Booking
+                          Book Now
+                        </>
+                      )}
                 </Button>
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={closeBooking}
-                  className="px-6"
-                  size="lg"
-                >
-                  Cancel
-                </Button>
+
+                    <div className="text-center text-sm text-gray-500">
+                      Free cancellation • Secure booking
               </div>
             </form>
+                </CardContent>
+              </Card>
           </div>
-        </Modal>
+        </div>
+      </div>
+
+
         
       <Footer />
     </div>

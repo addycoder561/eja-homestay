@@ -50,6 +50,7 @@ export interface Property {
   bedrooms: number;
   bathrooms: number;
   amenities: string[];
+  tags?: string[]; // Add tags field for Families only, Females only filtering
   images: string[];
   cover_image?: string | null;
   gallery?: Record<string, string[]>; // { living: [url], kitchen: [url], ... }
@@ -72,6 +73,16 @@ export interface Property {
   google_reviews_count?: number | null;
   google_place_id?: string | null;
   google_last_updated?: string | null;
+  // Host-related columns
+  host_name?: string | null;
+  host_type?: string | null;
+  host_tenure?: string | null;
+  host_description?: string | null;
+  host_image?: string | null;
+  host_usps?: string[];
+  // Property features
+  unique_propositions?: string[];
+  beds?: number;
   is_available: boolean;
   created_at: string;
   updated_at: string;
@@ -164,11 +175,14 @@ export interface SearchFilters {
   checkOut?: string;
   rooms?: number;
   adults?: number;
+  guests?: number; // Total guests (adults + children)
   minPrice?: number;
   maxPrice?: number;
   propertyType?: PropertyType;
   amenities?: string[];
   preference?: string[];
+  // New filter chip fields
+  selectedChips?: string[]; // For filter chips (Boutique, Homely, Off-Beat, Families only, Females only, Pet-Friendly, Pure-Veg)
 }
 
 export interface Experience {
@@ -208,12 +222,76 @@ export interface Trip {
   updated_at: string;
 }
 
-export interface Collaboration {
+export interface Retreat {
   id: string;
-  type: 'create' | 'retreat' | 'campaign';
-  name: string;
-  email: string;
-  role: string;
-  details: string;
+  host_id: string | null;
+  title: string;
+  subtitle?: string | null;
+  description: string | null;
+  location: string;
+  price: number;
+  images: string[];
+  cover_image?: string | null;
+  duration?: string;
+  categories?: string | string[];
+  is_active: boolean;
+  // Host-related columns
+  host_name?: string | null;
+  host_type?: string | null;
+  host_tenure?: string | null;
+  host_description?: string | null;
+  host_image?: string | null;
+  host_usps?: string[];
+  // Retreat features
+  unique_propositions?: string[];
   created_at: string;
-} 
+  updated_at: string;
+}
+
+// Engagement features types
+export interface Like {
+  id: string;
+  user_id: string;
+  item_id: string;
+  item_type: 'property' | 'experience' | 'retreat';
+  created_at: string;
+}
+
+export interface Share {
+  id: string;
+  user_id: string;
+  item_id: string;
+  item_type: 'property' | 'experience' | 'retreat';
+  platform: 'facebook' | 'twitter' | 'instagram' | 'whatsapp' | 'telegram' | 'copy_link';
+  created_at: string;
+}
+
+
+
+export interface CardCollaboration {
+  id: string;
+  user_id: string;
+  item_id: string;
+  item_type: 'property' | 'experience' | 'retreat';
+  collaboration_type: 'reel' | 'co_host';
+  user_name: string;
+  user_email: string;
+  user_phone?: string;
+  user_instagram?: string;
+  user_youtube?: string;
+  user_tiktok?: string;
+  proposal: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  host_response?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Razorpay TypeScript declarations
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+ 
