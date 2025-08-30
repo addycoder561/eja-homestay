@@ -179,7 +179,7 @@ export function Navigation() {
                                   <img 
                     src="/eja_02.svg" 
                     alt="EJA Logo" 
-                    className="w-72 h-72 sm:w-84 sm:h-84"
+                    className="w-50 h-50 sm:w-59 sm:h-59"
                   />
               </Link>
 
