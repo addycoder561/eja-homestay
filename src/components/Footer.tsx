@@ -74,18 +74,18 @@ export function Footer() {
 
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-7xl mx-auto py-16">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Company Info */}
           <div className="lg:col-span-1">
             <div 
-              className="flex items-center mb-6 animate-fade-in -ml-8"
+              className="flex items-center mb-6 animate-fade-in -ml-4 sm:-ml-8"
             >
               <img 
                 src="/eja_02.svg" 
                 alt="EJA Logo" 
-                className="w-[200px] h-[200px]"
+                className="w-[200px] h-[200px] sm:w-[225px] sm:h-[225px]"
               />
             </div>
             
