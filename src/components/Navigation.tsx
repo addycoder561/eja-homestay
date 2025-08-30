@@ -173,14 +173,14 @@ export function Navigation() {
         }`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Top Navigation Bar */}
-            <div className="flex justify-between items-center h-16 sm:h-20">
-              {/* Enhanced Logo */}
-              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200">
-                                  <img 
-                    src="/eja_02.svg" 
-                    alt="EJA Logo" 
-                    className="w-[200px] h-[200px] sm:w-[225px] sm:h-[225px]"
-                  />
+                        <div className="flex justify-between items-center h-16 sm:h-20">
+              {/* Enhanced Logo - Perfectly Left Aligned */}
+              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200 -ml-4">
+                <img 
+                  src="/eja_02.svg" 
+                  alt="EJA Logo" 
+                  className="w-[200px] h-[200px] sm:w-[225px] sm:h-[225px]"
+                />
               </Link>
 
               {/* Enhanced Desktop Navigation with Dropdowns */}
