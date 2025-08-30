@@ -176,11 +176,11 @@ export function Navigation() {
             <div className="flex justify-between items-center h-16 sm:h-20">
               {/* Enhanced Logo */}
               <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200">
-                <img 
-                  src="/eja-og-logo.svg" 
-                  alt="EJA Logo" 
-                  className="w-16 h-16 sm:w-20 sm:h-20"
-                />
+                                  <img 
+                    src="/eja_02.svg" 
+                    alt="EJA Logo" 
+                    className="w-16 h-16 sm:w-20 sm:h-20"
+                  />
               </Link>
 
               {/* Enhanced Desktop Navigation with Dropdowns */}

@@ -69,7 +69,7 @@ function SignInInner() {
             <CardHeader className="text-center">
               <div className="mx-auto flex items-center justify-center mb-4">
                 <img 
-                  src="/eja-og-logo.svg" 
+                  src="/eja_02.svg" 
                   alt="EJA Logo" 
                   className="w-20 h-20"
                 />

@@ -83,7 +83,7 @@ export function Footer() {
               className="flex items-center mb-6 animate-fade-in"
             >
               <img 
-                src="/eja-og-logo.svg" 
+                src="/eja_02.svg" 
                 alt="EJA Logo" 
                 className="w-16 h-16"
               />
