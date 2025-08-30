@@ -8,7 +8,7 @@ export default function Loading() {
             <img 
               src="/eja_02.svg" 
               alt="EJA Logo" 
-              className="w-40 h-40"
+              className="w-120 h-120"
             />
             <div className="absolute inset-0 bg-white/20 rounded-2xl animate-ping" />
           </div>
