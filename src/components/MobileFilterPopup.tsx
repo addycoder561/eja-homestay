@@ -39,7 +39,7 @@ export function MobileFilterPopup({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
-      <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out">
+             <div className="absolute left-0 top-0 h-1/2 w-full max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">

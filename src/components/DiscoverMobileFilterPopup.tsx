@@ -43,13 +43,13 @@ export function DiscoverMobileFilterPopup({
   selectedRetreatCategory,
   onRetreatCategoryChange
 }: DiscoverMobileFilterPopupProps) {
-  const [activeSection, setActiveSection] = useState<'content-type' | 'categories'>('content-type');
+  const [activeSection, setActiveSection] = useState<'content-type' | 'categories'>('categories');
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
-      <div className="absolute left-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out">
+             <div className="absolute left-0 top-0 h-1/2 w-full max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -60,63 +60,11 @@ export function DiscoverMobileFilterPopup({
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveSection('content-type')}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-              activeSection === 'content-type' 
-                ? 'border-yellow-400 text-yellow-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Content Type
-          </button>
-          <button
-            onClick={() => setActiveSection('categories')}
-            className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-              activeSection === 'categories' 
-                ? 'border-yellow-400 text-yellow-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Categories
-          </button>
-        </div>
+        
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {activeSection === 'content-type' && (
-            <div className="p-4 space-y-4">
-              <h4 className="font-semibold text-gray-900">Content Type</h4>
-              <div className="space-y-2">
-                {[
-                  { id: 'hyper-local', label: 'Hyper-local', icon: '🏘️' },
-                  { id: 'retreats', label: 'Retreats', icon: '🏔️' }
-                ].map((type) => (
-                  <button
-                    key={type.id}
-                    onClick={() => onContentTypeToggle(type.id as 'hyper-local' | 'retreats')}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                      selectedContentTypeToggle === type.id
-                        ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{type.icon}</span>
-                      <span>{type.label}</span>
-                    </div>
-                    {selectedContentTypeToggle === type.id && (
-                      <CheckIcon className="w-5 h-5 text-yellow-600" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'categories' && (
+                 {/* Content */}
+         <div className="flex-1 overflow-y-auto">
+           {activeSection === 'categories' && (
             <div className="p-4 space-y-6">
               {selectedContentTypeToggle === 'hyper-local' ? (
                 <>

@@ -66,13 +66,13 @@ export function MobileSearchForm({ searchData, setSearchData, handleSearch }: Mo
   return (
     <>
       {/* Mobile Search Form */}
-      <div className="lg:hidden">
-        <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-4 space-y-4">
-          {/* Destination Row */}
-          <div 
-            className="flex items-center justify-between p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50"
-            onClick={() => openPopup('destination')}
-          >
+             <div className="lg:hidden">
+         <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-6 space-y-6 max-w-md mx-auto">
+                     {/* Destination Row */}
+           <div 
+             className="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50"
+             onClick={() => openPopup('destination')}
+           >
             <div className="flex items-center gap-3">
               <MapPinIcon className="w-5 h-5 text-gray-400" />
               <div>
@@ -85,11 +85,11 @@ export function MobileSearchForm({ searchData, setSearchData, handleSearch }: Mo
             <ChevronRightIcon className="w-5 h-5 text-gray-400" />
           </div>
 
-          {/* Check-in/Check-out Row */}
-          <div 
-            className="flex items-center justify-between p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50"
-            onClick={() => openPopup('dates')}
-          >
+                     {/* Check-in/Check-out Row */}
+           <div 
+             className="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50"
+             onClick={() => openPopup('dates')}
+           >
             <div className="flex items-center gap-3">
               <CalendarIcon className="w-5 h-5 text-gray-400" />
               <div>
@@ -105,11 +105,11 @@ export function MobileSearchForm({ searchData, setSearchData, handleSearch }: Mo
             <ChevronRightIcon className="w-5 h-5 text-gray-400" />
           </div>
 
-          {/* Guests Row */}
-          <div 
-            className="flex items-center justify-between p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50"
-            onClick={() => openPopup('guests')}
-          >
+                     {/* Guests Row */}
+           <div 
+             className="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50"
+             onClick={() => openPopup('guests')}
+           >
             <div className="flex items-center gap-3">
               <UserGroupIcon className="w-5 h-5 text-gray-400" />
               <div>
@@ -122,11 +122,11 @@ export function MobileSearchForm({ searchData, setSearchData, handleSearch }: Mo
             <ChevronRightIcon className="w-5 h-5 text-gray-400" />
           </div>
 
-          {/* Search Button */}
-          <button 
-            type="submit"
-            className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-4 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
+                     {/* Search Button */}
+           <button 
+             type="submit"
+             className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-5 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+           >
             <MagnifyingGlassIcon className="w-5 h-5" />
             Search
           </button>
