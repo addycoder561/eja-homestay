@@ -699,8 +699,8 @@ export default function SearchPageClient() {
                   <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50/80 to-transparent pointer-events-none z-10"></div>
                   <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50/80 to-transparent pointer-events-none z-10"></div>
                   
-                  {/* Hyper-local Vibe Filters */}
-                  {selectedContentTypeToggle === 'hyper-local' && (
+                  {/* Filter chips moved to mobile popup */}
+                  {/* {selectedContentTypeToggle === 'hyper-local' && (
                     <>
 
 
@@ -745,8 +745,7 @@ export default function SearchPageClient() {
                     </>
                   )}
 
-                  {/* Retreats Category Filters */}
-                  {selectedContentTypeToggle === 'retreats' && (
+                  {/* {selectedContentTypeToggle === 'retreats' && (
                     <>
                       <button 
                         onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Couple' ? "" : 'Couple')}
@@ -813,7 +812,7 @@ export default function SearchPageClient() {
                         <span>Purposeful</span>
                       </button>
                     </>
-                  )}
+                  )} */}
 
 
                 </div>
