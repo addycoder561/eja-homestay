@@ -85,7 +85,7 @@ export function Footer() {
               <img 
                 src="/eja_02.svg" 
                 alt="EJA Logo" 
-                className="w-50 h-50"
+                className="w-[200px] h-[200px]"
               />
             </div>
             
