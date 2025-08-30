@@ -25,7 +25,9 @@ import {
   CalendarIcon,
   UserIcon,
   FireIcon,
-  ShareIcon
+  ShareIcon,
+  ChevronDownIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { Card, CardContent } from '@/components/ui/Card';
