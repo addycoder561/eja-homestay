@@ -262,54 +262,55 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
               {/* First two offers - vertical layout */}
               <div className="space-y-6">
-              {/* Flash Deal */}
-              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-red-200 flex">
-                <div className="relative w-1/3 bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-3xl font-bold mb-1">⚡</div>
-                    <div className="text-lg font-bold">FLASH DEAL</div>
-                    <div className="text-xs opacity-90">Limited Time</div>
+                {/* Flash Deal */}
+                <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-red-200 flex">
+                  <div className="relative w-1/3 bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <div className="text-3xl font-bold mb-1">⚡</div>
+                      <div className="text-lg font-bold">FLASH DEAL</div>
+                      <div className="text-xs opacity-90">Limited Time</div>
+                    </div>
+                    <div className="absolute top-2 right-2 bg-white text-red-600 px-2 py-1 rounded-full text-xs font-bold">
+                      -30%
+                    </div>
                   </div>
-                  <div className="absolute top-2 right-2 bg-white text-red-600 px-2 py-1 rounded-full text-xs font-bold">
-                    -30%
+                  <div className="flex-1 p-4 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">Weekend Getaways</h3>
+                      <p className="text-gray-600 text-sm mb-3">Book any weekend stay and get 30% off on properties above ₹5,000</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-red-600 font-bold text-sm">Valid till 31st Dec</span>
+                      <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
+                        Book Now
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 p-4 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">Weekend Getaways</h3>
-                    <p className="text-gray-600 text-sm mb-3">Book any weekend stay and get 30% off on properties above ₹5,000</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-red-600 font-bold text-sm">Valid till 31st Dec</span>
-                    <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                      Book Now
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              {/* Early Bird */}
-              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-yellow-200 flex">
-                <div className="relative w-1/3 bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-3xl font-bold mb-1">🐦</div>
-                    <div className="text-lg font-bold">EARLY BIRD</div>
-                    <div className="text-xs opacity-90">Book Early</div>
+                {/* Early Bird */}
+                <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-yellow-200 flex">
+                  <div className="relative w-1/3 bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <div className="text-3xl font-bold mb-1">🐦</div>
+                      <div className="text-lg font-bold">EARLY BIRD</div>
+                      <div className="text-xs opacity-90">Book Early</div>
+                    </div>
+                    <div className="absolute top-2 right-2 bg-white text-yellow-600 px-2 py-1 rounded-full text-xs font-bold">
+                      -25%
+                    </div>
                   </div>
-                  <div className="absolute top-2 right-2 bg-white text-yellow-600 px-2 py-1 rounded-full text-xs font-bold">
-                    -25%
-                  </div>
-                </div>
-                <div className="flex-1 p-4 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">Advance Booking</h3>
-                    <p className="text-gray-600 text-sm mb-3">Book 30+ days in advance and save 25% on your stay</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-yellow-600 font-bold text-sm">No Expiry</span>
-                    <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                      Explore
-                    </button>
+                  <div className="flex-1 p-4 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">Advance Booking</h3>
+                      <p className="text-gray-600 text-sm mb-3">Book 30+ days in advance and save 25% on your stay</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-yellow-600 font-bold text-sm">No Expiry</span>
+                      <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
+                        Explore
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -317,53 +318,54 @@ export default function Home() {
               {/* Next two offers - horizontal layout */}
               <div className="space-y-6">
                 {/* Student Offer */}
-              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-orange-200 flex">
-                <div className="relative w-1/3 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-3xl font-bold mb-1">🎓</div>
-                    <div className="text-lg font-bold">STUDENT</div>
-                    <div className="text-xs opacity-90">Special Offer</div>
+                <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-orange-200 flex">
+                  <div className="relative w-1/3 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <div className="text-3xl font-bold mb-1">🎓</div>
+                      <div className="text-lg font-bold">STUDENT</div>
+                      <div className="text-xs opacity-90">Special Offer</div>
+                    </div>
+                    <div className="absolute top-2 right-2 bg-white text-orange-600 px-2 py-1 rounded-full text-xs font-bold">
+                      -20%
+                    </div>
                   </div>
-                  <div className="absolute top-2 right-2 bg-white text-orange-600 px-2 py-1 rounded-full text-xs font-bold">
-                    -20%
+                  <div className="flex-1 p-4 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">Student Discount</h3>
+                      <p className="text-gray-600 text-sm mb-3">Valid student ID gets you 20% off on all properties</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-orange-600 font-bold text-sm">Always Active</span>
+                      <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
+                        Verify ID
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 p-4 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">Student Discount</h3>
-                    <p className="text-gray-600 text-sm mb-3">Valid student ID gets you 20% off on all properties</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-orange-600 font-bold text-sm">Always Active</span>
-                    <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                      Verify ID
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              {/* Family Package */}
-              <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-amber-200 flex">
-                <div className="relative w-1/3 bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-3xl font-bold mb-1">👨‍👩‍👧‍👦</div>
-                    <div className="text-lg font-bold">FAMILY</div>
-                    <div className="text-xs opacity-90">Package Deal</div>
+                {/* Family Package */}
+                <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-amber-200 flex">
+                  <div className="relative w-1/3 bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <div className="text-3xl font-bold mb-1">👨‍👩‍👧‍👦</div>
+                      <div className="text-lg font-bold">FAMILY</div>
+                      <div className="text-xs opacity-90">Package Deal</div>
+                    </div>
+                    <div className="absolute top-2 right-2 bg-white text-amber-600 px-2 py-1 rounded-full text-xs font-bold">
+                      -15%
+                    </div>
                   </div>
-                  <div className="absolute top-2 right-2 bg-white text-amber-600 px-2 py-1 rounded-full text-xs font-bold">
-                    -15%
-                  </div>
-                </div>
-                <div className="flex-1 p-4 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">Family Package</h3>
-                    <p className="text-gray-600 text-sm mb-3">Book for 4+ guests and get 15% off + free breakfast</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-amber-600 font-bold text-sm">4+ Guests</span>
-                    <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                      Book Now
-                    </button>
+                  <div className="flex-1 p-4 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">Family Package</h3>
+                      <p className="text-gray-600 text-sm mb-3">Book for 4+ guests and get 15% off + free breakfast</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-amber-600 font-bold text-sm">4+ Guests</span>
+                      <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
+                        Book Now
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
