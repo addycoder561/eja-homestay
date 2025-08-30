@@ -4,9 +4,7 @@ import Link from 'next/link';
 import { 
   MapPinIcon, 
   PhoneIcon, 
-  EnvelopeIcon,
-  GlobeAltIcon,
-  HeartIcon
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
 export function Footer() {
@@ -89,27 +87,7 @@ export function Footer() {
               />
             </div>
             
-            <p 
-              className="text-gray-300 mb-4 max-w-md leading-relaxed animate-fade-in-delay-1"
-            >
-              Discover amazing properties for your next adventure.
-            </p>
 
-            {/* Social Links */}
-            <div 
-              className="flex items-center gap-4 mb-4 animate-fade-in-delay-2"
-            >
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  className="text-gray-400 hover:text-white transition-colors duration-200"
-                  aria-label={social.name}
-                >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
 
             
           </div>
@@ -140,7 +118,7 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Bottom Section */}
+                 {/* Bottom Section */}
          <div className="border-t border-gray-800 pt-8">
            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
              {/* Copyright */}
@@ -150,23 +128,20 @@ export function Footer() {
                © {currentYear} EJA. All rights reserved.
              </div>
 
-             {/* Made with Love */}
+             {/* Social Links */}
              <div 
-               className="text-gray-500 text-sm animate-fade-in-delay-4"
+               className="flex items-center gap-4 animate-fade-in-delay-4"
              >
-               Made with <HeartIcon className="w-4 h-4 inline text-red-500" /> in India
-             </div>
-
-             {/* Language Selector */}
-             <div 
-               className="flex items-center gap-2 text-gray-400 text-sm animate-fade-in-delay-4"
-             >
-               <GlobeAltIcon className="w-4 h-4" />
-               <select className="bg-transparent border-none text-gray-400 focus:outline-none">
-                 <option value="en">English</option>
-                 <option value="hi">हिंदी</option>
-                 <option value="mr">मराठी</option>
-               </select>
+               {socialLinks.map((social) => (
+                 <a
+                   key={social.name}
+                   href={social.href}
+                   className="text-gray-400 hover:text-white transition-colors duration-200"
+                   aria-label={social.name}
+                 >
+                   {social.icon}
+                 </a>
+               ))}
              </div>
            </div>
          </div>
