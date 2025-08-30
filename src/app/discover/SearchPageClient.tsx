@@ -37,6 +37,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { DiscoverMobileFilterPopup } from '@/components/DiscoverMobileFilterPopup';
 import toast from 'react-hot-toast';
 import Script from 'next/script';
 import { sendPaymentReceiptEmail } from '@/lib/notifications';
@@ -113,6 +114,7 @@ export default function SearchPageClient() {
   const [selectedRetreatCategory, setSelectedRetreatCategory] = useState("");
   const [selectedContentTypeToggle, setSelectedContentTypeToggle] = useState<'hyper-local' | 'retreats'>('hyper-local');
   const [selectedFilterChips, setSelectedFilterChips] = useState<string[]>([]);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
 
 
@@ -819,6 +821,15 @@ export default function SearchPageClient() {
 
 
 
+              {/* Mobile Filter Button */}
+              <button
+                onClick={() => setShowMobileFilters(true)}
+                className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors text-xs shadow-sm h-7 flex-shrink-0"
+              >
+                <FunnelIcon className="w-4 h-4" />
+                Filters
+              </button>
+
               {/* Content Type Toggle - Fixed Right with proper spacing */}
               <div className="bg-gray-100 rounded-xl p-1 flex flex-shrink-0 ml-4">
                 {experienceFilterData.contentType.map((contentType) => (
@@ -1281,6 +1292,18 @@ export default function SearchPageClient() {
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
       <Footer />
+      
+      {/* Mobile Filter Popup */}
+      <DiscoverMobileFilterPopup
+        isOpen={showMobileFilters}
+        onClose={() => setShowMobileFilters(false)}
+        selectedContentTypeToggle={selectedContentTypeToggle}
+        onContentTypeToggle={setSelectedContentTypeToggle}
+        selectedExperienceCategory={selectedExperienceCategory}
+        onExperienceCategoryChange={setSelectedExperienceCategory}
+        selectedRetreatCategory={selectedRetreatCategory}
+        onRetreatCategoryChange={setSelectedRetreatCategory}
+      />
     </div>
   );
 } 

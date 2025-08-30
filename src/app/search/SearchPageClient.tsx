@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { MobileFilterPopup } from '@/components/MobileFilterPopup';
 
 
 export default function SearchPageClient() {
@@ -34,6 +35,7 @@ export default function SearchPageClient() {
     guests: searchParams.get('guests') ? parseInt(searchParams.get('guests')!) : undefined,
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [totalResults, setTotalResults] = useState(0);
   
   // Filter states
@@ -191,7 +193,10 @@ export default function SearchPageClient() {
             <div className="flex items-center gap-4">
               {/* All Filters Button - Fixed Left */}
               <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                onClick={() => {
+                  setShowAdvancedFilters(!showAdvancedFilters);
+                  setShowMobileFilters(!showMobileFilters);
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-full text-blue-600 font-medium hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0 text-sm shadow-sm h-12"
                 aria-label="Toggle advanced filters panel"
                 aria-expanded={showAdvancedFilters}
@@ -629,6 +634,16 @@ export default function SearchPageClient() {
       </div>
       
       <Footer />
+      
+      {/* Mobile Filter Popup */}
+      <MobileFilterPopup
+        isOpen={showMobileFilters}
+        onClose={() => setShowMobileFilters(false)}
+        selectedFilterChips={selectedFilterChips}
+        onFilterChipClick={handleFilterChipClick}
+        advancedFilters={advancedFilters}
+        onAdvancedFilterChange={setAdvancedFilters}
+      />
     </div>
   );
 } 
