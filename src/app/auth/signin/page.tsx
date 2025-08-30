@@ -71,7 +71,7 @@ function SignInInner() {
                 <img 
                   src="/eja_02.svg" 
                   alt="EJA Logo" 
-                  className="w-24 h-24"
+                  className="w-28 h-28"
                 />
               </div>
               <h2 className="text-3xl font-bold text-gray-900">Sign in to your account</h2>
