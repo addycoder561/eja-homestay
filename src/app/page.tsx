@@ -260,6 +260,8 @@ export default function Home() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+              {/* First two offers - vertical layout */}
+              <div className="space-y-6">
               {/* Flash Deal */}
               <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-red-200 flex">
                 <div className="relative w-1/3 bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
@@ -311,8 +313,10 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-
-              {/* Student Offer */}
+              
+              {/* Next two offers - horizontal layout */}
+              <div className="space-y-6">
+                {/* Student Offer */}
               <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-orange-200 flex">
                 <div className="relative w-1/3 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
                   <div className="text-center text-white">

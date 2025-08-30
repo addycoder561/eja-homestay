@@ -74,9 +74,9 @@ export function Footer() {
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Company Info */}
-          <div className="lg:col-span-1">
+          <div className="md:col-span-1">
             <div 
               className="flex items-center mb-6 animate-fade-in -ml-8 sm:-ml-12"
             >
@@ -86,13 +86,9 @@ export function Footer() {
                 className="w-[200px] h-[200px] sm:w-[225px] sm:h-[225px]"
               />
             </div>
-            
-
-
-            
           </div>
 
-          {/* Footer Links */}
+          {/* Footer Links - Three columns in one row */}
           {Object.entries(footerLinks).map(([category, links], index) => (
             <div
               key={category}

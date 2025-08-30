@@ -273,17 +273,7 @@ export default function DelightPage() {
       <Navigation />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <SparklesIcon className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Delight</h1>
-            <SparklesIcon className="w-8 h-8 text-yellow-500" />
-          </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Spread joy, make a difference, and earn points through acts of kindness and social good
-          </p>
-        </div>
+
 
         {/* Instagram-style Delight Stories */}
         <div className="mb-8">
@@ -513,8 +503,8 @@ export default function DelightPage() {
 
       {/* Mobile Categories Modal */}
       {showCategoriesModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50 lg:hidden">
-          <div className="bg-white rounded-t-2xl w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 lg:hidden">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900">Categories</h3>
@@ -551,8 +541,8 @@ export default function DelightPage() {
 
       {/* Mobile Leaderboard Modal */}
       {showLeaderboardModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50 lg:hidden">
-          <div className="bg-white rounded-t-2xl w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 lg:hidden">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900">Leaderboard</h3>

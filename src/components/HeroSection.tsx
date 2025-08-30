@@ -151,7 +151,7 @@ export function HeroSection() {
       </div>
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-        <div className="text-center mb-16">
+        <div className="text-center mb-16 flex flex-col justify-center min-h-[60vh]">
           {/* Reduced Main Heading */}
           <h1 
             className={`text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight transition-all duration-1000 ${

@@ -704,40 +704,40 @@ export default function SearchPageClient() {
 
                       <button 
                         onClick={() => setSelectedExperienceCategory(selectedExperienceCategory === 'Immersive' ? "" : 'Immersive')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedExperienceCategory === 'Immersive'
                             ? 'bg-purple-100 border-purple-200 text-purple-700 shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Immersive experiences"
                       >
-                        <span className="text-sm">🧘</span>
+                        <span className="text-xs">🧘</span>
                         <span>Immersive</span>
                       </button>
 
                       <button 
                         onClick={() => setSelectedExperienceCategory(selectedExperienceCategory === 'Playful' ? "" : 'Playful')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedExperienceCategory === 'Playful'
                             ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Playful experiences"
                       >
-                        <span className="text-sm">🎮</span>
+                        <span className="text-xs">🎮</span>
                         <span>Playful</span>
                       </button>
 
                       <button 
                         onClick={() => setSelectedExperienceCategory(selectedExperienceCategory === 'Culinary' ? "" : 'Culinary')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedExperienceCategory === 'Culinary'
                             ? 'bg-orange-100 border-orange-200 text-orange-700 shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Culinary experiences"
                       >
-                        <span className="text-sm">🍽️</span>
+                        <span className="text-xs">🍽️</span>
                         <span>Culinary</span>
                       </button>
                     </>
@@ -748,66 +748,66 @@ export default function SearchPageClient() {
                     <>
                       <button 
                         onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Couple' ? "" : 'Couple')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedRetreatCategory === 'Couple'
                             ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Couple retreats"
                       >
-                        <span className="text-sm">💑</span>
+                        <span className="text-xs">💑</span>
                         <span>Couple</span>
                       </button>
 
                       <button 
                         onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Solo' ? "" : 'Solo')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedRetreatCategory === 'Solo'
                             ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Solo retreats"
                       >
-                        <span className="text-sm">🧘</span>
+                        <span className="text-xs">🧘</span>
                         <span>Solo</span>
                       </button>
 
                       <button 
                         onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Family' ? "" : 'Family')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedRetreatCategory === 'Family'
                             ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Family retreats"
                       >
-                        <span className="text-sm">👨‍👩‍👧‍👦</span>
+                        <span className="text-xs">👨‍👩‍👧‍👦</span>
                         <span>Family</span>
                       </button>
 
                       <button 
                         onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Group' ? "" : 'Group')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedRetreatCategory === 'Group'
                             ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Group retreats"
                       >
-                        <span className="text-sm">👥</span>
+                        <span className="text-xs">👥</span>
                         <span>Group</span>
                       </button>
 
                       <button 
                         onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Purposeful' ? "" : 'Purposeful')}
-                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
+                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
                           selectedRetreatCategory === 'Purposeful'
                             ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                         }`}
                         title="Purposeful retreats"
                       >
-                        <span className="text-sm">🎯</span>
+                        <span className="text-xs">🎯</span>
                         <span>Purposeful</span>
                       </button>
                     </>
@@ -825,7 +825,7 @@ export default function SearchPageClient() {
                   <button
                     key={contentType.id}
                     onClick={() => setSelectedContentTypeToggle(contentType.id as 'hyper-local' | 'retreats')}
-                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 h-8 ${
+                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 h-7 ${
                       selectedContentTypeToggle === contentType.id
                         ? 'bg-yellow-400 text-white shadow-md'
                         : 'bg-white text-gray-600 hover:text-gray-900'
