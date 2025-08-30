@@ -166,11 +166,13 @@ export function Navigation() {
   return (
     <>
       {!isAuthPage && (
-        <nav className={`sticky top-0 z-50 transition-all duration-300 hidden lg:block ${
-          isScrolled 
-            ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
-            : 'bg-white shadow-sm border-b border-gray-200'
-        }`}>
+        <>
+          {/* Desktop Navigation */}
+          <nav className={`sticky top-0 z-50 transition-all duration-300 hidden lg:block ${
+            isScrolled 
+              ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
+              : 'bg-white shadow-sm border-b border-gray-200'
+          }`}>
                     <div className="max-w-7xl mx-auto">
             {/* Top Navigation Bar */}
             <div className="flex justify-between items-center h-16 sm:h-20">
@@ -193,6 +195,16 @@ export function Navigation() {
                 >
                   <HomeIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   Home
+                </Link>
+
+                <Link 
+                  href="/search" 
+                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
+                    pathname?.startsWith('/search') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <MagnifyingGlassIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Search
                 </Link>
 
                 <Link 
@@ -360,24 +372,45 @@ export function Navigation() {
                 </div>
               </div>
 
-              {/* Enhanced Mobile menu button */}
-              <div className="lg:hidden">
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="text-gray-700 hover:text-yellow-500 p-2 transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  {isMobileMenuOpen ? (
-                    <XMarkIcon className="w-6 h-6" />
-                  ) : (
-                    <Bars3Icon className="w-6 h-6" />
-                  )}
-                </button>
-              </div>
+
             </div>
 
-            {/* Enhanced Mobile Navigation Menu */}
+
+          </div>
+        </nav>
+
+          {/* Mobile Header */}
+          <nav className={`sticky top-0 z-50 transition-all duration-300 lg:hidden ${
+            isScrolled 
+              ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
+              : 'bg-white shadow-sm border-b border-gray-200'
+          }`}>
+            <div className="flex justify-between items-center h-16 px-4">
+              {/* Mobile Logo */}
+              <Link href="/" className="flex items-center">
+                <img 
+                  src="/eja_02.svg" 
+                  alt="EJA Logo" 
+                  className="w-[120px] h-[120px]"
+                />
+              </Link>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-gray-700 hover:text-yellow-500 p-2 transition-all duration-200 hover:scale-105 active:scale-95"
+              >
+                {isMobileMenuOpen ? (
+                  <XMarkIcon className="w-6 h-6" />
+                ) : (
+                  <Bars3Icon className="w-6 h-6" />
+                )}
+              </button>
+            </div>
+
+            {/* Mobile Navigation Menu */}
             {isMobileMenuOpen && (
-              <div className="lg:hidden border-t border-gray-100 bg-white animate-slide-down">
+              <div className="border-t border-gray-100 bg-white animate-slide-down">
                 <div className="px-4 py-6 space-y-4">
                   {/* Mobile Navigation Links */}
                   <div className="space-y-2">
@@ -393,6 +426,17 @@ export function Navigation() {
                     </Link>
 
                     <Link
+                      href="/search"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                        pathname?.startsWith('/search') ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                      Search
+                    </Link>
+
+                    <Link
                       href="/discover"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
@@ -403,14 +447,17 @@ export function Navigation() {
                       Discover
                     </Link>
 
-
-                    
-
-
+                    <Link
+                      href="/delight"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                        pathname?.startsWith('/delight') ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <SparklesIcon className="w-5 h-5" />
+                      Delight
+                    </Link>
                   </div>
-                  
-                  {/* Mobile About Links */}
-                  {/* Removed About section as requested */}
                   
                   {/* Mobile User Actions */}
                   <div className="border-t border-gray-100 pt-4">
@@ -479,8 +526,8 @@ export function Navigation() {
                 </div>
               </div>
             )}
-          </div>
-        </nav>
+          </nav>
+        </>
       )}
       
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />

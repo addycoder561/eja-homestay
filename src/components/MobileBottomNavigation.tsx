@@ -85,10 +85,10 @@ export function MobileBottomNavigation() {
       badge: wishlistCount > 0 ? wishlistCount : undefined
     },
     {
-      name: 'Profile',
-      href: user ? '/guest/dashboard' : '/auth/signin',
-      icon: pathname?.startsWith('/guest/') ? UserIconSolid : UserIcon,
-      active: pathname?.startsWith('/guest/')
+      name: 'Delight',
+      href: '/delight',
+      icon: pathname?.startsWith('/delight') ? SparklesIconSolid : SparklesIcon,
+      active: pathname?.startsWith('/delight')
     }
   ];
 
