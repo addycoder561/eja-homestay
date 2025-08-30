@@ -30,6 +30,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DelightProofModal } from '@/components/DelightProofModal';
+import { DelightStories } from '@/components/DelightStories';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -53,6 +54,8 @@ export default function DelightPage() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [likedStories, setLikedStories] = useState<Set<string>>(new Set());
   const [storyLikes, setStoryLikes] = useState<Record<string, number>>({});
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
 
   useEffect(() => {
     loadDelightData();
@@ -280,78 +283,46 @@ export default function DelightPage() {
           </p>
         </div>
 
-        {/* Delight Stories - Full Width at Top */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        {/* Instagram-style Delight Stories */}
+        <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <HeartIcon className="w-6 h-6 text-red-500" />
             Delight Stories
           </h2>
-          {stories.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {stories.map((story) => (
-                <div key={story.id} className="flex-shrink-0 w-64 bg-gray-50 rounded-xl p-4">
-                  <div className="aspect-video bg-gray-200 rounded-lg mb-3 overflow-hidden">
-                    <img 
-                      src={story.proof_media} 
-                      alt="Proof" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="text-sm text-gray-600 mb-2">
-                    <strong className="text-gray-900">{story.user?.full_name || 'Anonymous'}</strong> did{' '}
-                    <strong className="text-gray-900">{story.task?.title}</strong>
-                  </div>
-                  <div className="text-xs text-gray-500 mb-3">
-                    {formatTimeAgo(story.created_at)}
-                  </div>
-                  
-                  {/* Like and Share buttons */}
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => handleLikeStory(story.id)}
-                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        likedStories.has(story.id)
-                          ? 'bg-red-100 text-red-600'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {likedStories.has(story.id) ? (
-                        <HeartSolidIcon className="w-3 h-3" />
-                      ) : (
-                        <HeartIcon className="w-3 h-3" />
-                      )}
-                      {storyLikes[story.id] || 0}
-                    </button>
-                    
-                    <button
-                      onClick={() => handleShareStory(story)}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                    >
-                      <ShareIcon className="w-3 h-3" />
-                      Share
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Stories Yet</h3>
-              <p className="text-gray-600 mb-6">Be the first to complete a delight task and share your story!</p>
-              <button 
-                onClick={() => setSelectedCategory('all')}
-                className="bg-yellow-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-yellow-600 transition-colors"
-              >
-                Start Your First Task
-              </button>
-            </div>
-          )}
+          <DelightStories
+            stories={stories}
+            likedStories={likedStories}
+            storyLikes={storyLikes}
+            onLikeStory={handleLikeStory}
+            onShareStory={handleShareStory}
+          />
+        </div>
+
+        {/* Mobile Filter Chips */}
+        <div className="lg:hidden mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCategoriesModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <FireIcon className="w-4 h-4 text-yellow-500" />
+              Categories
+              <ChevronDownIcon className="w-4 h-4" />
+            </button>
+            
+            <button
+              onClick={() => setShowLeaderboardModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <TrophyIcon className="w-4 h-4 text-yellow-500" />
+              Leaderboard
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar - Filters */}
-          <div className="lg:col-span-1">
+          {/* Desktop Left Sidebar - Filters */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FireIcon className="w-5 h-5 text-yellow-500" />
@@ -388,9 +359,9 @@ export default function DelightPage() {
                 {tasks.map((task) => (
                   <Card key={task.id} className="hover:shadow-xl transition-all duration-300">
                     <CardContent className="p-0">
-                      <div className="flex">
-                        <div className="w-1/3">
-                          <div className="aspect-video bg-gray-200 rounded-l-xl overflow-hidden">
+                      <div className="flex flex-col md:flex-row">
+                        <div className="w-full md:w-1/3">
+                          <div className="aspect-video bg-gray-200 rounded-t-xl md:rounded-l-xl md:rounded-t-none overflow-hidden">
                             <img 
                               src={task.cover_image} 
                               alt={task.title} 
@@ -398,11 +369,11 @@ export default function DelightPage() {
                             />
                           </div>
                         </div>
-                        <div className="w-2/3 p-6">
+                        <div className="w-full md:w-2/3 p-6">
                           <h3 className="text-xl font-bold text-gray-900 mb-2">{task.title}</h3>
                           <p className="text-gray-600 text-sm mb-4">{task.subtitle}</p>
                           
-                          <div className="flex items-center gap-6 text-sm text-gray-500 mb-4">
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-4">
                             <div className="flex items-center gap-1">
                               <MapPinIcon className="w-4 h-4" />
                               {task.location}
@@ -448,8 +419,8 @@ export default function DelightPage() {
             </div>
           </div>
 
-          {/* Right Sidebar - Leaderboard */}
-          <div className="lg:col-span-1">
+          {/* Desktop Right Sidebar - Leaderboard */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <TrophyIcon className="w-5 h-5 text-yellow-500" />
@@ -533,6 +504,107 @@ export default function DelightPage() {
               >
                 Schedule
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Categories Modal */}
+      {showCategoriesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50 lg:hidden">
+          <div className="bg-white rounded-t-2xl w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Categories</h3>
+                <button
+                  onClick={() => setShowCategoriesModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      setShowCategoriesModal(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-3 ${
+                      selectedCategory === category.id
+                        ? 'bg-yellow-500 text-white shadow-lg'
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-lg">{category.icon}</span>
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Leaderboard Modal */}
+      {showLeaderboardModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50 lg:hidden">
+          <div className="bg-white rounded-t-2xl w-full max-w-md mx-4 max-h-[70vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Leaderboard</h3>
+                <button
+                  onClick={() => setShowLeaderboardModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              {userStats && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 mb-6">
+                  <div className="text-center mb-4">
+                    <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <UserIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-sm text-gray-600">Your Rank</div>
+                    <div className="text-2xl font-bold text-gray-900">#{userRank || 'N/A'}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">{userStats.totalSmiles}</div>
+                      <div className="text-xs text-gray-600">Lifetime Smiles</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">{userStats.recentSmiles}</div>
+                      <div className="text-xs text-gray-600">3 Months</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {leaderboard.length > 0 ? (
+                  leaderboard.map((entry, index) => (
+                    <div key={entry.user_id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                      <div className="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {entry.rank}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 text-sm">{entry.full_name}</div>
+                        <div className="text-xs text-gray-500">{entry.total_points} smiles</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <TrophyIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No leaderboard data yet</p>
+                    <p className="text-xs text-gray-400">Complete tasks to start earning smiles!</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

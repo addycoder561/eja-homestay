@@ -216,93 +216,93 @@ export default function SearchPageClient() {
                   {/* Property Type Filters */}
                   <button 
                     onClick={() => handleFilterChipClick('Boutique')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Boutique')
                         ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Boutique properties"
                   >
-                    <span className="text-base">🏨</span>
+                    <span className="text-sm">🏨</span>
                     <span>Boutique</span>
                   </button>
 
                   <button 
                     onClick={() => handleFilterChipClick('Homely')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Homely')
                         ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Homely properties"
                   >
-                    <span className="text-base">🏠</span>
+                    <span className="text-sm">🏠</span>
                     <span>Homely</span>
                   </button>
 
                   <button 
                     onClick={() => handleFilterChipClick('Off-Beat')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Off-Beat')
                         ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Off-Beat properties"
                   >
-                    <span className="text-base">✨</span>
+                    <span className="text-sm">✨</span>
                     <span>Off-Beat</span>
                   </button>
 
                   {/* Tag Filters (from tags column) */}
                   <button 
                     onClick={() => handleFilterChipClick('Families-only')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Families-only')
                         ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Family-friendly properties"
                   >
-                    <span className="text-base">👨‍👩‍👧‍👦</span>
+                    <span className="text-sm">👨‍👩‍👧‍👦</span>
                     <span>Families-only</span>
                   </button>
 
                   <button 
                     onClick={() => handleFilterChipClick('Females-only')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Females-only')
                         ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Female-only properties"
                   >
-                    <span className="text-base">👩</span>
+                    <span className="text-sm">👩</span>
                     <span>Females-only</span>
                   </button>
 
                   <button 
                     onClick={() => handleFilterChipClick('Pet Friendly')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Pet Friendly')
                         ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Pet-friendly properties"
                   >
-                    <span className="text-base">🐕</span>
+                    <span className="text-sm">🐕</span>
                     <span>Pet Friendly</span>
                   </button>
 
                   <button 
                     onClick={() => handleFilterChipClick('Pure-Veg')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-sm font-medium h-12 flex-shrink-0 ${
+                    className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-8 flex-shrink-0 ${
                       selectedFilterChips.includes('Pure-Veg')
                         ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     title="Pure vegetarian properties"
                   >
-                    <span className="text-base">🥗</span>
+                    <span className="text-sm">🥗</span>
                     <span>Pure-Veg</span>
                   </button>
                 </div>

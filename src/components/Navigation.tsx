@@ -412,52 +412,7 @@ export function Navigation() {
             {isMobileMenuOpen && (
               <div className="border-t border-gray-100 bg-white animate-slide-down">
                 <div className="px-4 py-6 space-y-4">
-                  {/* Mobile Navigation Links */}
-                  <div className="space-y-2">
-                    <Link
-                      href="/"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                        pathname === '/' ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <HomeIcon className="w-5 h-5" />
-                      Home
-                    </Link>
 
-                    <Link
-                      href="/search"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                        pathname?.startsWith('/search') ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <MagnifyingGlassIcon className="w-5 h-5" />
-                      Search
-                    </Link>
-
-                    <Link
-                      href="/discover"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                        pathname?.startsWith('/discover') ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <MagnifyingGlassIcon className="w-5 h-5" />
-                      Discover
-                    </Link>
-
-                    <Link
-                      href="/delight"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                        pathname?.startsWith('/delight') ? 'bg-yellow-50 text-yellow-500' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <SparklesIcon className="w-5 h-5" />
-                      Delight
-                    </Link>
-                  </div>
                   
                   {/* Mobile User Actions */}
                   <div className="border-t border-gray-100 pt-4">
