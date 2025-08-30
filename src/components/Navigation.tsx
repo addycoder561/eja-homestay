@@ -175,7 +175,7 @@ export function Navigation() {
             {/* Top Navigation Bar */}
             <div className="flex justify-between items-center h-16 sm:h-20">
               {/* Enhanced Logo - Extreme Left Aligned */}
-              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200 -ml-8">
+              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200 -ml-4 sm:-ml-8">
                 <img 
                   src="/eja_02.svg" 
                   alt="EJA Logo" 
