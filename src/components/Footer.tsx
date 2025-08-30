@@ -80,7 +80,7 @@ export function Footer() {
           {/* Company Info */}
           <div className="lg:col-span-1">
             <div 
-              className="flex items-center mb-6 animate-fade-in -ml-4 sm:-ml-8"
+              className="flex items-center mb-6 animate-fade-in -ml-8 sm:-ml-12"
             >
               <img 
                 src="/eja_02.svg" 
