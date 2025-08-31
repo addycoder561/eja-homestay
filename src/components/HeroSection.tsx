@@ -18,7 +18,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { DestinationAutocomplete } from './DestinationAutocomplete';
 import { DatePicker } from './DatePicker';
-import { MobileSearchForm } from './MobileSearchForm';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isBefore, isAfter, addDays } from 'date-fns';
 
 export function HeroSection() {
@@ -168,9 +167,7 @@ export function HeroSection() {
 
           {/* Search Box */}
           <div className="max-w-4xl mx-auto">
-            {/* Desktop Search Form */}
-            <div className="hidden lg:block">
-              <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-1.5">
+            <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-1.5">
               <div className="flex flex-col lg:flex-row items-stretch">
                 {/* Where Section */}
                 <div className="flex-1 p-2.5 border-r border-gray-200">
@@ -317,14 +314,6 @@ export function HeroSection() {
                 </div>
               </div>
             </form>
-            </div>
-
-            {/* Mobile Search Form */}
-            <MobileSearchForm 
-              searchData={searchData}
-              setSearchData={setSearchData}
-              handleSearch={handleSearch}
-            />
           </div>
         </div>
       </div>
