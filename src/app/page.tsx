@@ -476,11 +476,11 @@ export default function Home() {
               /* Fallback to existing hardcoded banner when no active coupons */
               <div className="mt-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 text-center">
                 <div className="max-w-3xl mx-auto">
-                  <h3 className="text-3xl font-bold text-white mb-4">🎉 New Year Special</h3>
-                  <p className="text-xl text-white mb-6">Get up to 40% off on bookings for January & February 2024</p>
+                  <h3 className="text-3xl font-bold text-white mb-4">🎉 Welcome EJA</h3>
+                  <p className="text-xl text-white mb-6">Sponsored 2D/1N Getaway with Every Signup/Collab this September–October 2025.</p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                     <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-                      <span className="text-white font-semibold">Use Code: NEWYEAR2024</span>
+                      <span className="text-white font-semibold">Use Code: EJASTART</span>
                     </div>
                     <button className="bg-white text-orange-600 font-bold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors">
                       Claim Offer
