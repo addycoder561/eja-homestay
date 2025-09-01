@@ -23,6 +23,7 @@ import {
 import { UserGroupIcon } from '@heroicons/react/24/solid';
 import { useEffect, useState } from 'react';
 import { getRetreats, getExperiences, getProperties, getAdCampaigns, getActiveCoupons } from '@/lib/database';
+import ComingSoonRedirect from '@/components/ComingSoonRedirect';
 import { buildCoverFirstImages } from '@/lib/media';
 import { PropertyWithHost } from '@/lib/types';
 import { LiveRating } from '@/components/LiveRating';
@@ -204,26 +205,28 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <style jsx global>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-      <Navigation />
-      <main>
-        <HeroSection />
+    <>
+      <ComingSoonRedirect />
+      <div className="min-h-screen bg-gray-50">
+        <style jsx global>{`
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+          .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+        <Navigation />
+        <main>
+          <HeroSection />
 
         {/* Explore Destinations Section */}
         <section className="py-20 bg-white">
@@ -674,5 +677,6 @@ export default function Home() {
       </main>
       <Footer />
     </div>
+    </>
   );
 }
