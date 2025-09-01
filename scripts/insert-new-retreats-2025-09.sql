@@ -21,7 +21,7 @@ INSERT INTO public.retreats (
     'Specially-Abled Getaways',
     'Accessible travel designed with care',
     'Thoughtfully curated retreats with step-free access, supportive staff, and inclusive activities for diverse mobility needs. Ideal for groups seeking comfort, dignity, and memorable shared experiences.',
-    'Rishikesh, Uttarakhand, India',
+    'Mountains',
     'Group',
     8999,
     ARRAY[
@@ -37,14 +37,14 @@ INSERT INTO public.retreats (
     'Second Chances Retreat',
     'Reconnect, reset, and rise stronger',
     'A gentle couple-focused program blending nature, guided conversations, and mindful practices to rebuild trust, rediscover joy, and create a new chapter together.',
-    'Manali, Himachal Pradesh, India',
+    'Mountains',
     'Couple',
     10999,
     ARRAY[
       'https://images.unsplash.com/photo-1529336953128-a85760f31659?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1530023367847-a683933f4172?auto=format&fit=crop&w=1200&q=80'
     ],
-    'https://images.unsplash.com/photo-1529336953128-a85760f31659?auto=format&fit=crop&w=1600&q=80',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=80',
     '2N/3D',
     TRUE
   ),
@@ -53,14 +53,14 @@ INSERT INTO public.retreats (
     'Doctors Retreat',
     'Deep rest for those who care for all',
     'A restorative group retreat for medical professionals featuring silent mornings, breathwork, light treks, and nutrition-forward meals to decompress, reflect, and recharge.',
-    'Kasol, Himachal Pradesh, India',
+    'Mountains',
     'Group',
     11999,
     ARRAY[
       'https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80'
     ],
-    'https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=1600&q=80',
+    'https://images.unsplash.com/photo-1454391304352-2bf4678b1a7a?auto=format&fit=crop&w=1600&q=80',
     '3N/4D',
     TRUE
   ),
@@ -69,7 +69,7 @@ INSERT INTO public.retreats (
     'Engineers Retreat',
     'Unplug, build clarity, return inspired',
     'A maker-minded nature escape designed for product thinkers and engineers—hiking, sauna-style recovery, journaling sprints, and campfire ideation to reset focus and creativity.',
-    'Kanatal, Uttarakhand, India',
+    'Mountains',
     'Group',
     9999,
     ARRAY[
@@ -85,7 +85,7 @@ INSERT INTO public.retreats (
     'First Relationship Retreat',
     'Grow together with intention',
     'A heart-first retreat for young couples—playful activities, communication workshops, mindful sunrise walks, and simple rituals to build trust and shared meaning.',
-    'Nainital, Uttarakhand, India',
+    'Mountains',
     'Couple',
     8999,
     ARRAY[
@@ -101,7 +101,7 @@ INSERT INTO public.retreats (
     'First Startup Retreat',
     'From idea to momentum, together',
     'A high-energy group retreat for early founders—nature resets, lightweight strategy workshops, peer feedback circles, and pitch campfires to unlock clarity and momentum.',
-    'Dehradun, Uttarakhand, India',
+    'Mountains',
     'Group',
     12999,
     ARRAY[
