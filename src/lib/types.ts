@@ -287,6 +287,35 @@ export interface CardCollaboration {
   updated_at: string;
 }
 
+// Marketing: Ad campaigns and coupons
+export interface AdCampaign {
+  id: string;
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  target_url?: string | null;
+  start_date?: string | null; // YYYY-MM-DD
+  end_date?: string | null;   // YYYY-MM-DD
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  description?: string | null;
+  discount_type: 'percent' | 'amount';
+  discount_value: number;
+  max_uses?: number | null;
+  used_count: number;
+  valid_from?: string | null; // YYYY-MM-DD
+  valid_to?: string | null;   // YYYY-MM-DD
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Razorpay TypeScript declarations
 declare global {
   interface Window {

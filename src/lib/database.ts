@@ -14,7 +14,9 @@ import {
   Experience,
   Trip,
   BookingWithPropertyAndGuest,
-  CardCollaboration
+  CardCollaboration,
+  AdCampaign,
+  Coupon
 } from './types';
 
 // Profile functions
@@ -684,6 +686,41 @@ export async function getUserCollaborations(userId: string): Promise<any[]> {
     .order('created_at', { ascending: false });
   return error ? [] : (data || []);
 } 
+
+// --- Marketing: Ad campaigns and coupons ---
+export async function getAdCampaigns(limit = 4): Promise<AdCampaign[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('ad_campaigns')
+    .select('*')
+    .eq('is_active', true)
+    .or(`start_date.is.null,and(start_date.lte.${today})`)
+    .or(`end_date.is.null,and(end_date.gte.${today})`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error('Error fetching ad campaigns:', error);
+    return [];
+  }
+  return (data || []) as AdCampaign[];
+}
+
+export async function getActiveCoupons(limit = 10): Promise<Coupon[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('coupons')
+    .select('*')
+    .eq('is_active', true)
+    .gte('valid_to', today)
+    .lte('valid_from', today)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error('Error fetching active coupons:', error);
+    return [];
+  }
+  return (data || []) as Coupon[];
+}
 
 // Wishlist functions
 export async function getWishlist(userId: string) {
