@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Set this to false when you're ready to launch
-const SHOW_COMING_SOON = true;
+const SHOW_COMING_SOON = false;
 
 export default function ComingSoonRedirect() {
   const router = useRouter();
