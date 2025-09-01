@@ -23,7 +23,6 @@ import {
 import { UserGroupIcon } from '@heroicons/react/24/solid';
 import { useEffect, useState } from 'react';
 import { getRetreats, getExperiences, getProperties, getAdCampaigns, getActiveCoupons } from '@/lib/database';
-import ComingSoonRedirect from '@/components/ComingSoonRedirect';
 import { buildCoverFirstImages } from '@/lib/media';
 import { PropertyWithHost } from '@/lib/types';
 import { LiveRating } from '@/components/LiveRating';
@@ -205,9 +204,7 @@ export default function Home() {
   }, []);
 
   return (
-    <>
-      <ComingSoonRedirect />
-      <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
         <style jsx global>{`
           .scrollbar-hide {
             -ms-overflow-style: none;
@@ -677,6 +674,5 @@ export default function Home() {
       </main>
       <Footer />
     </div>
-    </>
   );
 }
