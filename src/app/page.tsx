@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { UserGroupIcon } from '@heroicons/react/24/solid';
 import { useEffect, useState } from 'react';
-import { getRetreats, getExperiences, getProperties, getAdCampaigns } from '@/lib/database';
+import { getRetreats, getExperiences, getProperties, getAdCampaigns, getActiveCoupons } from '@/lib/database';
 import { buildCoverFirstImages } from '@/lib/media';
 import { PropertyWithHost } from '@/lib/types';
 import { LiveRating } from '@/components/LiveRating';
@@ -123,10 +123,12 @@ export default function Home() {
   const [experiences, setExperiences] = useState<any[]>([]);
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
   const [loadingRetreats, setLoadingRetreats] = useState(true);
   const [loadingExperiences, setLoadingExperiences] = useState(true);
   const [loadingProperties, setLoadingProperties] = useState(true);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const [loadingCoupons, setLoadingCoupons] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -181,10 +183,24 @@ export default function Home() {
       }
     };
 
+    const fetchCoupons = async () => {
+      try {
+        setLoadingCoupons(true);
+        const data = await getActiveCoupons(5);
+        setCoupons(data || []);
+      } catch (error) {
+        console.error('Error fetching active coupons:', error);
+        setCoupons([]);
+      } finally {
+        setLoadingCoupons(false);
+      }
+    };
+
     fetchRetreats();
     fetchExperiences();
     fetchProperties();
     fetchCampaigns();
+    fetchCoupons();
   }, []);
 
   return (
@@ -417,21 +433,62 @@ export default function Home() {
               </div>
             )}
 
-            {/* Additional Promotional Banner */}
-            <div className="mt-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 text-center">
-              <div className="max-w-3xl mx-auto">
-                <h3 className="text-3xl font-bold text-white mb-4">🎉 New Year Special</h3>
-                <p className="text-xl text-white mb-6">Get up to 40% off on bookings for January & February 2024</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-                    <span className="text-white font-semibold">Use Code: NEWYEAR2024</span>
+            {/* Dynamic Promotional Banner with Active Coupons */}
+            {coupons && coupons.length > 0 ? (
+              <div className="mt-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 text-center">
+                <div className="max-w-4xl mx-auto">
+                  <h3 className="text-3xl font-bold text-white mb-4">🎉 Special Offers</h3>
+                  <p className="text-xl text-white mb-6">Limited time discounts - grab them before they expire!</p>
+                  
+                  {/* Coupon Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {coupons.slice(0, 6).map((coupon, index) => (
+                      <div key={coupon.id || index} className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/30 transition-all duration-200 cursor-pointer group">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-white mb-2">
+                            {coupon.discount_type === 'percent' 
+                              ? `${coupon.discount_value}% OFF`
+                              : `₹${coupon.discount_value} OFF`
+                            }
+                          </div>
+                          <div className="text-white/90 text-sm mb-2 font-medium">
+                            {coupon.description || 'Special Discount'}
+                          </div>
+                          <div className="bg-white text-orange-600 px-3 py-2 rounded-lg font-bold text-lg tracking-wider">
+                            {coupon.code}
+                          </div>
+                          {coupon.valid_to && (
+                            <div className="text-white/80 text-xs mt-2">
+                              Valid till {new Date(coupon.valid_to).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                  
                   <button className="bg-white text-orange-600 font-bold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors">
-                    Claim Offer
+                    View All Offers
                   </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* Fallback to existing hardcoded banner when no active coupons */
+              <div className="mt-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 text-center">
+                <div className="max-w-3xl mx-auto">
+                  <h3 className="text-3xl font-bold text-white mb-4">🎉 New Year Special</h3>
+                  <p className="text-xl text-white mb-6">Get up to 40% off on bookings for January & February 2024</p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+                      <span className="text-white font-semibold">Use Code: NEWYEAR2024</span>
+                    </div>
+                    <button className="bg-white text-orange-600 font-bold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors">
+                      Claim Offer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

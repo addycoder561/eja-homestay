@@ -711,8 +711,8 @@ export async function getActiveCoupons(limit = 10): Promise<Coupon[]> {
     .from('coupons')
     .select('*')
     .eq('is_active', true)
-    .gte('valid_to', today)
-    .lte('valid_from', today)
+    .or(`valid_from.is.null,and(valid_from.lte.${today})`)
+    .or(`valid_to.is.null,and(valid_to.gte.${today})`)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) {
