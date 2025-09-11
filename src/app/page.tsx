@@ -52,13 +52,13 @@ const EXPERIENCE_CATEGORIES = [
 ];
 
 export default function Home() {
-  const [retreats, setRetreats] = useState<any[]>([]);
-  const [experiences, setExperiences] = useState<any[]>([]);
+  const [retreats, setRetreats] = useState<unknown[]>([]);
+  const [experiences, setExperiences] = useState<unknown[]>([]);
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedExperience, setSelectedExperience] = useState<any>(null);
+  const [selectedExperience, setSelectedExperience] = useState<unknown>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
+  const [selectedRetreat, setSelectedRetreat] = useState<unknown>(null);
   const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const handleExperienceClick = (experience: any) => {
+  const handleExperienceClick = (experience: unknown) => {
     try {
       if (experience && experience.id) {
     setSelectedExperience(experience);
@@ -116,7 +116,7 @@ export default function Home() {
     }
   };
 
-  const handleRetreatClick = (retreat: any) => {
+  const handleRetreatClick = (retreat: unknown) => {
     try {
       if (retreat && retreat.id) {
     setSelectedRetreat(retreat);
@@ -265,7 +265,7 @@ export default function Home() {
                     const item = dataArray[dataIndex];
                     
                     // Helper function to get image URL
-                    const getImageUrl = (item: any, isExp: boolean) => {
+                    const getImageUrl = (item: unknown, isExp: boolean) => {
                       console.log('Getting image for item:', item);
                       console.log('Is experience:', isExp);
                       
@@ -320,8 +320,9 @@ export default function Home() {
                                 alt={item.title || (isExperience ? 'Experience' : 'Retreat')}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 onError={(e) => {
-                                  console.log('Image failed to load:', e.target.src);
-                                  e.target.src = isExperience 
+                                  const target = e.target as HTMLImageElement;
+                                  console.log('Image failed to load:', target.src);
+                                  target.src = isExperience 
                                     ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
                                     : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
                                 }}
