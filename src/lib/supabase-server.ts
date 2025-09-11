@@ -20,7 +20,7 @@ export function getSupabaseServer() {
       set(name: string, value: string, options: CookieOptions) {
         const maybePromise = cookieStore as any;
         if (typeof maybePromise.then === 'function') {
-          // @ts-ignore
+          // @ts-expect-error - cookieStore may be a promise that needs to be awaited
           return maybePromise.then((store: any) => store.set({ name, value, ...options }));
         }
         (cookieStore as any).set({ name, value, ...options });
@@ -28,7 +28,7 @@ export function getSupabaseServer() {
       remove(name: string, options: CookieOptions) {
         const maybePromise = cookieStore as any;
         if (typeof maybePromise.then === 'function') {
-          // @ts-ignore
+          // @ts-expect-error - cookieStore may be a promise that needs to be awaited
           return maybePromise.then((store: any) => store.set({ name, value: '', ...options, expires: new Date(0) }));
         }
         (cookieStore as any).set({ name, value: '', ...options, expires: new Date(0) });
