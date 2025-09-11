@@ -12,9 +12,10 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { PropertyCard } from '@/components/PropertyCard';
-import { EngagementIcons } from '@/components/EngagementIcons';
-import { getProperties, searchProperties, getExperiences, getRetreats, createExperienceBooking, createTripBooking, isWishlisted, addToWishlist, removeFromWishlist, ensureProfile } from '@/lib/database';
+import { getProperties, searchProperties, getExperiences, getRetreats, getExperienceCategories, getRetreatCategories, createExperienceBooking, createTripBooking, isWishlisted, addToWishlist, removeFromWishlist, ensureProfile, testWishlistTable } from '@/lib/database';
 import { PropertyWithHost, SearchFilters as SearchFiltersType, Experience, PropertyType } from '@/lib/types';
+import ExperienceModal from '@/components/ExperienceModal';
+import RetreatModal from '@/components/RetreatModal';
 import { 
   MagnifyingGlassIcon, 
   MapPinIcon, 
@@ -43,31 +44,36 @@ import { sendPaymentReceiptEmail } from '@/lib/notifications';
 
 
 
-// Filter data for experiences and retreats
-const experienceFilterData = {
-  category: [
-    { id: 'immersive', label: 'Immersive', icon: '🧘', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-    { id: 'playful', label: 'Playful', icon: '🎮', color: 'bg-green-100 text-green-700 border-green-200' },
-    { id: 'culinary', label: 'Culinary', icon: '🍽️', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-    { id: 'meaningful', label: 'Meaningful', icon: '❤️', color: 'bg-red-100 text-red-700 border-red-200' }
-  ],
-  contentType: [
-    { id: 'hyper-local', label: 'Hyper-local', icon: '🏘️', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-    { id: 'retreats', label: 'Retreats', icon: '🏔️', color: 'bg-gray-100 text-gray-700 border-gray-200' }
-  ]
+// Helper function to get category icon
+const getCategoryIcon = (category: string) => {
+  const categoryLower = category.toLowerCase();
+  if (categoryLower.includes('immersive')) return '🧘';
+  if (categoryLower.includes('playful')) return '🎮';
+  if (categoryLower.includes('culinary')) return '🍽️';
+  if (categoryLower.includes('meaningful')) return '❤️';
+  if (categoryLower.includes('couple')) return '💑';
+  if (categoryLower.includes('solo')) return '🧘';
+  if (categoryLower.includes('pet')) return '🐕';
+  if (categoryLower.includes('family')) return '👨‍👩‍👧‍👦';
+  if (categoryLower.includes('purposeful')) return '🎯';
+  if (categoryLower.includes('senior')) return '👴';
+  if (categoryLower.includes('group')) return '👥';
+  if (categoryLower.includes('parents')) return '👨‍👩‍👦';
+  if (categoryLower.includes('try')) return '🎯';
+  return '🌟';
 };
 
-const retreatFilterData = {
-  category: [
-    { id: 'Couple', label: 'Couple', icon: '💑' },
-    { id: 'Solo', label: 'Solo', icon: '🧘' },
-    { id: 'Pet-Friendly', label: 'Pet-Friendly', icon: '🐕' },
-    { id: 'Family', label: 'Family', icon: '👨‍👩‍👧‍👦' },
-    { id: 'Purposeful', label: 'Purposeful', icon: '🎯' },
-    { id: 'Senior Citizen', label: 'Senior Citizen', icon: '👴' },
-    { id: 'Group', label: 'Group', icon: '👥' },
-    { id: 'Parents', label: 'Parents', icon: '👨‍👩‍👦' }
-  ]
+// Helper function to get category color
+const getCategoryColor = (category: string, isRetreat: boolean = false) => {
+  const categoryLower = category.toLowerCase();
+  if (isRetreat) {
+    return 'bg-yellow-400 border-yellow-400 text-white';
+  }
+  if (categoryLower.includes('immersive')) return 'bg-purple-100 text-purple-700 border-purple-200';
+  if (categoryLower.includes('playful')) return 'bg-green-100 text-green-700 border-green-200';
+  if (categoryLower.includes('culinary')) return 'bg-orange-100 text-orange-700 border-orange-200';
+  if (categoryLower.includes('meaningful')) return 'bg-red-100 text-red-700 border-red-200';
+  return 'bg-blue-100 text-blue-700 border-blue-200';
 };
 
 export default function SearchPageClient() {
@@ -108,11 +114,22 @@ export default function SearchPageClient() {
   const [wishlistedExperienceIds, setWishlistedExperienceIds] = useState<string[]>([]);
   const [wishlistedRetreatIds, setWishlistedRetreatIds] = useState<string[]>([]);
   
+  // Experience modal states
+  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
+  const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
+  const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
+  const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
+  
   // Filter states
   const [selectedExperienceCategory, setSelectedExperienceCategory] = useState("");
   const [selectedRetreatCategory, setSelectedRetreatCategory] = useState("");
   const [selectedContentTypeToggle, setSelectedContentTypeToggle] = useState<'hyper-local' | 'retreats'>('hyper-local');
   const [selectedFilterChips, setSelectedFilterChips] = useState<string[]>([]);
+  
+  // Dynamic categories
+  const [experienceCategories, setExperienceCategories] = useState<string[]>([]);
+  const [retreatCategories, setRetreatCategories] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   
 
 
@@ -197,6 +214,40 @@ export default function SearchPageClient() {
     fetchRetreats();
   }, []);
 
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const [expCategories, retreatCats] = await Promise.all([
+          getExperienceCategories(),
+          getRetreatCategories()
+        ]);
+        setExperienceCategories(expCategories);
+        setRetreatCategories(retreatCats);
+        console.log('🔍 DEBUG - Fetched experience categories:', expCategories);
+        console.log('🔍 DEBUG - Fetched retreat categories:', retreatCats);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Debug filter state changes
+  useEffect(() => {
+    console.log('🔍 Filter state changed:', {
+      selectedExperienceCategory,
+      selectedRetreatCategory,
+      selectedContentTypeToggle,
+      experienceCategories,
+      retreatCategories
+    });
+  }, [selectedExperienceCategory, selectedRetreatCategory, selectedContentTypeToggle, experienceCategories, retreatCategories]);
+
   // Fetch wishlist status for experiences
   useEffect(() => {
     let ignore = false;
@@ -262,27 +313,40 @@ export default function SearchPageClient() {
       return;
     }
     
+    console.log('🔖 Discover page wishlist toggle:', { 
+      userId: user.id, 
+      experienceId: expId, 
+      currentState: wishlisted 
+    });
+    
+    // Test if wishlist table exists first
+    const tableExists = await testWishlistTable();
+    if (!tableExists) {
+      toast.error('Wishlist table not accessible. Please check database setup.');
+      return;
+    }
+    
     try {
       if (wishlisted) {
         const success = await removeFromWishlist(user.id, expId, 'experience');
         if (success) {
           setWishlistedExperienceIds(ids => ids.filter(id => id !== expId));
-          toast.success('Experience removed from wishlist');
+          toast.success('Experience removed from saved');
         } else {
-          toast.error('Failed to remove from wishlist');
+          toast.error('Failed to remove from saved');
         }
       } else {
         const success = await addToWishlist(user.id, expId, 'experience');
         if (success) {
           setWishlistedExperienceIds(ids => [...ids, expId]);
-          toast.success('Experience added to wishlist');
+          toast.success('Experience added to saved');
         } else {
-          toast.error('Failed to add to wishlist');
+          toast.error('Failed to add to saved');
         }
       }
     } catch (error) {
-      console.error('Wishlist error:', error);
-      toast.error('Failed to update wishlist');
+      console.error('❌ Discover page wishlist error:', error);
+      toast.error('Failed to update saved items');
     }
   };
 
@@ -316,6 +380,27 @@ export default function SearchPageClient() {
       console.error('Wishlist error:', error);
       toast.error('Failed to update wishlist');
     }
+  };
+
+  // Experience modal handlers
+  const handleExperienceClick = (experience: Experience) => {
+    setSelectedExperience(experience);
+    setIsExperienceModalOpen(true);
+  };
+
+  const handleCloseExperienceModal = () => {
+    setIsExperienceModalOpen(false);
+    setSelectedExperience(null);
+  };
+
+  const handleRetreatClick = (retreat: any) => {
+    setSelectedRetreat(retreat);
+    setIsRetreatModalOpen(true);
+  };
+
+  const handleCloseRetreatModal = () => {
+    setIsRetreatModalOpen(false);
+    setSelectedRetreat(null);
   };
 
   // Filter chip click handler
@@ -594,9 +679,17 @@ export default function SearchPageClient() {
   const filteredExperiences = experiences.filter((exp) => {
     // Filter by vibe category
     if (selectedExperienceCategory && exp.categories) {
-      const categoriesStr = String(exp.categories).toLowerCase();
-      const selectedCategoryLower = selectedExperienceCategory.toLowerCase();
-      if (!categoriesStr.includes(selectedCategoryLower)) {
+      const categoriesArray = Array.isArray(exp.categories) ? exp.categories : [exp.categories];
+      const hasCategory = categoriesArray.some(cat => 
+        cat.toLowerCase() === selectedExperienceCategory.toLowerCase()
+      );
+      console.log('🔍 Experience filter:', {
+        title: exp.title,
+        categories: categoriesArray,
+        selectedCategory: selectedExperienceCategory,
+        hasCategory
+      });
+      if (!hasCategory) {
         return false;
       }
     }
@@ -623,9 +716,16 @@ export default function SearchPageClient() {
       // Show retreats for retreats mode
       // Filter by category if selected
       if (selectedRetreatCategory && retreat.categories) {
-        const hasCategory = Array.isArray(retreat.categories)
-          ? retreat.categories.includes(selectedRetreatCategory)
-          : retreat.categories === selectedRetreatCategory;
+        const categoriesArray = Array.isArray(retreat.categories) ? retreat.categories : [retreat.categories];
+        const hasCategory = categoriesArray.some((cat: string) => 
+          cat.toLowerCase() === selectedRetreatCategory.toLowerCase()
+        );
+        console.log('🔍 Retreat filter:', {
+          title: retreat.title,
+          categories: categoriesArray,
+          selectedCategory: selectedRetreatCategory,
+          hasCategory
+        });
         return hasCategory;
       }
       return true;
@@ -658,6 +758,15 @@ export default function SearchPageClient() {
     selectedExperienceCategory || 
     selectedRetreatCategory || 
     selectedContentTypeToggle !== 'hyper-local';
+
+  // Debug filtered results
+  console.log('🔍 Filtered results:', {
+    experiences: filteredExperiences.length,
+    retreats: filteredRetreats.length,
+    selectedExperienceCategory,
+    selectedRetreatCategory,
+    selectedContentTypeToggle
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -697,119 +806,51 @@ export default function SearchPageClient() {
                   <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50/80 to-transparent pointer-events-none z-10"></div>
                   <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50/80 to-transparent pointer-events-none z-10"></div>
                   
-                  {/* Hyper-local Vibe Filters */}
-                  {selectedContentTypeToggle === 'hyper-local' && (
+                  {/* Hyper-local Vibe Filters - Dynamic */}
+                  {selectedContentTypeToggle === 'hyper-local' && !loadingCategories && (
                     <>
-
-
-                      <button 
-                        onClick={() => setSelectedExperienceCategory(selectedExperienceCategory === 'Immersive' ? "" : 'Immersive')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedExperienceCategory === 'Immersive'
-                            ? 'bg-purple-100 border-purple-200 text-purple-700 shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Immersive experiences"
-                      >
-                        <span className="text-xs">🧘</span>
-                        <span>Immersive</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setSelectedExperienceCategory(selectedExperienceCategory === 'Playful' ? "" : 'Playful')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedExperienceCategory === 'Playful'
-                            ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Playful experiences"
-                      >
-                        <span className="text-xs">🎮</span>
-                        <span>Playful</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setSelectedExperienceCategory(selectedExperienceCategory === 'Culinary' ? "" : 'Culinary')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedExperienceCategory === 'Culinary'
-                            ? 'bg-orange-100 border-orange-200 text-orange-700 shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Culinary experiences"
-                      >
-                        <span className="text-xs">🍽️</span>
-                        <span>Culinary</span>
-                      </button>
+                      {experienceCategories.map((category) => (
+                        <button 
+                          key={category}
+                          onClick={() => {
+                            console.log('🔍 Experience category clicked:', category, 'Current:', selectedExperienceCategory);
+                            setSelectedExperienceCategory(selectedExperienceCategory === category ? "" : category);
+                          }}
+                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
+                            selectedExperienceCategory === category
+                              ? getCategoryColor(category, false) + ' shadow-md'
+                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
+                          }`}
+                          title={`${category} experiences`}
+                        >
+                          <span className="text-xs">{getCategoryIcon(category)}</span>
+                          <span>{category}</span>
+                        </button>
+                      ))}
                     </>
                   )}
 
-                  {/* Retreats Category Filters */}
-                  {selectedContentTypeToggle === 'retreats' && (
+                  {/* Retreats Category Filters - Dynamic */}
+                  {selectedContentTypeToggle === 'retreats' && !loadingCategories && (
                     <>
-                      <button 
-                        onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Couple' ? "" : 'Couple')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedRetreatCategory === 'Couple'
-                            ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Couple retreats"
-                      >
-                        <span className="text-xs">💑</span>
-                        <span>Couple</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Solo' ? "" : 'Solo')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedRetreatCategory === 'Solo'
-                            ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Solo retreats"
-                      >
-                        <span className="text-xs">🧘</span>
-                        <span>Solo</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Family' ? "" : 'Family')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedRetreatCategory === 'Family'
-                            ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Family retreats"
-                      >
-                        <span className="text-xs">👨‍👩‍👧‍👦</span>
-                        <span>Family</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Group' ? "" : 'Group')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedRetreatCategory === 'Group'
-                            ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Group retreats"
-                      >
-                        <span className="text-xs">👥</span>
-                        <span>Group</span>
-                      </button>
-
-                      <button 
-                        onClick={() => setSelectedRetreatCategory(selectedRetreatCategory === 'Purposeful' ? "" : 'Purposeful')}
-                        className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                          selectedRetreatCategory === 'Purposeful'
-                            ? 'bg-yellow-400 border-yellow-400 text-white shadow-md'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                        }`}
-                        title="Purposeful retreats"
-                      >
-                        <span className="text-xs">🎯</span>
-                        <span>Purposeful</span>
-                      </button>
+                      {retreatCategories.map((category) => (
+                        <button 
+                          key={category}
+                          onClick={() => {
+                            console.log('🔍 Retreat category clicked:', category, 'Current:', selectedRetreatCategory);
+                            setSelectedRetreatCategory(selectedRetreatCategory === category ? "" : category);
+                          }}
+                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
+                            selectedRetreatCategory === category
+                              ? getCategoryColor(category, true) + ' shadow-md'
+                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
+                          }`}
+                          title={`${category} retreats`}
+                        >
+                          <span className="text-xs">{getCategoryIcon(category)}</span>
+                          <span>{category}</span>
+                        </button>
+                      ))}
                     </>
                   )}
 
@@ -821,7 +862,10 @@ export default function SearchPageClient() {
 
               {/* Content Type Toggle - Fixed Right with proper spacing */}
               <div className="bg-gray-100 rounded-xl p-1 flex flex-shrink-0 ml-4">
-                {experienceFilterData.contentType.map((contentType) => (
+                {[
+                  { id: 'hyper-local', label: 'Hyper-local', icon: '🏘️' },
+                  { id: 'retreats', label: 'Retreats', icon: '🏔️' }
+                ].map((contentType) => (
                   <button
                     key={contentType.id}
                     onClick={() => setSelectedContentTypeToggle(contentType.id as 'hyper-local' | 'retreats')}
@@ -934,9 +978,9 @@ export default function SearchPageClient() {
               {filteredExperiences.map((exp, index) => {
                 const isWishlisted = wishlistedExperienceIds.includes(exp.id);
                 return (
-                  <Link
+                  <div
                     key={exp.id}
-                    href={`/experiences/${exp.id}`}
+                    onClick={() => handleExperienceClick(exp)}
                     className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
@@ -954,7 +998,7 @@ export default function SearchPageClient() {
                       {exp.categories && (
                         <div className="absolute top-4 left-4 z-10">
                           <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
-                            {exp.categories}
+                            {Array.isArray(exp.categories) ? exp.categories[0] : exp.categories}
                           </span>
                         </div>
                       )}
@@ -1009,15 +1053,8 @@ export default function SearchPageClient() {
                         </div>
                       </div>
 
-                      {/* Engagement Icons */}
-                      <EngagementIcons 
-                        itemId={exp.id}
-                        itemType="experience"
-                        itemTitle={exp.title}
-                        itemUrl={`/experiences/${exp.id}`}
-                      />
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
               
@@ -1025,9 +1062,9 @@ export default function SearchPageClient() {
               {filteredRetreats.map((retreat, index) => {
                 const isWishlisted = wishlistedRetreatIds.includes(retreat.id);
                 return (
-                  <Link
+                  <div
                     key={retreat.id}
-                    href={`/retreats/${retreat.id}`}
+                    onClick={() => handleRetreatClick(retreat)}
                     className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
@@ -1084,31 +1121,18 @@ export default function SearchPageClient() {
                           <MapPinIcon className="w-3 h-3" />
                           <span className="text-xs">{retreat.location}</span>
                         </div>
-                        {retreat.duration && (
-                          <div className="flex items-center gap-1">
-                            <ClockIcon className="w-3 h-3" />
-                            <span className="text-xs">{retreat.duration}</span>
-                          </div>
-                        )}
                       </div>
                       
                       {/* Price */}
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div className="flex items-baseline gap-1">
                           <span className="text-base font-bold text-gray-900">₹{retreat.price?.toLocaleString()}</span>
-                          <span className="text-xs text-gray-500">/ person</span>
+                          <span className="text-xs text-gray-500">for 2 adults</span>
                         </div>
                       </div>
 
-                      {/* Engagement Icons */}
-                      <EngagementIcons 
-                        itemId={retreat.id}
-                        itemType="retreat"
-                        itemTitle={retreat.title}
-                        itemUrl={`/retreats/${retreat.id}`}
-                      />
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -1279,6 +1303,19 @@ export default function SearchPageClient() {
 
       {/* Razorpay Script */}
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+      
+      {/* Experience Modal */}
+      <ExperienceModal 
+        experience={selectedExperience}
+        isOpen={isExperienceModalOpen}
+        onClose={handleCloseExperienceModal}
+      />
+      
+      <RetreatModal 
+        retreat={selectedRetreat}
+        isOpen={isRetreatModalOpen}
+        onClose={handleCloseRetreatModal}
+      />
       
       <Footer />
     </div>

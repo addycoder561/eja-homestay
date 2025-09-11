@@ -561,14 +561,8 @@ export default function RetreatDetailPage() {
                   </div>
                     </div>
                     
-                    {/* Second line: duration, category */}
+                    {/* Second line: category */}
                     <div className="flex items-center gap-4 text-gray-600">
-              {retreat.duration && (
-                    <div className="flex items-center gap-2">
-                          <ClockIcon className="w-4 h-4" />
-                      <span>{retreat.duration}</span>
-                    </div>
-                  )}
                   {retreat.categories && (
                     <div className="flex items-center gap-2">
                           <span className="text-xl">{getCategoryIcon(Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories)}</span>
@@ -628,18 +622,12 @@ export default function RetreatDetailPage() {
                           <h3 className="text-xl font-semibold text-gray-800 mb-4">{retreat.subtitle}</h3>
                         )}
                         
-                        {/* Location, Duration, Category */}
+                        {/* Location, Category */}
                         <div className="flex items-center space-x-6 mb-4 text-sm">
                           <div className="flex items-center space-x-1">
                             <MapPinIcon className="w-4 h-4 text-gray-500" />
                             <span className="text-gray-700">{retreat.location}</span>
                           </div>
-                          {retreat.duration && (
-                            <div className="flex items-center space-x-1">
-                              <ClockIcon className="w-4 h-4 text-gray-500" />
-                              <span className="text-gray-700">{retreat.duration}</span>
-                            </div>
-                          )}
                           {retreat.categories && (
                             <div className="flex items-center space-x-1">
                               <span className="text-2xl">{getCategoryIcon(Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories)}</span>
@@ -900,7 +888,7 @@ export default function RetreatDetailPage() {
                     <div className="text-3xl font-bold text-gray-900 mb-1">
                       ₹{retreat.price?.toLocaleString()}
                     </div>
-                    <div className="text-gray-600">per person</div>
+                    <div className="text-gray-600">for 2 adults</div>
                   </div>
 
                   <form onSubmit={handleBookingSubmit} className="space-y-4">
@@ -957,7 +945,7 @@ export default function RetreatDetailPage() {
                   <h4 className="text-sm font-semibold text-gray-900 mb-3">Booking Summary</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Price per person:</span>
+                      <span className="text-gray-600">Price for 2 adults:</span>
                       <span>₹{retreat.price?.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">

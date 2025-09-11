@@ -66,12 +66,6 @@ export function MobileBottomNavigation() {
       active: pathname === '/'
     },
     {
-      name: 'Search',
-      href: '/search',
-      icon: pathname?.startsWith('/search') ? MagnifyingGlassIconSolid : MagnifyingGlassIcon,
-      active: pathname?.startsWith('/search')
-    },
-    {
       name: 'Discover',
       href: '/discover',
       icon: pathname?.startsWith('/discover') ? SparklesIconSolid : SparklesIcon,
@@ -84,12 +78,6 @@ export function MobileBottomNavigation() {
       active: pathname?.startsWith('/guest/wishlist'),
       badge: wishlistCount > 0 ? wishlistCount : undefined
     },
-    {
-      name: 'Delight',
-      href: '/delight',
-      icon: pathname?.startsWith('/delight') ? SparklesIconSolid : SparklesIcon,
-      active: pathname?.startsWith('/delight')
-    }
   ];
 
   return (

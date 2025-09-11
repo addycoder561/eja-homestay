@@ -194,12 +194,20 @@ export interface Experience {
   location: string;
   date: string; // YYYY-MM-DD
   price: number;
-  max_guests: number;
   images: string[];
   cover_image?: string;
   duration?: string;
-  categories?: string;
+  categories?: string | string[];
   is_active: boolean;
+  // Host-related fields
+  host_name?: string;
+  host_type?: string;
+  host_tenure?: string;
+  host_description?: string;
+  host_image?: string;
+  host_usps?: string[];
+  // Unique propositions
+  unique_propositions?: string[];
   created_at: string;
   updated_at: string;
 }

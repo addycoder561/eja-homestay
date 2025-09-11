@@ -722,6 +722,29 @@ export async function getActiveCoupons(limit = 10): Promise<Coupon[]> {
   return (data || []) as Coupon[];
 }
 
+// Test function to check if wishlist table exists
+export async function testWishlistTable() {
+  console.log('🧪 Testing wishlist table access...');
+  
+  try {
+    const { data, error } = await supabase
+      .from('wishlist')
+      .select('count')
+      .limit(1);
+      
+    if (error) {
+      console.error('❌ Wishlist table test failed:', error);
+      return false;
+    }
+    
+    console.log('✅ Wishlist table is accessible');
+    return true;
+  } catch (err) {
+    console.error('❌ Wishlist table test error:', err);
+    return false;
+  }
+}
+
 // Wishlist functions
 export async function getWishlist(userId: string) {
   console.log('🔍 getWishlist called with userId:', userId);
@@ -741,14 +764,28 @@ export async function getWishlist(userId: string) {
 }
 
 export async function isWishlisted(userId: string, itemId: string, itemType: string) {
+  console.log('🔍 isWishlisted called:', { userId, itemId, itemType });
+  
   const { data, error } = await supabase
     .from('wishlist')
     .select('id')
     .eq('user_id', userId)
     .eq('item_id', itemId)
-    .eq('item_type', itemType)
-    .single();
-  return !!data;
+    .eq('item_type', itemType);
+    
+  if (error) {
+    console.error('❌ Error checking wishlist status:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
+    return false;
+  }
+  
+  console.log('✅ isWishlisted result:', !!data && data.length > 0, 'Data:', data);
+  return !!data && data.length > 0;
 }
 
 export async function addToWishlist(userId: string, itemId: string, itemType: string) {
@@ -774,30 +811,43 @@ export async function addToWishlist(userId: string, itemId: string, itemType: st
     return true; // Return true since the item is already wishlisted
   }
   
-  const { error } = await supabase
+  console.log('🔄 Attempting to insert into wishlist table...');
+  const { data, error } = await supabase
     .from('wishlist')
-    .insert({ user_id: userId, item_id: itemId, item_type: itemType });
+    .insert({ user_id: userId, item_id: itemId, item_type: itemType })
+    .select();
     
   if (error) {
     console.error('❌ Error adding to wishlist:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return false;
   }
   
-  console.log('✅ Item added to wishlist successfully');
+  console.log('✅ Item added to wishlist successfully:', data);
   return true;
 }
 
 export async function removeFromWishlist(userId: string, itemId: string, itemType: string) {
+  console.log('🗑️ removeFromWishlist called:', { userId, itemId, itemType });
+  
   const { error } = await supabase
     .from('wishlist')
     .delete()
     .eq('user_id', userId)
     .eq('item_id', itemId)
     .eq('item_type', itemType);
+    
   if (error) {
-    console.error('Error removing from wishlist:', error);
+    console.error('❌ Error removing from wishlist:', error);
     return false;
   }
+  
+  console.log('✅ Item removed from wishlist successfully');
   return true;
 } 
 
@@ -1161,4 +1211,182 @@ export async function checkDatabaseContent(): Promise<void> {
       tags: property.tags
     });
   });
+}
+
+// Function to check experiences database content for debugging
+export async function checkExperiencesContent(): Promise<void> {
+  console.log('🔍 DEBUG - Checking experiences database content...');
+  
+  const { data, error } = await supabase
+    .from('experiences')
+    .select('*')
+    .eq('is_active', true)
+    .limit(10);
+  
+  if (error) {
+    console.error('🔍 DEBUG - Error fetching experiences:', error);
+    return;
+  }
+  
+  console.log('🔍 DEBUG - Total experiences found:', data?.length || 0);
+  
+  // Check categories
+  const allCategories = data?.flatMap(exp => {
+    if (Array.isArray(exp.categories)) {
+      return exp.categories;
+    } else if (exp.categories) {
+      return [exp.categories];
+    }
+    return [];
+  }).filter(Boolean);
+  const uniqueCategories = [...new Set(allCategories)];
+  console.log('🔍 DEBUG - Available experience categories:', uniqueCategories);
+  console.log('🔍 DEBUG - Experience categories data types:', data?.map(e => ({ 
+    id: e.id, 
+    title: e.title, 
+    categories: e.categories, 
+    isArray: Array.isArray(e.categories) 
+  })));
+  
+  // Check host names
+  const hostNames = [...new Set(data?.map(exp => exp.host_name).filter(Boolean))];
+  console.log('🔍 DEBUG - Available host names:', hostNames);
+  
+  // Show sample experiences
+  console.log('🔍 DEBUG - Sample experiences:');
+  data?.slice(0, 3).forEach((experience, index) => {
+    console.log(`  Experience ${index + 1}:`, {
+      id: experience.id,
+      title: experience.title,
+      location: experience.location,
+      price: experience.price,
+      duration: experience.duration,
+      categories: experience.categories,
+      host_name: experience.host_name,
+      host_type: experience.host_type,
+      images: experience.images?.length || 0,
+      cover_image: experience.cover_image ? 'Yes' : 'No',
+      unique_propositions: experience.unique_propositions?.length || 0
+    });
+  });
+}
+
+// Function to check retreats database content for debugging
+export async function checkRetreatsContent(): Promise<void> {
+  console.log('🔍 DEBUG - Checking retreats database content...');
+  
+  const { data, error } = await supabase
+    .from('retreats')
+    .select('id, title, subtitle, location, price, duration, categories, host_name, host_type, unique_propositions')
+    .eq('is_active', true)
+    .limit(10);
+  
+  if (error) {
+    console.error('🔍 DEBUG - Error fetching retreats:', error);
+    return;
+  }
+  
+  console.log('🔍 DEBUG - Total retreats found:', data?.length || 0);
+  
+  // Check categories
+  const allCategories = data?.flatMap(r => Array.isArray(r.categories) ? r.categories : [r.categories]).filter(Boolean);
+  const uniqueCategories = [...new Set(allCategories)];
+  console.log('🔍 DEBUG - Available retreat categories:', uniqueCategories);
+  console.log('🔍 DEBUG - Categories data types:', data?.map(r => ({ 
+    id: r.id, 
+    title: r.title, 
+    categories: r.categories, 
+    isArray: Array.isArray(r.categories) 
+  })));
+  
+  // Check host types
+  const hostTypes = [...new Set(data?.map(r => r.host_type).filter(Boolean))];
+  console.log('🔍 DEBUG - Available host types:', hostTypes);
+  
+  // Check unique propositions
+  const allPropositions = data?.flatMap(r => r.unique_propositions || []).filter(Boolean);
+  const uniquePropositions = [...new Set(allPropositions)];
+  console.log('🔍 DEBUG - Available unique propositions:', uniquePropositions);
+  
+  // Log sample retreat data
+  if (data && data.length > 0) {
+    console.log('🔍 DEBUG - Sample retreat data:', data[0]);
+  }
+  
+  // Show sample retreats
+  console.log('🔍 DEBUG - Sample retreats:');
+  data?.slice(0, 3).forEach((retreat, index) => {
+    console.log(`  Retreat ${index + 1}:`, {
+      id: retreat.id,
+      title: retreat.title,
+      subtitle: retreat.subtitle,
+      location: retreat.location,
+      price: retreat.price,
+      duration: retreat.duration,
+      categories: retreat.categories,
+      host_name: retreat.host_name,
+      host_type: retreat.host_type,
+      unique_propositions: retreat.unique_propositions?.length || 0
+    });
+  });
+}
+
+// Function to get unique experience categories
+export async function getExperienceCategories(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('experiences')
+      .select('categories')
+      .eq('is_active', true);
+    
+    if (error) {
+      console.error('Error fetching experience categories:', error);
+      return [];
+    }
+    
+    const allCategories = data?.flatMap(exp => {
+      if (Array.isArray(exp.categories)) {
+        return exp.categories;
+      } else if (exp.categories) {
+        return [exp.categories];
+      }
+      return [];
+    }).filter(Boolean) || [];
+    
+    const uniqueCategories = [...new Set(allCategories)];
+    return uniqueCategories;
+  } catch (error) {
+    console.error('Unexpected error fetching experience categories:', error);
+    return [];
+  }
+}
+
+// Function to get unique retreat categories
+export async function getRetreatCategories(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('retreats')
+      .select('categories')
+      .eq('is_active', true);
+    
+    if (error) {
+      console.error('Error fetching retreat categories:', error);
+      return [];
+    }
+    
+    const allCategories = data?.flatMap(retreat => {
+      if (Array.isArray(retreat.categories)) {
+        return retreat.categories;
+      } else if (retreat.categories) {
+        return [retreat.categories];
+      }
+      return [];
+    }).filter(Boolean) || [];
+    
+    const uniqueCategories = [...new Set(allCategories)];
+    return uniqueCategories;
+  } catch (error) {
+    console.error('Unexpected error fetching retreat categories:', error);
+    return [];
+  }
 } 

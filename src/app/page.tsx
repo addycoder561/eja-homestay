@@ -2,119 +2,52 @@
 
 import { Navigation } from '@/components/Navigation';
 import { HeroSection } from '@/components/HeroSection';
-import { FeaturedProperties } from '@/components/FeaturedProperties';
 import { Footer } from '@/components/Footer';
 import { OptimizedImage } from '@/components/OptimizedImage';
 import Link from 'next/link';
 import { 
-  MapPinIcon, 
-  StarIcon, 
-  HeartIcon,
-  ArrowRightIcon,
-  PlayIcon,
-  ShieldCheckIcon,
-  ClockIcon,
-  CurrencyRupeeIcon,
-  BuildingOfficeIcon,
-  PhoneIcon,
-  MagnifyingGlassIcon,
-  CalendarIcon
+  MapPinIcon
 } from '@heroicons/react/24/outline';
-import { UserGroupIcon } from '@heroicons/react/24/solid';
 import { useEffect, useState } from 'react';
-import { getRetreats, getExperiences, getProperties, getAdCampaigns, getActiveCoupons } from '@/lib/database';
-import { buildCoverFirstImages } from '@/lib/media';
+import { getRetreats, getExperiences, getProperties } from '@/lib/database';
 import { PropertyWithHost } from '@/lib/types';
-import { LiveRating } from '@/components/LiveRating';
+import ExperienceModal from '@/components/ExperienceModal';
+import RetreatModal from '@/components/RetreatModal';
 
 
 
 
 
-const POPULAR_DESTINATIONS = [
+const EXPERIENCE_CATEGORIES = [
   { 
-    city: 'Rishikesh', 
-    state: 'Uttarakhand', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=800&q=80',
-    description: 'Spiritual capital of yoga'
+    name: 'Immersive', 
+    description: 'Deep cultural experiences and local connections',
+    image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=800&q=80',
+    icon: '🎭'
   },
   { 
-    city: 'Mussoorie', 
-    state: 'Uttarakhand', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1504609813440-554e64a8f005?auto=format&fit=crop&w=800&q=80',
-    description: 'Queen of the hills'
+    name: 'Culinary', 
+    description: 'Food tours and authentic local cuisine',
+    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
+    icon: '🍽️'
   },
   { 
-    city: 'Kanatal', 
-    state: 'Uttarakhand', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80',
-    description: 'Serene hill station'
+    name: 'Try', 
+    description: 'New experiences and exciting discoveries',
+    image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=800&q=80',
+    icon: '✨'
   },
   { 
-    city: 'Manali', 
-    state: 'Himachal Pradesh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80',
-    description: 'Adventure paradise'
+    name: 'Group', 
+    description: 'Group retreats and team experiences',
+    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
+    icon: '👥'
   },
   { 
-    city: 'Ladakh', 
-    state: 'Ladakh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=800&q=80',
-    description: 'Land of high passes'
-  },
-  { 
-    city: 'Shimla', 
-    state: 'Himachal Pradesh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=800&q=80',
-    description: 'Summer capital of British India'
-  },
-  { 
-    city: 'Nainital', 
-    state: 'Uttarakhand', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=800&q=80',
-    description: 'Lake city of Uttarakhand'
-  },
-  { 
-    city: 'Dehradun', 
-    state: 'Uttarakhand', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=800&q=80',
-    description: 'Gateway to the hills'
-  },
-  { 
-    city: 'McLeod Ganj', 
-    state: 'Himachal Pradesh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=800&q=80',
-    description: 'Little Lhasa of India'
-  },
-  { 
-    city: 'Kasol', 
-    state: 'Himachal Pradesh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80',
-    description: 'Mini Israel of India'
-  },
-  { 
-    city: 'Kullu', 
-    state: 'Himachal Pradesh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80',
-    description: 'Valley of Gods'
-  },
-  { 
-    city: 'Dalhousie', 
-    state: 'Himachal Pradesh', 
-    country: 'India', 
-    image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=800&q=80',
-    description: 'Switzerland of India'
+    name: 'Couple', 
+    description: 'Romantic retreats and couple experiences',
+    image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
+    icon: '💕'
   }
 ];
 
@@ -122,86 +55,98 @@ export default function Home() {
   const [retreats, setRetreats] = useState<any[]>([]);
   const [experiences, setExperiences] = useState<any[]>([]);
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [coupons, setCoupons] = useState<any[]>([]);
-  const [loadingRetreats, setLoadingRetreats] = useState(true);
-  const [loadingExperiences, setLoadingExperiences] = useState(true);
-  const [loadingProperties, setLoadingProperties] = useState(true);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
-  const [loadingCoupons, setLoadingCoupons] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedExperience, setSelectedExperience] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
+  const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchRetreats = async () => {
+    const fetchData = async () => {
       try {
-        setLoadingRetreats(true);
-        setError(null);
-        const data = await getRetreats();
-        setRetreats(data || []);
+        setLoading(true);
+        
+        // Fetch data with simple error handling
+        const [retreatsData, experiencesData, propertiesData] = await Promise.allSettled([
+          getRetreats(),
+          getExperiences(),
+          getProperties()
+        ]);
+
+        const retreatsResult = retreatsData.status === 'fulfilled' ? (retreatsData.value || []) : [];
+        const experiencesResult = experiencesData.status === 'fulfilled' ? (experiencesData.value || []) : [];
+        const propertiesResult = propertiesData.status === 'fulfilled' ? (propertiesData.value || []) : [];
+        
+        // Debug: Log the data structure
+        console.log('Retreats data:', retreatsResult);
+        console.log('Experiences data:', experiencesResult);
+        console.log('Properties data:', propertiesResult);
+        
+        setRetreats(retreatsResult);
+        setExperiences(experiencesResult);
+        setProperties(propertiesResult);
+
       } catch (error) {
-        console.error('Error fetching retreats:', error);
-        setError('Failed to load retreats');
+        console.error('Error fetching data:', error);
       } finally {
-        setLoadingRetreats(false);
+        setLoading(false);
       }
     };
 
-    const fetchExperiences = async () => {
-      try {
-        setLoadingExperiences(true);
-        const data = await getExperiences();
-        setExperiences(data || []);
-      } catch (error) {
-        console.error('Error fetching experiences:', error);
-      } finally {
-        setLoadingExperiences(false);
-      }
-    };
-
-    const fetchProperties = async () => {
-      try {
-        setLoadingProperties(true);
-        const data = await getProperties();
-        setProperties(data || []);
-      } catch (error) {
-        console.error('Error fetching properties:', error);
-      } finally {
-        setLoadingProperties(false);
-      }
-    };
-
-    const fetchCampaigns = async () => {
-      try {
-        setLoadingCampaigns(true);
-        const data = await getAdCampaigns(4);
-        setCampaigns(data || []);
-      } catch (error) {
-        console.error('Error fetching ad campaigns:', error);
-        setCampaigns([]);
-      } finally {
-        setLoadingCampaigns(false);
-      }
-    };
-
-    const fetchCoupons = async () => {
-      try {
-        setLoadingCoupons(true);
-        const data = await getActiveCoupons(5);
-        setCoupons(data || []);
-      } catch (error) {
-        console.error('Error fetching active coupons:', error);
-        setCoupons([]);
-      } finally {
-        setLoadingCoupons(false);
-      }
-    };
-
-    fetchRetreats();
-    fetchExperiences();
-    fetchProperties();
-    fetchCampaigns();
-    fetchCoupons();
+    fetchData();
   }, []);
+
+  const handleExperienceClick = (experience: any) => {
+    try {
+      if (experience && experience.id) {
+    setSelectedExperience(experience);
+    setIsModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error handling experience click:', error);
+    }
+  };
+
+  const handleCloseModal = () => {
+    try {
+    setIsModalOpen(false);
+    setSelectedExperience(null);
+    } catch (error) {
+      console.error('Error closing modal:', error);
+    }
+  };
+
+  const handleRetreatClick = (retreat: any) => {
+    try {
+      if (retreat && retreat.id) {
+    setSelectedRetreat(retreat);
+    setIsRetreatModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error handling retreat click:', error);
+    }
+  };
+
+  const handleCloseRetreatModal = () => {
+    try {
+    setIsRetreatModalOpen(false);
+    setSelectedRetreat(null);
+    } catch (error) {
+      console.error('Error closing retreat modal:', error);
+    }
+  };
+
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading amazing experiences...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -212,6 +157,12 @@ export default function Home() {
           }
           .scrollbar-hide::-webkit-scrollbar {
             display: none;
+          }
+          .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
           .animate-fade-in {
             animation: fadeIn 0.5s ease-in-out;
@@ -225,11 +176,12 @@ export default function Home() {
         <main>
           <HeroSection />
 
-        {/* Explore Destinations Section */}
+
+        {/* Explore Happiness Section */}
         <section className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12 animate-fade-in">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Explore Destinations</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Explore Happiness</h2>
             </div>
             
             <div className="relative">
@@ -240,41 +192,39 @@ export default function Home() {
                   msOverflowStyle: 'none'
                 }}
               >
-                {/* Popular Destinations */}
-                {POPULAR_DESTINATIONS.map((dest, index) => (
+                {/* Experience Categories */}
+                {EXPERIENCE_CATEGORIES.map((category, index) => (
                   <div
-                    key={`dest-${dest.city}`} 
+                    key={`category-${category.name}`} 
                     className="group animate-fade-in flex-shrink-0 w-72"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <Link 
-                      href={`/search?location=${encodeURIComponent(dest.city)}`} 
+                      href={`/search?type=experiences&category=${encodeURIComponent(category.name)}`} 
                       className="block relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:scale-105"
                     >
-                      <div className="relative h-48 w-full">
-                        <OptimizedImage 
-                          src={dest.image} 
-                          alt={dest.city} 
-                          fill 
-                          className="object-cover group-hover:scale-110 transition-transform duration-500" 
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      <div className="relative h-64">
+                        <img
+                          src={category.image}
+                          alt={`${category.name} experiences`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            console.log('Category image failed to load:', target.src);
+                            // Fallback to a different image if the first one fails
+                            target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                          }}
                         />
-                        {/* Gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute top-4 right-4 text-4xl">{category.icon}</div>
+                      </div>
                       
-                        {/* Destination info */}
-                        <div className="absolute bottom-4 left-4 right-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-white font-bold text-lg">{dest.city}</span>
-                            <span className="text-white text-sm">🇮🇳</span>
-                          </div>
-                          <div className="text-white/90 text-sm mb-3">{dest.description}</div>
-                          
-                          {/* Enhanced CTA */}
-                          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                            <span className="text-white font-semibold text-sm">Explore Now</span>
-                          </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                        <div className="mb-2">
+                          <h3 className="text-xl font-bold mb-1">{category.name}</h3>
+                          <p className="text-sm text-gray-200">Experiences</p>
                         </div>
+                        <p className="text-sm text-gray-300">{category.description}</p>
                       </div>
                     </Link>
                   </div>
@@ -284,213 +234,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Best Deals Section */}
-        <section className="py-16 bg-gradient-to-r from-yellow-50 to-orange-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12 animate-fade-in">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Best Deals & Offers</h2>
-            </div>
-            {campaigns && campaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-                {campaigns.slice(0, 4).map((c: any, index: number) => (
-                  <Link
-                    key={c.id || index}
-                    href={c.target_url || '#'}
-                    className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-yellow-200 flex"
-                  >
-                    <div className="relative w-1/3 bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                      <div className="text-center text-white px-3">
-                        <div className="text-3xl font-bold mb-1">🔥</div>
-                        <div className="text-lg font-bold line-clamp-1">{c.title}</div>
-                        {c.start_date && c.end_date && (
-                          <div className="text-xs opacity-90">{new Date(c.start_date).toLocaleDateString()} - {new Date(c.end_date).toLocaleDateString()}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">{c.title}</h3>
-                        {c.description && (
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{c.description}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-yellow-600 font-bold text-sm">Featured Offer</span>
-                        <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                          Explore
-                        </button>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-                {/* Fallback to existing hardcoded offers when there are no active campaigns */}
-                <div className="space-y-6">
-                  <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-red-200 flex">
-                    <div className="relative w-1/3 bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="text-3xl font-bold mb-1">⚡</div>
-                        <div className="text-lg font-bold">FLASH DEAL</div>
-                        <div className="text-xs opacity-90">Limited Time</div>
-                      </div>
-                      <div className="absolute top-2 right-2 bg-white text-red-600 px-2 py-1 rounded-full text-xs font-bold">
-                        -30%
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-2">Weekend Getaways</h3>
-                        <p className="text-gray-600 text-sm mb-3">Book any weekend stay and get 30% off on properties above ₹5,000</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-red-600 font-bold text-sm">Valid till 31st Dec</span>
-                        <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                          Book Now
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-yellow-200 flex">
-                    <div className="relative w-1/3 bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="text-3xl font-bold mb-1">🐦</div>
-                        <div className="text-lg font-bold">EARLY BIRD</div>
-                        <div className="text-xs opacity-90">Book Early</div>
-                      </div>
-                      <div className="absolute top-2 right-2 bg-white text-yellow-600 px-2 py-1 rounded-full text-xs font-bold">
-                        -25%
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-2">Advance Booking</h3>
-                        <p className="text-gray-600 text-sm mb-3">Book 30+ days in advance and save 25% on your stay</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-yellow-600 font-bold text-sm">No Expiry</span>
-                        <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                          Explore
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-orange-200 flex">
-                    <div className="relative w-1/3 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="text-3xl font-bold mb-1">🎓</div>
-                        <div className="text-lg font-bold">STUDENT</div>
-                        <div className="text-xs opacity-90">Special Offer</div>
-                      </div>
-                      <div className="absolute top-2 right-2 bg-white text-orange-600 px-2 py-1 rounded-full text-xs font-bold">
-                        -20%
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-2">Student Discount</h3>
-                        <p className="text-gray-600 text-sm mb-3">Valid student ID gets you 20% off on all properties</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-orange-600 font-bold text-sm">Always Active</span>
-                        <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                          Verify ID
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105 border-2 border-amber-200 flex">
-                    <div className="relative w-1/3 bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="text-3xl font-bold mb-1">👨‍👩‍👧‍👦</div>
-                        <div className="text-lg font-bold">FAMILY</div>
-                        <div className="text-xs opacity-90">Package Deal</div>
-                      </div>
-                      <div className="absolute top-2 right-2 bg-white text-amber-600 px-2 py-1 rounded-full text-xs font-bold">
-                        -15%
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-2">Family Package</h3>
-                        <p className="text-gray-600 text-sm mb-3">Book for 4+ guests and get 15% off + free breakfast</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-amber-600 font-bold text-sm">4+ Guests</span>
-                        <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                          Book Now
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Dynamic Promotional Banner with Active Coupons */}
-            {coupons && coupons.length > 0 ? (
-              <div className="mt-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 text-center">
-                <div className="max-w-4xl mx-auto">
-                  <h3 className="text-3xl font-bold text-white mb-4">🎉 Special Offers</h3>
-                  <p className="text-xl text-white mb-6">Limited time discounts - grab them before they expire!</p>
-                  
-                  {/* Coupon Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    {coupons.slice(0, 6).map((coupon, index) => (
-                      <div key={coupon.id || index} className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/30 transition-all duration-200 cursor-pointer group">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-white mb-2">
-                            {coupon.discount_type === 'percent' 
-                              ? `${coupon.discount_value}% OFF`
-                              : `₹${coupon.discount_value} OFF`
-                            }
-                          </div>
-                          <div className="text-white/90 text-sm mb-2 font-medium">
-                            {coupon.description || 'Special Discount'}
-                          </div>
-                          <div className="bg-white text-orange-600 px-3 py-2 rounded-lg font-bold text-lg tracking-wider">
-                            {coupon.code}
-                          </div>
-                          {coupon.valid_to && (
-                            <div className="text-white/80 text-xs mt-2">
-                              Valid till {new Date(coupon.valid_to).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <button className="bg-white text-orange-600 font-bold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors">
-                    View All Offers
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Fallback to existing hardcoded banner when no active coupons */
-              <div className="mt-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 text-center">
-                <div className="max-w-3xl mx-auto">
-                  <h3 className="text-3xl font-bold text-white mb-4">🎉 Welcome EJA</h3>
-                  <p className="text-xl text-white mb-6">Sponsored 2D/1N Getaway with Every Signup/Collab this September–October 2025.</p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-                      <span className="text-white font-semibold">Use Code: EJASTART</span>
-                    </div>
-                    <button className="bg-white text-orange-600 font-bold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors">
-                      Claim Offer
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
 
         {/* Travel Inspirations Section */}
         <section className="py-20 bg-gray-50">
@@ -507,172 +250,230 @@ export default function Home() {
                   msOverflowStyle: 'none'
                 }}
               >
-                {/* Trending Getaways */}
-                {!loadingRetreats && retreats.slice(0, 4).map((retreat, index) => (
-                  <div
-                    key={`retreat-${retreat.id}`}
-                    className="group animate-fade-in flex-shrink-0 w-72"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <Link 
-                      href={`/retreats/${retreat.id}`} 
-                      className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
-                    >
-                      <div className="relative h-40 w-full overflow-hidden">
-                        <OptimizedImage 
-                          src={retreat.image || retreat.cover_image || '/placeholder-experience.jpg'} 
-                          alt={retreat.title} 
-                          fill 
-                          className="object-cover group-hover:scale-110 transition-transform duration-500" 
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-900">
-                          Retreat
-                        </div>
-                        {/* Verified Badge */}
-                        <div className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                          <ShieldCheckIcon className="w-3 h-3" />
-                          Verified
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="font-bold text-lg text-gray-900 mb-2 group-hover:text-yellow-500 transition-colors">
-                          {retreat.title}
-                        </div>
-                        <div className="text-gray-600 text-sm mb-2 flex items-center gap-1">
-                          <MapPinIcon className="w-4 h-4" />
-                          {retreat.location}
-                        </div>
-                        
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="text-yellow-500 font-bold text-lg">₹{retreat.price?.toLocaleString()}</div>
-                          <span className="text-gray-500 text-sm">/person</span>
-                        </div>
-                        
-                        {/* Enhanced CTA Button */}
-                        <button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                          <CalendarIcon className="w-4 h-4" />
-                          Book Now
-                        </button>
-                      </div>
-                    </Link>
-                  </div>
-                ))}
 
-                {/* Unique Experiences */}
-                {!loadingExperiences && experiences.slice(0, 4).map((experience, index) => (
-                  <div
-                    key={`experience-${experience.id}`}
+                {/* Mixed Experiences and Retreats - 15 cards alternating pattern */}
+                {(() => {
+                  const mixedCards = [];
+                  const maxCards = 15;
+                  let cardIndex = 0;
+                  
+                  // Create alternating pattern: 2 experiences, 2 retreats, repeat
+                  for (let i = 0; i < maxCards; i++) {
+                    const isExperience = Math.floor(i / 2) % 2 === 0;
+                    const dataArray = isExperience ? experiences : retreats;
+                    const dataIndex = Math.floor(i / 4) * 2 + (i % 2);
+                    const item = dataArray[dataIndex];
+                    
+                    // Helper function to get image URL
+                    const getImageUrl = (item, isExp) => {
+                      console.log('Getting image for item:', item);
+                      console.log('Is experience:', isExp);
+                      
+                      if (!item) {
+                        console.log('No item, using fallback');
+                        return isExp 
+                          ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                          : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
+                      }
+                      
+                      // Try different image field names
+                      const possibleImages = [
+                        item.cover_image,
+                        item.image,
+                        item.images?.[0],
+                        item.images,
+                        item.photo,
+                        item.thumbnail,
+                        item.picture
+                      ];
+                      
+                      console.log('Possible images:', possibleImages);
+                      
+                      for (const img of possibleImages) {
+                        if (img && typeof img === 'string' && img.startsWith('http')) {
+                          console.log('Found valid image:', img);
+                          return img;
+                        }
+                      }
+                      
+                      console.log('No valid image found, using fallback');
+                      // Fallback to default images
+                      return isExp 
+                        ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                        : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
+                    };
+                    
+                    if (item) {
+                      mixedCards.push(
+                        <div
+                          key={`${isExperience ? 'experience' : 'retreat'}-${item.id || cardIndex}`}
                     className="group animate-fade-in flex-shrink-0 w-72"
-                    style={{ animationDelay: `${(index + 4) * 0.1}s` }}
+                          style={{ animationDelay: `${cardIndex * 0.1}s` }}
                   >
-                    <Link 
-                      href={`/experiences/${experience.id}`} 
+                    <div 
+                            onClick={() => isExperience ? handleExperienceClick(item) : handleRetreatClick(item)}
                       className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
                     >
-                      <div className="relative h-40 w-full overflow-hidden">
-                        <OptimizedImage 
-                          src={experience.image || experience.cover_image || '/placeholder-experience.jpg'} 
-                          alt={experience.title} 
-                          fill 
-                          className="object-cover group-hover:scale-110 transition-transform duration-500" 
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-900">
-                          Experience
-                        </div>
-                        {/* Verified Badge */}
-                        <div className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                          <ShieldCheckIcon className="w-3 h-3" />
-                          Verified
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="font-bold text-lg text-gray-900 mb-2 group-hover:text-yellow-500 transition-colors">
-                          {experience.title}
-                        </div>
-                        <div className="text-gray-600 text-sm mb-2 flex items-center gap-1">
-                          <MapPinIcon className="w-4 h-4" />
-                          {experience.location}
+                            <div className="relative h-48">
+                              <img
+                                src={getImageUrl(item, isExperience)}
+                                alt={item.title || (isExperience ? 'Experience' : 'Retreat')}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                onError={(e) => {
+                                  console.log('Image failed to load:', e.target.src);
+                                  e.target.src = isExperience 
+                                    ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                                    : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
+                                }}
+                              />
                         </div>
                         
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="text-yellow-500 font-bold text-lg">₹{experience.price?.toLocaleString()}</div>
-                          <span className="text-gray-500 text-sm">/person</span>
-                        </div>
-                        
-                        {/* Enhanced CTA Button */}
-                        <button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                          <CalendarIcon className="w-4 h-4" />
-                          Book Now
-                        </button>
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-
-                {/* Featured Properties */}
-                {properties && properties.slice(0, 4).map((property, index) => (
-                  <div
-                    key={`property-${property.id}`}
-                    className="group animate-fade-in flex-shrink-0 w-72"
-                    style={{ animationDelay: `${(index + 8) * 0.1}s` }}
-                  >
-                    <Link 
-                      href={`/property/${property.id}`} 
-                      className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
-                    >
-                      <div className="relative h-40 w-full overflow-hidden">
-                        <OptimizedImage 
-                          src={buildCoverFirstImages(property.cover_image, property.images)[0]} 
-                          alt={property.title} 
-                          fill 
-                          className="object-cover group-hover:scale-110 transition-transform duration-500" 
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-900">
-                          Property
-                        </div>
-                        <div className="absolute top-4 left-4 bg-white px-2 py-1 rounded-full text-sm font-semibold text-gray-900">
-                          ₹{property.price_per_night}/night
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="font-bold text-lg text-gray-900 mb-2 group-hover:text-yellow-500 transition-colors">
-                          {property.title}
-                        </div>
-                        <div className="text-gray-600 text-sm mb-2 flex items-center gap-1">
-                          <MapPinIcon className="w-4 h-4" />
-                          {property.city}, {property.country}
-                        </div>
-                        
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <UserGroupIcon className="w-4 h-4 mr-1" />
-                            <span>Up to {property.max_guests} guests</span>
+                            <div className="p-6">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                                  isExperience 
+                                    ? 'text-green-600 bg-green-50' 
+                                    : 'text-blue-600 bg-blue-50'
+                                }`}>
+                                  {item.categories ? (
+                                    Array.isArray(item.categories) 
+                                      ? item.categories[0] 
+                                      : item.categories
+                                  ) : (
+                                    isExperience ? 'Experience' : 'Retreat'
+                                  )}
+                            </span>
                           </div>
-                          <LiveRating 
-                            propertyId={property.id}
-                            propertyTitle={property.title}
-                            size="sm"
-                          />
+                              
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                {item.title || (isExperience ? 'Experience' : 'Retreat')}
+                              </h3>
+                              
+                              <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                                {item.description || (isExperience ? 'Discover amazing experiences' : 'Discover amazing retreats')}
+                              </p>
+                              
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center text-gray-500 text-sm">
+                                  <MapPinIcon className="w-4 h-4 mr-1" />
+                                  <span>{item.location || 'Location TBD'}</span>
                         </div>
-                        
-                        {/* Enhanced CTA Button */}
-                        <button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                          <CalendarIcon className="w-4 h-4" />
-                          Book Now
-                        </button>
+                                <div className="text-lg font-bold text-gray-900">
+                                  ₹{item.price ? item.price.toLocaleString() : '0'}
+                        </div>
                       </div>
-                    </Link>
-                  </div>
-                ))}
+                        </div>
+                          </div>
+                        </div>
+                      );
+                      cardIndex++;
+                    }
+                  }
+                  
+                  // If we don't have enough real data, fill with sample cards
+                  while (mixedCards.length < maxCards) {
+                    const isExperience = Math.floor(mixedCards.length / 2) % 2 === 0;
+                    const sampleData = isExperience 
+                      ? {
+                          id: `sample-exp-${mixedCards.length}`,
+                          title: 'Mountain Adventure',
+                          description: 'Experience breathtaking mountain views and thrilling adventures',
+                          location: 'Himalayas',
+                          price: 2500,
+                          categories: 'Mountain',
+                          cover_image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                        }
+                      : {
+                          id: `sample-retreat-${mixedCards.length}`,
+                          title: 'Yoga Retreat',
+                          description: 'Rejuvenate your mind and body with our peaceful yoga retreat',
+                          location: 'Rishikesh',
+                          price: 5000,
+                          categories: 'Wellness',
+                          cover_image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80'
+                        };
+                    
+                    mixedCards.push(
+                      <div
+                        key={`sample-${isExperience ? 'experience' : 'retreat'}-${mixedCards.length}`}
+                    className="group animate-fade-in flex-shrink-0 w-72"
+                        style={{ animationDelay: `${cardIndex * 0.1}s` }}
+                  >
+                        <div 
+                          onClick={() => isExperience ? handleExperienceClick(sampleData) : handleRetreatClick(sampleData)}
+                      className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
+                    >
+                          <div className="relative h-48">
+                        <OptimizedImage 
+                              src={sampleData.cover_image}
+                              alt={sampleData.title}
+                          fill 
+                          className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                        </div>
+                          
+                          <div className="p-6">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                                isExperience 
+                                  ? 'text-green-600 bg-green-50' 
+                                  : 'text-blue-600 bg-blue-50'
+                              }`}>
+                                {sampleData.categories}
+                              </span>
+                        </div>
+                            
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                              {sampleData.title}
+                            </h3>
+                            
+                            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                              {sampleData.description}
+                            </p>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-gray-500 text-sm">
+                                <MapPinIcon className="w-4 h-4 mr-1" />
+                                <span>{sampleData.location}</span>
+                      </div>
+                              <div className="text-lg font-bold text-gray-900">
+                                ₹{sampleData.price.toLocaleString()}
+                        </div>
+                        </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                    cardIndex++;
+                  }
+                  
+                  return mixedCards;
+                })()}
               </div>
             </div>
           </div>
         </section>
       </main>
       <Footer />
+      
+      {/* Experience Modal */}
+      {isModalOpen && selectedExperience && (
+      <ExperienceModal 
+        experience={selectedExperience}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
+      )}
+      
+      {/* Retreat Modal */}
+      {isRetreatModalOpen && selectedRetreat && (
+      <RetreatModal 
+        retreat={selectedRetreat}
+        isOpen={isRetreatModalOpen}
+        onClose={handleCloseRetreatModal}
+      />
+      )}
     </div>
   );
 }

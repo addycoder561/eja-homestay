@@ -45,24 +45,26 @@ import Link from 'next/link';
 
 interface Experience {
   id: string;
+  host_id: string | null;
   title: string;
-  subtitle?: string;
-  description?: string;
+  subtitle?: string | null;
+  description: string | null;
   location: string;
   date: string;
   price: number;
-  images: string | string[];
+  images: string[];
   cover_image?: string;
   duration?: string;
-  categories?: string;
+  categories?: string | string[];
   is_active: boolean;
-  host_id?: string;
+  // Host-related fields
   host_name?: string;
   host_type?: string;
   host_tenure?: string;
   host_description?: string;
   host_image?: string;
   host_usps?: string[];
+  // Unique propositions
   unique_propositions?: string[];
   created_at: string;
   updated_at: string;
@@ -352,7 +354,7 @@ export default function ExperienceDetailPage() {
     if (navigator.share) {
       navigator.share({
         title: experience?.title,
-        text: experience?.description,
+        text: experience?.description || '',
         url: window.location.href,
       });
     } else {
@@ -508,10 +510,11 @@ export default function ExperienceDetailPage() {
     }
   };
 
-  const getCategoryIcon = (category: string) => {
+  const getCategoryIcon = (category: string | string[]) => {
     try {
       if (!category) return '🌟';
-      const categoryLower = category.toLowerCase();
+      const categoryStr = Array.isArray(category) ? category[0] : category;
+      const categoryLower = categoryStr.toLowerCase();
       if (categoryLower.includes('immersive')) return '🧘';
       if (categoryLower.includes('playful')) return '🎮';
       if (categoryLower.includes('culinary')) return '🍽️';
@@ -545,7 +548,7 @@ export default function ExperienceDetailPage() {
   }
 
   // Build images list from cover_image + images[]
-  const images: string[] = buildCoverFirstImages(experience.cover_image, experience.images);
+  const images: string[] = buildCoverFirstImages(experience.cover_image, experience.images || []);
   const averageRating = calculateAverageRating();
 
   // Defensive programming - ensure we have required data
@@ -670,9 +673,9 @@ export default function ExperienceDetailPage() {
                   )}
                   {experience.categories && (
                             <div className="flex items-center space-x-1">
-                      <span className="text-2xl">{getCategoryIcon(experience.categories)}</span>
+                      <span className="text-2xl">{getCategoryIcon(Array.isArray(experience.categories) ? experience.categories[0] : experience.categories)}</span>
                               <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        {experience.categories}
+                        {Array.isArray(experience.categories) ? experience.categories[0] : experience.categories}
                       </span>
                     </div>
               )}

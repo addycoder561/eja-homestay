@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProperties, getExperiences, getTrips, createTrip, updateTrip, deleteTrip } from '@/lib/database';
-import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, BookingWithPropertyAndGuest, RoomInventory } from '@/lib/types';
+import { getProperties, getExperiences, getTrips, getRetreats, createTrip, updateTrip, deleteTrip } from '@/lib/database';
+import { PropertyWithHost, Room, Experience, PropertyType, Property, Trip, Retreat, BookingWithPropertyAndGuest, RoomInventory } from '@/lib/types';
 import { 
   HomeIcon,
   BuildingOfficeIcon,
@@ -671,7 +671,7 @@ function ExperiencesSection() {
     location: '',
     date: '',
     price: '',
-    max_guests: '',
+    duration: '',
     images: '', // comma-separated URLs
     is_active: true,
   });
@@ -692,7 +692,7 @@ function ExperiencesSection() {
       location: '',
       date: '',
       price: '',
-      max_guests: '',
+      duration: '',
       images: '',
       is_active: true,
     });
@@ -707,7 +707,7 @@ function ExperiencesSection() {
       location: exp.location,
       date: exp.date,
       price: String(exp.price),
-      max_guests: String(exp.max_guests),
+      duration: exp.duration || '',
       images: (exp.images || []).join(','),
       is_active: exp.is_active,
     });
@@ -725,7 +725,6 @@ function ExperiencesSection() {
     const payload = {
       ...form,
       price: Number(form.price),
-      max_guests: Number(form.max_guests),
       images: form.images.split(',').map(s => s.trim()).filter(Boolean),
       host_id: profile?.id || '',
     };
@@ -752,7 +751,7 @@ function ExperiencesSection() {
               <th className="p-2">Location</th>
               <th className="p-2">Date</th>
               <th className="p-2">Price</th>
-              <th className="p-2">Max Guests</th>
+              <th className="p-2">Duration</th>
               <th className="p-2">Active</th>
               <th className="p-2">Actions</th>
             </tr>
@@ -764,7 +763,7 @@ function ExperiencesSection() {
                 <td className="p-2">{exp.location}</td>
                 <td className="p-2">{exp.date}</td>
                 <td className="p-2">₹{exp.price}</td>
-                <td className="p-2">{exp.max_guests}</td>
+                <td className="p-2">{exp.duration || 'N/A'}</td>
                 <td className="p-2">{exp.is_active ? 'Yes' : 'No'}</td>
                 <td className="p-2 flex gap-2">
                   <button className="px-2 py-1 bg-yellow-200 rounded" onClick={() => handleEdit(exp)}>Edit</button>
@@ -785,7 +784,7 @@ function ExperiencesSection() {
             <input className="w-full border p-2 rounded" placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required />
             <input className="w-full border p-2 rounded" type="date" placeholder="Date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
             <input className="w-full border p-2 rounded" placeholder="Price" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Max Guests" type="number" value={form.max_guests} onChange={e => setForm({ ...form, max_guests: e.target.value })} required />
+            <input className="w-full border p-2 rounded" placeholder="Duration (e.g., 2-3 hrs)" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} />
             <input className="w-full border p-2 rounded" placeholder="Image URLs (comma separated)" value={form.images} onChange={e => setForm({ ...form, images: e.target.value })} />
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />
@@ -803,69 +802,88 @@ function ExperiencesSection() {
 }
 
 function RetreatsSection() {
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const [retreats, setRetreats] = useState<Retreat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editTrip, setEditTrip] = useState<Trip | null>(null);
+  const [editRetreat, setEditRetreat] = useState<Retreat | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [form, setForm] = useState({
     title: '',
     subtitle: '',
     description: '',
     location: '',
-    start_date: '',
-    end_date: '',
     price: '',
-    max_guests: '',
+    duration: '',
+    categories: '',
+    host_name: '',
+    host_type: '',
+    host_tenure: '',
+    host_description: '',
+    host_image: '',
+    host_usps: '',
+    unique_propositions: '',
     images: '', // comma-separated URLs
     is_active: true,
   });
 
   useEffect(() => {
-    getTrips().then(data => {
-      setTrips((data || []).filter((t): t is Trip => !!t));
+    getRetreats().then(data => {
+      setRetreats((data || []).filter((r): r is Retreat => !!r));
       setLoading(false);
     });
   }, []);
 
-  const handleDelete = async (trip: Trip) => {
+  const handleDelete = async (retreat: Retreat) => {
     if (confirm('Are you sure you want to delete this retreat?')) {
-      const deleted = await deleteTrip(trip.id);
+      const deleted = await deleteTrip(retreat.id);
       if (deleted) {
-        setTrips(trips.filter(t => t.id !== trip.id));
+        setRetreats(retreats.filter(r => r.id !== retreat.id));
         // toast.success('Retreat deleted successfully'); // toast is removed from imports
       }
     }
   };
 
-  const handleEdit = (trip: Trip) => {
-    setEditTrip(trip);
+  const handleEdit = (retreat: Retreat) => {
+    setEditRetreat(retreat);
     setForm({
-      title: trip.title,
-      subtitle: trip.subtitle || '',
-      description: trip.description || '',
-      location: trip.location,
-      start_date: trip.start_date,
-      end_date: trip.end_date,
-      price: String(trip.price),
-      max_guests: String(trip.max_guests),
-      images: (trip.images || []).join(','),
-      is_active: trip.is_active,
+      title: retreat.title,
+      subtitle: retreat.subtitle || '',
+      description: retreat.description || '',
+      location: retreat.location,
+      price: String(retreat.price),
+      duration: retreat.duration || '',
+      categories: Array.isArray(retreat.categories) ? retreat.categories.join(',') : retreat.categories || '',
+      host_name: retreat.host_name || '',
+      host_type: retreat.host_type || '',
+      host_tenure: retreat.host_tenure || '',
+      host_description: retreat.host_description || '',
+      host_image: retreat.host_image || '',
+      host_usps: Array.isArray(retreat.host_usps) ? retreat.host_usps.join(',') : '',
+      unique_propositions: Array.isArray(retreat.unique_propositions) ? retreat.unique_propositions.join(',') : '',
+      images: (retreat.images || []).join(','),
+      is_active: retreat.is_active,
     });
     setShowCreateForm(true);
   };
 
-  const handleUpdate = async (trip: Trip) => {
-    const updated = await updateTrip(trip.id, trip);
+  const handleUpdate = async (retreat: Retreat) => {
+    const updated = await updateTrip(retreat.id, retreat);
     if (updated) {
-      setTrips(trips.map(t => (editTrip && t.id === editTrip.id ? updated : t)));
-      setEditTrip(null);
+      setRetreats(retreats.map(r => (editRetreat && r.id === editRetreat.id ? updated : r)));
+      setEditRetreat(null);
       // toast.success('Retreat updated successfully'); // toast is removed from imports
     }
   };
 
-  const handleCreate = async (trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>) => {
-    const created = await createTrip(trip);
-    if (created) setTrips([...trips, created]);
+  const handleCreate = async (retreat: Omit<Retreat, 'id' | 'created_at' | 'updated_at'>) => {
+    // Convert retreat to trip format for createTrip function
+    const tripData = {
+      ...retreat,
+      max_guests: 10, // Default value for retreats
+      start_date: new Date().toISOString().split('T')[0], // Default to today
+      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default to 7 days from now
+    };
+    const created = await createTrip(tripData);
+    if (created) setRetreats([...retreats, created]);
     setShowCreateForm(false);
     // toast.success('Retreat created successfully'); // toast is removed from imports
   };
@@ -882,27 +900,25 @@ function RetreatsSection() {
             <tr className="bg-gray-100">
               <th className="p-2">Title</th>
               <th className="p-2">Location</th>
-              <th className="p-2">Start Date</th>
-              <th className="p-2">End Date</th>
+              <th className="p-2">Duration</th>
               <th className="p-2">Price</th>
-              <th className="p-2">Max Guests</th>
+              <th className="p-2">Host</th>
               <th className="p-2">Active</th>
               <th className="p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {trips.map(trip => (
-              <tr key={trip.id} className="border-b">
-                <td className="p-2">{trip.title}</td>
-                <td className="p-2">{trip.location}</td>
-                <td className="p-2">{trip.start_date}</td>
-                <td className="p-2">{trip.end_date}</td>
-                <td className="p-2">₹{trip.price}</td>
-                <td className="p-2">{trip.max_guests}</td>
-                <td className="p-2">{trip.is_active ? 'Yes' : 'No'}</td>
+            {retreats.map(retreat => (
+              <tr key={retreat.id} className="border-b">
+                <td className="p-2">{retreat.title}</td>
+                <td className="p-2">{retreat.location}</td>
+                <td className="p-2">{retreat.duration || 'N/A'}</td>
+                <td className="p-2">₹{retreat.price}</td>
+                <td className="p-2">{retreat.host_name || 'EJA'}</td>
+                <td className="p-2">{retreat.is_active ? 'Yes' : 'No'}</td>
                 <td className="p-2 flex gap-2">
-                  <button className="px-2 py-1 bg-yellow-200 rounded" onClick={() => handleEdit(trip)}>Edit</button>
-                  <button className="px-2 py-1 bg-red-200 rounded" onClick={() => handleDelete(trip)}>Delete</button>
+                  <button className="px-2 py-1 bg-yellow-200 rounded" onClick={() => handleEdit(retreat)}>Edit</button>
+                  <button className="px-2 py-1 bg-red-200 rounded" onClick={() => handleDelete(retreat)}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -913,35 +929,47 @@ function RetreatsSection() {
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <form className="bg-white p-8 rounded shadow w-96 space-y-4" onSubmit={e => {
             e.preventDefault();
-            const payload: Omit<Trip, 'id' | 'created_at' | 'updated_at'> = {
+            const payload: Omit<Retreat, 'id' | 'created_at' | 'updated_at'> = {
               host_id: null,
               title: form.title,
               subtitle: form.subtitle,
               description: form.description,
               location: form.location,
-              start_date: form.start_date,
-              end_date: form.end_date,
               price: Number(form.price),
-              max_guests: Number(form.max_guests),
+              duration: form.duration,
+              categories: form.categories ? form.categories.split(',').map(s => s.trim()).filter(Boolean) : [],
+              host_name: form.host_name,
+              host_type: form.host_type,
+              host_tenure: form.host_tenure,
+              host_description: form.host_description,
+              host_image: form.host_image,
+              host_usps: form.host_usps ? form.host_usps.split(',').map(s => s.trim()).filter(Boolean) : [],
+              unique_propositions: form.unique_propositions ? form.unique_propositions.split(',').map(s => s.trim()).filter(Boolean) : [],
               images: form.images.split(',').map(s => s.trim()).filter(Boolean),
               is_active: form.is_active,
             };
-            if (editTrip) {
-              handleUpdate({ ...editTrip, ...payload });
+            if (editRetreat) {
+              handleUpdate({ ...editRetreat, ...payload });
             } else {
               handleCreate(payload);
             }
             setShowCreateForm(false);
           }}>
-            <h3 className="text-xl font-bold mb-2">{editTrip ? 'Edit Retreat' : 'Add Retreat'}</h3>
+            <h3 className="text-xl font-bold mb-2">{editRetreat ? 'Edit Retreat' : 'Add Retreat'}</h3>
             <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
             <input className="w-full border p-2 rounded" placeholder="Subtitle" value={form.subtitle} onChange={e => setForm({ ...form, subtitle: e.target.value })} />
             <textarea className="w-full border p-2 rounded" placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             <input className="w-full border p-2 rounded" placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required />
-            <input className="w-full border p-2 rounded" type="date" placeholder="Start Date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required />
-            <input className="w-full border p-2 rounded" type="date" placeholder="End Date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} required />
+            <input className="w-full border p-2 rounded" placeholder="Duration" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} />
             <input className="w-full border p-2 rounded" placeholder="Price" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Max Guests" type="number" value={form.max_guests} onChange={e => setForm({ ...form, max_guests: e.target.value })} required />
+            <input className="w-full border p-2 rounded" placeholder="Categories (comma separated)" value={form.categories} onChange={e => setForm({ ...form, categories: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Host Name" value={form.host_name} onChange={e => setForm({ ...form, host_name: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Host Type" value={form.host_type} onChange={e => setForm({ ...form, host_type: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Host Tenure" value={form.host_tenure} onChange={e => setForm({ ...form, host_tenure: e.target.value })} />
+            <textarea className="w-full border p-2 rounded" placeholder="Host Description" value={form.host_description} onChange={e => setForm({ ...form, host_description: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Host Image URL" value={form.host_image} onChange={e => setForm({ ...form, host_image: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Host USPs (comma separated)" value={form.host_usps} onChange={e => setForm({ ...form, host_usps: e.target.value })} />
+            <textarea className="w-full border p-2 rounded" placeholder="Unique Propositions (comma separated)" value={form.unique_propositions} onChange={e => setForm({ ...form, unique_propositions: e.target.value })} />
             <input className="w-full border p-2 rounded" placeholder="Image URLs (comma separated)" value={form.images} onChange={e => setForm({ ...form, images: e.target.value })} />
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />

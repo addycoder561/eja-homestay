@@ -197,15 +197,6 @@ export function Navigation() {
                   Home
                 </Link>
 
-                <Link 
-                  href="/search" 
-                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
-                    pathname?.startsWith('/search') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <MagnifyingGlassIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Search
-                </Link>
 
                 <Link 
                   href="/discover" 
@@ -217,15 +208,6 @@ export function Navigation() {
                   Discover
                 </Link>
 
-                <Link 
-                  href="/delight" 
-                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
-                    pathname?.startsWith('/delight') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <SparklesIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Delight
-                </Link>
 
                 {/* About Dropdown */}
                 {/* Removed About dropdown as requested */}

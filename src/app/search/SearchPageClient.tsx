@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { PropertyCard } from '@/components/PropertyCard';
-import { getProperties, searchProperties, checkDatabaseContent } from '@/lib/database';
+import { getProperties, searchProperties, checkDatabaseContent, getExperiences, getRetreats } from '@/lib/database';
 import { PropertyWithHost, SearchFilters as SearchFiltersType, PropertyType } from '@/lib/types';
 import { 
   MagnifyingGlassIcon, 
@@ -22,7 +22,15 @@ export default function SearchPageClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, profile, loading: loadingAuth } = useAuth();
+  
+  // Get search type from URL parameters
+  const searchType = searchParams.get('type') || 'properties';
+  const category = searchParams.get('category') || '';
+  
+  
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
+  const [experiences, setExperiences] = useState<any[]>([]);
+  const [retreats, setRetreats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<SearchFiltersType>({
     location: searchParams.get('location') || '',
@@ -49,70 +57,104 @@ export default function SearchPageClient() {
   });
 
   useEffect(() => {
-    const fetchProperties = async () => {
+    const fetchData = async () => {
       setLoading(true);
       const startTime = Date.now();
       
       try {
-        let data;
-        
-        // Combine filters with selected chips and advanced filters
-        const combinedFilters = {
-          ...filters,
-          selectedChips: selectedFilterChips.length > 0 ? selectedFilterChips : undefined,
-          // Include advanced filters in backend search
-          minPrice: advancedFilters.minPrice > 0 ? advancedFilters.minPrice : undefined,
-          maxPrice: advancedFilters.maxPrice < 10000 ? advancedFilters.maxPrice : undefined,
-          propertyType: (advancedFilters.propertyType as PropertyType) || undefined,
-          amenities: advancedFilters.amenities.length > 0 ? advancedFilters.amenities : undefined
-        };
-
-        // Check if any filters are applied
-        const hasFilters = Object.values(combinedFilters).some(value => {
-          if (Array.isArray(value)) {
-            return value.length > 0;
+        if (searchType === 'experiences') {
+          // Fetch experiences and retreats by category
+          
+          const [experiencesData, retreatsData] = await Promise.all([
+            getExperiences(),
+            getRetreats()
+          ]);
+          
+          // Filter by category if provided
+          let filteredExperiences = experiencesData || [];
+          let filteredRetreats = retreatsData || [];
+          
+          if (category) {
+            filteredExperiences = filteredExperiences.filter(exp => 
+              exp.categories === category || 
+              (Array.isArray(exp.categories) && exp.categories.includes(category))
+            );
+            filteredRetreats = filteredRetreats.filter(retreat => 
+              retreat.categories === category
+            );
           }
-          return value !== undefined && value !== null && value !== '';
-        });
-
-        // Check if we have meaningful search criteria
-        const hasLocationOnly = combinedFilters.location && !combinedFilters.checkIn && !combinedFilters.checkOut && !combinedFilters.adults && !combinedFilters.guests;
-        const hasNoFilters = !combinedFilters.location && !combinedFilters.checkIn && !combinedFilters.checkOut && !combinedFilters.adults && !combinedFilters.guests && selectedFilterChips.length === 0;
-        const hasAdvancedFilters = selectedFilterChips.length > 0 || 
-          (advancedFilters.minPrice > 0) || 
-          (advancedFilters.maxPrice < 10000) || 
-          advancedFilters.propertyType || 
-          advancedFilters.amenities.length > 0;
-
-        // Logic: 
-        // 1. If no filters at all -> fetch all properties
-        // 2. If location only OR location + other criteria OR advanced filters -> use search
-        console.log('🔍 Search Debug - Filters:', combinedFilters);
-        console.log('🔍 Search Debug - selectedFilterChips:', selectedFilterChips);
-        console.log('🔍 Search Debug - hasNoFilters:', hasNoFilters);
-        console.log('🔍 Search Debug - hasLocationOnly:', hasLocationOnly);
-        console.log('🔍 Search Debug - hasAdvancedFilters:', hasAdvancedFilters);
-        
-        if (hasNoFilters) {
-          console.log('🔍 Search Debug - Fetching all properties');
-          data = await getProperties();
+          
+          setExperiences(filteredExperiences);
+          setRetreats(filteredRetreats);
+          setTotalResults(filteredExperiences.length + filteredRetreats.length);
+          setProperties([]); // Clear properties
+          
         } else {
-          console.log('🔍 Search Debug - Using search with filters');
-          data = await searchProperties(combinedFilters);
+          // Original properties logic
+          let data;
+          
+          // Combine filters with selected chips and advanced filters
+          const combinedFilters = {
+            ...filters,
+            selectedChips: selectedFilterChips.length > 0 ? selectedFilterChips : undefined,
+            // Include advanced filters in backend search
+            minPrice: advancedFilters.minPrice > 0 ? advancedFilters.minPrice : undefined,
+            maxPrice: advancedFilters.maxPrice < 10000 ? advancedFilters.maxPrice : undefined,
+            propertyType: (advancedFilters.propertyType as PropertyType) || undefined,
+            amenities: advancedFilters.amenities.length > 0 ? advancedFilters.amenities : undefined
+          };
+
+          // Check if any filters are applied
+          const hasFilters = Object.values(combinedFilters).some(value => {
+            if (Array.isArray(value)) {
+              return value.length > 0;
+            }
+            return value !== undefined && value !== null && value !== '';
+          });
+
+          // Check if we have meaningful search criteria
+          const hasLocationOnly = combinedFilters.location && !combinedFilters.checkIn && !combinedFilters.checkOut && !combinedFilters.adults && !combinedFilters.guests;
+          const hasNoFilters = !combinedFilters.location && !combinedFilters.checkIn && !combinedFilters.checkOut && !combinedFilters.adults && !combinedFilters.guests && selectedFilterChips.length === 0;
+          const hasAdvancedFilters = selectedFilterChips.length > 0 || 
+            (advancedFilters.minPrice > 0) || 
+            (advancedFilters.maxPrice < 10000) || 
+            advancedFilters.propertyType || 
+            advancedFilters.amenities.length > 0;
+
+          // Logic: 
+          // 1. If no filters at all -> fetch all properties
+          // 2. If location only OR location + other criteria OR advanced filters -> use search
+          console.log('🔍 Search Debug - Filters:', combinedFilters);
+          console.log('🔍 Search Debug - selectedFilterChips:', selectedFilterChips);
+          console.log('🔍 Search Debug - hasNoFilters:', hasNoFilters);
+          console.log('🔍 Search Debug - hasLocationOnly:', hasLocationOnly);
+          console.log('🔍 Search Debug - hasAdvancedFilters:', hasAdvancedFilters);
+          
+          if (hasNoFilters) {
+            console.log('🔍 Search Debug - Fetching all properties');
+            data = await getProperties();
+          } else {
+            console.log('🔍 Search Debug - Using search with filters');
+            data = await searchProperties(combinedFilters);
+          }
+          
+          setProperties(data || []);
+          setTotalResults((data || []).length);
+          setExperiences([]); // Clear experiences
+          setRetreats([]); // Clear retreats
         }
-        
-        setProperties(data || []);
-        setTotalResults((data || []).length);
       } catch (error) {
-        console.error('Error fetching properties:', error);
+        console.error('Error fetching data:', error);
         setProperties([]);
+        setExperiences([]);
+        setRetreats([]);
         setTotalResults(0);
       } finally {
         setLoading(false);
       }
     };
-    fetchProperties();
-  }, [filters, selectedFilterChips, advancedFilters]);
+    fetchData();
+  }, [filters, selectedFilterChips, advancedFilters, searchType, category]);
 
   // Check database content on mount for debugging
   useEffect(() => {
@@ -186,8 +228,9 @@ export default function SearchPageClient() {
       <Navigation />
       <div className="relative">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Horizontal Filter Bar */}
-          <div className="mb-8 sticky top-16 z-40 bg-gray-50 py-4 -mx-8 px-8 border-b border-gray-200">
+          {/* Horizontal Filter Bar - Only show for properties */}
+          {searchType !== 'experiences' && (
+            <div className="mb-8 sticky top-16 z-40 bg-gray-50 py-4 -mx-8 px-8 border-b border-gray-200">
             <div className="flex items-center gap-4">
               {/* All Filters Button - Fixed Left */}
               <button
@@ -309,19 +352,18 @@ export default function SearchPageClient() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Header Section */}
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {filters.location ? `Properties in ${filters.location}` : 'All Properties'}
+                  {searchType === 'experiences' 
+                    ? (category ? category : 'All Categories')
+                    : (filters.location ? `Properties in ${filters.location}` : 'All Properties')
+                  }
                 </h1>
-                {!loading && (
-                  <div className="flex items-center gap-4 text-gray-600">
-                    <span>{totalResults} properties</span>
-                  </div>
-                )}
               </div>
               
               <div className="flex items-center gap-3">
@@ -605,25 +647,128 @@ export default function SearchPageClient() {
                 </div>
               ))}
             </div>
-          ) : properties.length === 0 ? (
-            <div className="text-center py-16 animate-fade-in">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <MagnifyingGlassIcon className="w-12 h-12 text-gray-400" />
+          ) : searchType === 'experiences' ? (
+            // Experiences and Retreats Results
+            (experiences.length === 0 && retreats.length === 0) ? (
+              <div className="text-center py-16 animate-fade-in">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <MagnifyingGlassIcon className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No experiences or retreats found
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Try adjusting your filters or browse our popular categories
+                </p>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No properties found
-              </h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Try adjusting your filters or browse our popular destinations
-              </p>
+            ) : (
+              <div className="space-y-8">
+                {/* Experiences Section */}
+                {experiences.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Experiences</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      {experiences.map((experience, index) => (
+                        <div key={experience.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                          <div className="relative h-48">
+                            <img
+                              src={experience.cover_image || (Array.isArray(experience.images) ? experience.images[0] : experience.images) || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
+                              alt={experience.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="p-6">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                                {experience.categories || 'Experience'}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                              {experience.title}
+                            </h3>
+                            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                              {experience.description}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-gray-500 text-sm">
+                                <MapPinIcon className="w-4 h-4 mr-1" />
+                                <span>{experience.location}</span>
+                              </div>
+                              <div className="text-lg font-bold text-gray-900">
+                                ₹{experience.price?.toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            </div>
+                {/* Retreats Section */}
+                {retreats.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Retreats</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      {retreats.map((retreat, index) => (
+                        <div key={retreat.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                          <div className="relative h-48">
+                            <img
+                              src={retreat.cover_image || retreat.image || (Array.isArray(retreat.images) ? retreat.images[0] : retreat.images) || 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80'}
+                              alt={retreat.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="p-6">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                {retreat.categories || 'Retreat'}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                              {retreat.title}
+                            </h3>
+                            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                              {retreat.description}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-gray-500 text-sm">
+                                <MapPinIcon className="w-4 h-4 mr-1" />
+                                <span>{retreat.location}</span>
+                              </div>
+                              <div className="text-lg font-bold text-gray-900">
+                                ₹{retreat.price?.toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {properties.map((property, index) => (
-                <PropertyCard key={property.id} property={property} index={index} />
-              ))}
-            </div>
+            // Properties Results (original logic)
+            properties.length === 0 ? (
+              <div className="text-center py-16 animate-fade-in">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <MagnifyingGlassIcon className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No properties found
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Try adjusting your filters or browse our popular destinations
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {properties.map((property, index) => (
+                  <PropertyCard key={property.id} property={property} index={index} />
+                ))}
+              </div>
+            )
           )}
         </main>
       </div>

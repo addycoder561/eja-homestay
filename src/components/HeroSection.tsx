@@ -315,6 +315,83 @@ export function HeroSection() {
               </div>
             </form>
           </div>
+
+          {/* Coupon Offers */}
+          <div className="mt-12 max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              {/* Coupon Ticket 1 */}
+              <div 
+                className="group relative bg-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 w-64 h-16 flex items-center justify-between px-6 border-2 border-dashed border-gray-300 cursor-pointer"
+                onClick={() => {
+                  navigator.clipboard.writeText('WELCOME20');
+                  // You could add a toast notification here
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">%</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">SAVE 20%</div>
+                    <div className="text-sm font-bold text-gray-900">WELCOME20</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">First Booking</div>
+                  <div className="text-xs text-gray-400">Click to copy</div>
+                </div>
+                <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-2 h-4 bg-gray-100 rounded-r-full border-r-2 border-dashed border-gray-300"></div>
+              </div>
+
+              {/* Coupon Ticket 2 */}
+              <div 
+                className="group relative bg-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 w-64 h-16 flex items-center justify-between px-6 border-2 border-dashed border-gray-300 cursor-pointer"
+                onClick={() => {
+                  navigator.clipboard.writeText('GROUP500');
+                  // You could add a toast notification here
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">₹</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">₹500 OFF</div>
+                    <div className="text-sm font-bold text-gray-900">GROUP500</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Group Booking</div>
+                  <div className="text-xs text-gray-400">Click to copy</div>
+                </div>
+                <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-2 h-4 bg-gray-100 rounded-r-full border-r-2 border-dashed border-gray-300"></div>
+              </div>
+
+              {/* Coupon Ticket 3 */}
+              <div 
+                className="group relative bg-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 w-64 h-16 flex items-center justify-between px-6 border-2 border-dashed border-gray-300 cursor-pointer"
+                onClick={() => {
+                  navigator.clipboard.writeText('WEEKEND15');
+                  // You could add a toast notification here
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">★</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">FLAT 15%</div>
+                    <div className="text-sm font-bold text-gray-900">WEEKEND15</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Weekend Special</div>
+                  <div className="text-xs text-gray-400">Click to copy</div>
+                </div>
+                <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-2 h-4 bg-gray-100 rounded-r-full border-r-2 border-dashed border-gray-300"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
