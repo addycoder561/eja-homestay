@@ -265,7 +265,7 @@ export default function Home() {
                     const item = dataArray[dataIndex];
                     
                     // Helper function to get image URL
-                    const getImageUrl = (item, isExp) => {
+                    const getImageUrl = (item: any, isExp: boolean) => {
                       console.log('Getting image for item:', item);
                       console.log('Is experience:', isExp);
                       
