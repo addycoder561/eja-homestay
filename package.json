@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:vercel": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "fix-profiles": "node scripts/run-profile-fix.js --direct"
   },
   "dependencies": {

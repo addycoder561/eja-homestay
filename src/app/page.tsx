@@ -52,13 +52,13 @@ const EXPERIENCE_CATEGORIES = [
 ];
 
 export default function Home() {
-  const [retreats, setRetreats] = useState<unknown[]>([]);
-  const [experiences, setExperiences] = useState<unknown[]>([]);
+  const [retreats, setRetreats] = useState<any[]>([]);
+  const [experiences, setExperiences] = useState<any[]>([]);
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedExperience, setSelectedExperience] = useState<unknown>(null);
+  const [selectedExperience, setSelectedExperience] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRetreat, setSelectedRetreat] = useState<unknown>(null);
+  const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
   const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const handleExperienceClick = (experience: unknown) => {
+  const handleExperienceClick = (experience: any) => {
     try {
       if (experience && experience.id) {
     setSelectedExperience(experience);
@@ -116,7 +116,7 @@ export default function Home() {
     }
   };
 
-  const handleRetreatClick = (retreat: unknown) => {
+  const handleRetreatClick = (retreat: any) => {
     try {
       if (retreat && retreat.id) {
     setSelectedRetreat(retreat);
@@ -265,7 +265,7 @@ export default function Home() {
                     const item = dataArray[dataIndex];
                     
                     // Helper function to get image URL
-                    const getImageUrl = (item: unknown, isExp: boolean) => {
+                    const getImageUrl = (item: any, isExp: boolean) => {
                       console.log('Getting image for item:', item);
                       console.log('Is experience:', isExp);
                       
