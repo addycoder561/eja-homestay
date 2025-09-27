@@ -63,30 +63,39 @@ export default function SearchPageClient() {
       
       try {
         if (searchType === 'experiences') {
-          // Fetch experiences and retreats by category
-          
-          const [experiencesData, retreatsData] = await Promise.all([
-            getExperiences(),
-            getRetreats()
-          ]);
+          // Fetch experiences by category
+          const experiencesData = await getExperiences();
           
           // Filter by category if provided
           let filteredExperiences = experiencesData || [];
-          let filteredRetreats = retreatsData || [];
           
           if (category) {
             filteredExperiences = filteredExperiences.filter(exp => 
-              exp.categories === category || 
-              (Array.isArray(exp.categories) && exp.categories.includes(category))
-            );
-            filteredRetreats = filteredRetreats.filter(retreat => 
-              retreat.categories === category
+              exp.mood === category
             );
           }
           
           setExperiences(filteredExperiences);
+          setRetreats([]); // Clear retreats
+          setTotalResults(filteredExperiences.length);
+          setProperties([]); // Clear properties
+          
+        } else if (searchType === 'retreats') {
+          // Fetch retreats by category
+          const retreatsData = await getRetreats();
+          
+          // Filter by category if provided
+          let filteredRetreats = retreatsData || [];
+          
+          if (category) {
+            filteredRetreats = filteredRetreats.filter(retreat => 
+              retreat.mood === category
+            );
+          }
+          
           setRetreats(filteredRetreats);
-          setTotalResults(filteredExperiences.length + filteredRetreats.length);
+          setExperiences([]); // Clear experiences
+          setTotalResults(filteredRetreats.length);
           setProperties([]); // Clear properties
           
         } else {
@@ -129,8 +138,9 @@ export default function SearchPageClient() {
           console.log('🔍 Search Debug - hasNoFilters:', hasNoFilters);
           console.log('🔍 Search Debug - hasLocationOnly:', hasLocationOnly);
           console.log('🔍 Search Debug - hasAdvancedFilters:', hasAdvancedFilters);
+          console.log('🔍 Search Debug - hasFilters:', hasFilters);
           
-          if (hasNoFilters) {
+          if (hasNoFilters && !hasAdvancedFilters) {
             console.log('🔍 Search Debug - Fetching all properties');
             data = await getProperties();
           } else {
@@ -228,131 +238,6 @@ export default function SearchPageClient() {
       <Navigation />
       <div className="relative">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Horizontal Filter Bar - Only show for properties */}
-          {searchType !== 'experiences' && (
-            <div className="mb-8 sticky top-16 z-40 bg-gray-50 py-4 -mx-8 px-8 border-b border-gray-200">
-            <div className="flex items-center gap-4">
-              {/* All Filters Button - Fixed Left */}
-              <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-full text-blue-600 font-medium hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0 text-sm shadow-sm h-12"
-                aria-label="Toggle advanced filters panel"
-                aria-expanded={showAdvancedFilters}
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
-                </svg>
-                All filters
-              </button>
-
-
-
-              {/* Scrollable Middle Section */}
-              <div className="flex-1 overflow-x-auto scrollbar-hide relative">
-                <div className="flex items-center gap-3 py-2 pr-16">
-                  {/* Scroll gradient indicators - Reduced opacity and width */}
-                  <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50/80 to-transparent pointer-events-none z-10"></div>
-                  <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50/80 to-transparent pointer-events-none z-10"></div>
-                  
-                  {/* Property Filters - Removed for now, will recreate */}
-                  
-                  {/* Property Type Filters */}
-                  <button 
-                    onClick={() => handleFilterChipClick('Boutique')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Boutique')
-                        ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Boutique properties"
-                  >
-                    <span className="text-xs">🏨</span>
-                    <span>Boutique</span>
-                  </button>
-
-                  <button 
-                    onClick={() => handleFilterChipClick('Homely')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Homely')
-                        ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Homely properties"
-                  >
-                    <span className="text-xs">🏠</span>
-                    <span>Homely</span>
-                  </button>
-
-                  <button 
-                    onClick={() => handleFilterChipClick('Off-Beat')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Off-Beat')
-                        ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Off-Beat properties"
-                  >
-                    <span className="text-xs">✨</span>
-                    <span>Off-Beat</span>
-                  </button>
-
-                  {/* Tag Filters (from tags column) */}
-                  <button 
-                    onClick={() => handleFilterChipClick('Families-only')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Families-only')
-                        ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Family-friendly properties"
-                  >
-                    <span className="text-xs">👨‍👩‍👧‍👦</span>
-                    <span>Families-only</span>
-                  </button>
-
-                  <button 
-                    onClick={() => handleFilterChipClick('Females-only')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Females-only')
-                        ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Female-only properties"
-                  >
-                    <span className="text-xs">👩</span>
-                    <span>Females-only</span>
-                  </button>
-
-                  <button 
-                    onClick={() => handleFilterChipClick('Pet Friendly')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Pet Friendly')
-                        ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Pet-friendly properties"
-                  >
-                    <span className="text-xs">🐕</span>
-                    <span>Pet Friendly</span>
-                  </button>
-
-                  <button 
-                    onClick={() => handleFilterChipClick('Pure-Veg')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                      selectedFilterChips.includes('Pure-Veg')
-                        ? 'bg-green-100 border-green-200 text-green-700 shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                    }`}
-                    title="Pure vegetarian properties"
-                  >
-                    <span className="text-xs">🥗</span>
-                    <span>Pure-Veg</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
 
           {/* Header Section */}
           <div className="mb-8">
@@ -361,12 +246,28 @@ export default function SearchPageClient() {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   {searchType === 'experiences' 
                     ? (category ? category : 'All Categories')
+                    : searchType === 'retreats'
+                    ? (category ? category : 'All Retreats')
                     : (filters.location ? `Properties in ${filters.location}` : 'All Properties')
                   }
                 </h1>
               </div>
               
               <div className="flex items-center gap-3">
+                {/* All Filters Button - Only show for properties */}
+                {searchType === 'properties' && (
+                  <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-full text-blue-600 font-medium hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0 text-sm shadow-sm h-10"
+                    aria-label="Toggle advanced filters panel"
+                    aria-expanded={showAdvancedFilters}
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                    </svg>
+                    All filters
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -647,7 +548,7 @@ export default function SearchPageClient() {
                 </div>
               ))}
             </div>
-          ) : searchType === 'experiences' ? (
+          ) : (searchType === 'experiences' || searchType === 'retreats') ? (
             // Experiences and Retreats Results
             (experiences.length === 0 && retreats.length === 0) ? (
               <div className="text-center py-16 animate-fade-in">
@@ -655,7 +556,7 @@ export default function SearchPageClient() {
                   <MagnifyingGlassIcon className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No experiences or retreats found
+                  {searchType === 'retreats' ? 'No retreats found' : 'No experiences found'}
                 </h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
                   Try adjusting your filters or browse our popular categories
@@ -672,7 +573,7 @@ export default function SearchPageClient() {
                         <div key={experience.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                           <div className="relative h-48">
                             <img
-                              src={experience.cover_image || (Array.isArray(experience.images) ? experience.images[0] : experience.images) || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
+                              src={experience.cover_image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
                               alt={experience.title}
                               className="w-full h-full object-cover"
                             />
@@ -680,7 +581,7 @@ export default function SearchPageClient() {
                           <div className="p-6">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                                {experience.categories || 'Experience'}
+                                {experience.mood || 'Experience'}
                               </span>
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
@@ -714,7 +615,7 @@ export default function SearchPageClient() {
                         <div key={retreat.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                           <div className="relative h-48">
                             <img
-                              src={retreat.cover_image || retreat.image || (Array.isArray(retreat.images) ? retreat.images[0] : retreat.images) || 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80'}
+                              src={retreat.cover_image || 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80'}
                               alt={retreat.title}
                               className="w-full h-full object-cover"
                             />
@@ -722,7 +623,7 @@ export default function SearchPageClient() {
                           <div className="p-6">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                                {retreat.categories || 'Retreat'}
+                                {retreat.mood || 'Retreat'}
                               </span>
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">

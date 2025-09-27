@@ -19,15 +19,14 @@ import RetreatModal from '@/components/RetreatModal';
 import { 
   MagnifyingGlassIcon, 
   MapPinIcon, 
-  FunnelIcon,
-  AdjustmentsHorizontalIcon,
   XMarkIcon,
   StarIcon,
   BuildingOfficeIcon,
   CalendarIcon,
   ClockIcon,
   UsersIcon,
-  BookmarkIcon as BookmarkOutline
+  BookmarkIcon as BookmarkOutline,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import Link from 'next/link';
@@ -44,37 +43,7 @@ import { sendPaymentReceiptEmail } from '@/lib/notifications';
 
 
 
-// Helper function to get category icon
-const getCategoryIcon = (category: string) => {
-  const categoryLower = category.toLowerCase();
-  if (categoryLower.includes('immersive')) return '🧘';
-  if (categoryLower.includes('playful')) return '🎮';
-  if (categoryLower.includes('culinary')) return '🍽️';
-  if (categoryLower.includes('meaningful')) return '❤️';
-  if (categoryLower.includes('couple')) return '💑';
-  if (categoryLower.includes('solo')) return '🧘';
-  if (categoryLower.includes('pet')) return '🐕';
-  if (categoryLower.includes('family')) return '👨‍👩‍👧‍👦';
-  if (categoryLower.includes('purposeful')) return '🎯';
-  if (categoryLower.includes('senior')) return '👴';
-  if (categoryLower.includes('group')) return '👥';
-  if (categoryLower.includes('parents')) return '👨‍👩‍👦';
-  if (categoryLower.includes('try')) return '🎯';
-  return '🌟';
-};
-
-// Helper function to get category color
-const getCategoryColor = (category: string, isRetreat: boolean = false) => {
-  const categoryLower = category.toLowerCase();
-  if (isRetreat) {
-    return 'bg-yellow-400 border-yellow-400 text-white';
-  }
-  if (categoryLower.includes('immersive')) return 'bg-purple-100 text-purple-700 border-purple-200';
-  if (categoryLower.includes('playful')) return 'bg-green-100 text-green-700 border-green-200';
-  if (categoryLower.includes('culinary')) return 'bg-orange-100 text-orange-700 border-orange-200';
-  if (categoryLower.includes('meaningful')) return 'bg-red-100 text-red-700 border-red-200';
-  return 'bg-blue-100 text-blue-700 border-blue-200';
-};
+// Category helpers removed as filter chips are no longer shown
 
 export default function SearchPageClient() {
   const searchParams = useSearchParams();
@@ -86,6 +55,9 @@ export default function SearchPageClient() {
   const [loading, setLoading] = useState(true);
   const [loadingExperiences, setLoadingExperiences] = useState(true);
   const [loadingRetreats, setLoadingRetreats] = useState(true);
+  // Content filter chip: hyper-local | online | retreats
+  const [contentFilter, setContentFilter] = useState<'hyper-local' | 'online' | 'retreats'>('hyper-local');
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [filters, setFilters] = useState<SearchFiltersType>({
     location: searchParams.get('location') || '',
     checkIn: searchParams.get('checkIn') || '',
@@ -120,16 +92,7 @@ export default function SearchPageClient() {
   const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
   const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
   
-  // Filter states
-  const [selectedExperienceCategory, setSelectedExperienceCategory] = useState("");
-  const [selectedRetreatCategory, setSelectedRetreatCategory] = useState("");
-  const [selectedContentTypeToggle, setSelectedContentTypeToggle] = useState<'hyper-local' | 'retreats'>('hyper-local');
-  const [selectedFilterChips, setSelectedFilterChips] = useState<string[]>([]);
-  
-  // Dynamic categories
-  const [experienceCategories, setExperienceCategories] = useState<string[]>([]);
-  const [retreatCategories, setRetreatCategories] = useState<string[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  // Filter and category UI removed
   
 
 
@@ -141,30 +104,11 @@ export default function SearchPageClient() {
       try {
         let data;
         
-        // Combine filters with selected chips
-        const combinedFilters = {
-          ...filters,
-          selectedChips: selectedFilterChips.length > 0 ? selectedFilterChips : undefined
-        };
-
-        console.log('🔍 DEBUG - Combined Filters:', combinedFilters);
-        console.log('🔍 DEBUG - Selected Filter Chips:', selectedFilterChips);
-        
-        // Check if any filters are applied
-        const hasFilters = Object.values(combinedFilters).some(value => {
-          if (Array.isArray(value)) {
-            return value.length > 0;
-          }
-          return value !== undefined && value !== null && value !== '';
-        });
-
-        if (hasFilters) {
-          console.log('Applying filters:', combinedFilters);
-          data = await searchProperties(combinedFilters);
-        } else {
-          console.log('No filters applied, fetching all properties');
-          data = await getProperties();
-        }
+        // Property search retained for future use; Discover shows experiences/retreats
+        console.log('No property filters applied on Discover; fetching all properties');
+        const combinedFilters = { ...filters };
+        console.log('🔍 DEBUG - Filters (properties unused on Discover):', combinedFilters);
+        data = await getProperties();
         
         console.log('Fetched properties:', data);
         setProperties(data || []);
@@ -178,7 +122,7 @@ export default function SearchPageClient() {
       }
     };
     fetchProperties();
-  }, [filters, selectedFilterChips]);
+  }, [filters]);
 
   // Fetch experiences
   useEffect(() => {
@@ -214,39 +158,9 @@ export default function SearchPageClient() {
     fetchRetreats();
   }, []);
 
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoadingCategories(true);
-        const [expCategories, retreatCats] = await Promise.all([
-          getExperienceCategories(),
-          getRetreatCategories()
-        ]);
-        setExperienceCategories(expCategories);
-        setRetreatCategories(retreatCats);
-        console.log('🔍 DEBUG - Fetched experience categories:', expCategories);
-        console.log('🔍 DEBUG - Fetched retreat categories:', retreatCats);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
+  // Category fetching removed
 
-    fetchCategories();
-  }, []);
-
-  // Debug filter state changes
-  useEffect(() => {
-    console.log('🔍 Filter state changed:', {
-      selectedExperienceCategory,
-      selectedRetreatCategory,
-      selectedContentTypeToggle,
-      experienceCategories,
-      retreatCategories
-    });
-  }, [selectedExperienceCategory, selectedRetreatCategory, selectedContentTypeToggle, experienceCategories, retreatCategories]);
+  // Filter state debug removed
 
   // Fetch wishlist status for experiences
   useEffect(() => {
@@ -303,6 +217,8 @@ export default function SearchPageClient() {
     fetchRetreatWishlist();
     return () => { ignore = true; };
   }, [user, retreats]);
+
+  // Removed global click-outside handler to revert to simpler behavior
 
   // Wishlist handlers
   const handleExperienceWishlist = async (expId: string, wishlisted: boolean, e: React.MouseEvent) => {
@@ -403,17 +319,7 @@ export default function SearchPageClient() {
     setSelectedRetreat(null);
   };
 
-  // Filter chip click handler
-  const handleFilterChipClick = (chipName: string) => {
-    console.log('🔍 DEBUG - Filter chip clicked:', chipName);
-    setSelectedFilterChips(prev => {
-      const newChips = prev.includes(chipName) 
-        ? prev.filter(chip => chip !== chipName)
-        : [...prev, chipName];
-      console.log('🔍 DEBUG - Updated filter chips:', newChips);
-      return newChips;
-    });
-  };
+  // Filter chip handlers removed
 
   // Booking handlers
   const openBooking = (item: Experience | any, type: 'experience' | 'retreat') => {
@@ -675,63 +581,21 @@ export default function SearchPageClient() {
     });
   };
 
-  // Filter experiences based on selected vibe category
+  // Determine if an experience is "online"
+  const isOnlineExperience = (exp: any) => {
+    const loc = (exp?.location || '').toLowerCase();
+    return loc.includes('online') || loc.includes('virtual') || loc.includes('remote');
+  };
+
+  // Apply chip filter to experiences
   const filteredExperiences = experiences.filter((exp) => {
-    // Filter by vibe category
-    if (selectedExperienceCategory && exp.categories) {
-      const categoriesArray = Array.isArray(exp.categories) ? exp.categories : [exp.categories];
-      const hasCategory = categoriesArray.some(cat => 
-        cat.toLowerCase() === selectedExperienceCategory.toLowerCase()
-      );
-      console.log('🔍 Experience filter:', {
-        title: exp.title,
-        categories: categoriesArray,
-        selectedCategory: selectedExperienceCategory,
-        hasCategory
-      });
-      if (!hasCategory) {
-        return false;
-      }
-    }
-    
-    // Filter by content type toggle
-    if (selectedContentTypeToggle === 'hyper-local') {
-      // Show only experiences for hyper-local
-      return true; // Keep all experiences
-    } else if (selectedContentTypeToggle === 'retreats') {
-      // Hide experiences for retreats mode
-      return false;
-    }
-    
-    return true;
+    if (contentFilter === 'retreats') return false;
+    if (contentFilter === 'online') return isOnlineExperience(exp);
+    // hyper-local => exclude online items if detectable
+    return !isOnlineExperience(exp);
   });
 
-  // Filter retreats based on selected category and content type toggle
-  const filteredRetreats = retreats.filter((retreat) => {
-    // Filter by content type toggle
-    if (selectedContentTypeToggle === 'hyper-local') {
-      // Hide retreats for hyper-local mode
-      return false;
-    } else if (selectedContentTypeToggle === 'retreats') {
-      // Show retreats for retreats mode
-      // Filter by category if selected
-      if (selectedRetreatCategory && retreat.categories) {
-        const categoriesArray = Array.isArray(retreat.categories) ? retreat.categories : [retreat.categories];
-        const hasCategory = categoriesArray.some((cat: string) => 
-          cat.toLowerCase() === selectedRetreatCategory.toLowerCase()
-        );
-        console.log('🔍 Retreat filter:', {
-          title: retreat.title,
-          categories: categoriesArray,
-          selectedCategory: selectedRetreatCategory,
-          hasCategory
-        });
-        return hasCategory;
-      }
-      return true;
-    }
-    return false;
-  });
+  const filteredRetreats = contentFilter === 'retreats' ? retreats : [];
 
   // Filter properties based on content type toggle - Properties moved to search page
   const filteredProperties = properties.filter((property) => {
@@ -740,10 +604,7 @@ export default function SearchPageClient() {
   });
 
   const clearAllFilters = () => {
-    setSelectedExperienceCategory("");
-    setSelectedRetreatCategory("");
-    setSelectedContentTypeToggle('hyper-local');
-    setSelectedFilterChips([]);
+    clearFilters();
   };
 
   const hasPropertyFilters = Object.values(filters).some(value => {
@@ -753,19 +614,14 @@ export default function SearchPageClient() {
     return value !== undefined && value !== null && value !== '';
   });
 
-  // Check if any filters are active
-  const hasActiveFilters = selectedFilterChips.length > 0 || 
-    selectedExperienceCategory || 
-    selectedRetreatCategory || 
-    selectedContentTypeToggle !== 'hyper-local';
+  // Active filters limited to date/location now
+  const hasActiveFilters = Object.values(filters).some(value => value && value !== '');
 
   // Debug filtered results
   console.log('🔍 Filtered results:', {
+    contentFilter,
     experiences: filteredExperiences.length,
-    retreats: filteredRetreats.length,
-    selectedExperienceCategory,
-    selectedRetreatCategory,
-    selectedContentTypeToggle
+    retreats: filteredRetreats.length
   });
 
   return (
@@ -796,89 +652,51 @@ export default function SearchPageClient() {
       <Navigation />
       <div className="relative">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Horizontal Filter Bar */}
-          <div className="mb-8 sticky top-16 z-40 bg-gray-50 py-4 -mx-8 px-8 border-b border-gray-200">
-            <div className="flex items-center gap-4">
-              {/* Scrollable Middle Section */}
-              <div className="flex-1 overflow-x-auto scrollbar-hide relative">
-                <div className="flex items-center gap-3 py-2 pr-16">
-                  {/* Scroll gradient indicators - Reduced opacity and width */}
-                  <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50/80 to-transparent pointer-events-none z-10"></div>
-                  <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50/80 to-transparent pointer-events-none z-10"></div>
-                  
-                  {/* Hyper-local Vibe Filters - Dynamic */}
-                  {selectedContentTypeToggle === 'hyper-local' && !loadingCategories && (
-                    <>
-                      {experienceCategories.map((category) => (
-                        <button 
-                          key={category}
-                          onClick={() => {
-                            console.log('🔍 Experience category clicked:', category, 'Current:', selectedExperienceCategory);
-                            setSelectedExperienceCategory(selectedExperienceCategory === category ? "" : category);
-                          }}
-                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                            selectedExperienceCategory === category
-                              ? getCategoryColor(category, false) + ' shadow-md'
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                          }`}
-                          title={`${category} experiences`}
-                        >
-                          <span className="text-xs">{getCategoryIcon(category)}</span>
-                          <span>{category}</span>
-                        </button>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Retreats Category Filters - Dynamic */}
-                  {selectedContentTypeToggle === 'retreats' && !loadingCategories && (
-                    <>
-                      {retreatCategories.map((category) => (
-                        <button 
-                          key={category}
-                          onClick={() => {
-                            console.log('🔍 Retreat category clicked:', category, 'Current:', selectedRetreatCategory);
-                            setSelectedRetreatCategory(selectedRetreatCategory === category ? "" : category);
-                          }}
-                          className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border-2 transition-all duration-200 whitespace-nowrap text-xs font-medium h-7 flex-shrink-0 ${
-                            selectedRetreatCategory === category
-                              ? getCategoryColor(category, true) + ' shadow-md'
-                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:shadow-sm'
-                          }`}
-                          title={`${category} retreats`}
-                        >
-                          <span className="text-xs">{getCategoryIcon(category)}</span>
-                          <span>{category}</span>
-                        </button>
-                      ))}
-                    </>
-                  )}
-
-
-                </div>
-              </div>
-
-
-
-              {/* Content Type Toggle - Fixed Right with proper spacing */}
-              <div className="bg-gray-100 rounded-xl p-1 flex flex-shrink-0 ml-4">
-                {[
-                  { id: 'hyper-local', label: 'Hyper-local', icon: '🏘️' },
-                  { id: 'retreats', label: 'Retreats', icon: '🏔️' }
-                ].map((contentType) => (
-                  <button
-                    key={contentType.id}
-                    onClick={() => setSelectedContentTypeToggle(contentType.id as 'hyper-local' | 'retreats')}
-                    className={`flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 h-7 ${
-                      selectedContentTypeToggle === contentType.id
-                        ? 'bg-yellow-400 text-white shadow-md'
-                        : 'bg-white text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="text-sm">{contentType.icon}</span>
-                    {contentType.label}
-                  </button>
-                ))}
+          {/* Single content chip */}
+          <div className="mb-4">
+            <div className="flex items-center justify-end gap-3">
+              <div className="relative inline-block">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowTypeMenu(v => !v);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-gray-900 text-sm shadow-sm hover:bg-gray-50"
+                >
+                  <span className="font-medium">
+                    {contentFilter === 'hyper-local' ? 'Hyper-local' : contentFilter === 'online' ? 'Online' : 'Retreats'}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-600" />
+                </button>
+                {showTypeMenu && (
+                  <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
+                    {[
+                      { id: 'hyper-local', label: 'Hyper-local' },
+                      { id: 'online', label: 'Online' },
+                      { id: 'retreats', label: 'Retreats' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setContentFilter(opt.id as any);
+                          setShowTypeMenu(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
+                          contentFilter === opt.id 
+                            ? 'bg-yellow-50 text-yellow-700 font-semibold' 
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -887,56 +705,13 @@ export default function SearchPageClient() {
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {selectedContentTypeToggle === 'hyper-local' 
-                    ? (filters.location ? `Experiences in ${filters.location}` : 'All Experiences')
-                    : (filters.location ? `Retreats in ${filters.location}` : 'All Retreats')
-                  }
-                </h1>
-                {!loading && (
-                  <div className="flex items-center gap-4 text-gray-600">
-                    <span>
-                      {selectedContentTypeToggle === 'hyper-local' 
-                        ? `${filteredExperiences.length} experiences`
-                        : `${filteredRetreats.length} retreats`
-                      }
-                    </span>
-                  </div>
-                )}
+                {/* Removed "Discover" title and results count as requested */}
               </div>
               
 
             </div>
 
-            {/* Active Filters Display */}
-            {(hasPropertyFilters || hasActiveFilters) && (
-              <div 
-                className="flex flex-wrap gap-2 mt-4 animate-fade-in"
-              >
-                {filters.location && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    <MapPinIcon className="w-4 h-4" />
-                    {filters.location}
-                  </span>
-                )}
-                {filters.checkIn && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    Check-in: {filters.checkIn}
-                  </span>
-                )}
-                {filters.checkOut && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    Check-out: {filters.checkOut}
-                  </span>
-                )}
-                {filters.adults && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                    {filters.adults} adults
-                  </span>
-                )}
-
-              </div>
-            )}
+            {/* Active filter chips removed */}
           </div>
 
           {/* Combined Results Section */}
@@ -960,7 +735,7 @@ export default function SearchPageClient() {
                 <MagnifyingGlassIcon className="w-12 h-12 text-gray-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No {selectedContentTypeToggle === 'hyper-local' ? 'experiences' : 'retreats'} found
+                No results found
               </h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 Try adjusting your filters or browse our popular destinations
@@ -987,7 +762,7 @@ export default function SearchPageClient() {
                     {/* Image Section */}
                     <div className="relative h-48 overflow-hidden">
                       <Image
-                        src={buildCoverFirstImages(exp.cover_image, exp.images)[0] || '/placeholder-experience.jpg'}
+                        src={exp.cover_image || '/placeholder-experience.jpg'}
                         alt={exp.title}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -995,10 +770,10 @@ export default function SearchPageClient() {
                       />
                       
                       {/* Category Badge - Top Left */}
-                      {exp.categories && (
+                      {exp.mood && (
                         <div className="absolute top-4 left-4 z-10">
                           <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
-                            {Array.isArray(exp.categories) ? exp.categories[0] : exp.categories}
+                            {exp.mood}
                           </span>
                         </div>
                       )}
@@ -1071,7 +846,7 @@ export default function SearchPageClient() {
                     {/* Image Section */}
                     <div className="relative h-48 overflow-hidden">
                       <Image
-                        src={buildCoverFirstImages(retreat.image || retreat.cover_image, retreat.images)[0] || '/placeholder-experience.jpg'}
+                        src={buildCoverFirstImages(retreat.cover_image, retreat.gallery)[0] || '/placeholder-experience.jpg'}
                         alt={retreat.title}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -1079,10 +854,10 @@ export default function SearchPageClient() {
                       />
                       
                       {/* Category Badge - Top Left */}
-                      {retreat.categories && (
+                      {retreat.mood && (
                         <div className="absolute top-4 left-4 z-10">
                           <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
-                            {Array.isArray(retreat.categories) ? retreat.categories[0] : retreat.categories}
+                            {retreat.mood}
                           </span>
                         </div>
                       )}

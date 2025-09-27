@@ -494,7 +494,7 @@ export default function RetreatDetailPage() {
     );
   }
 
-  const images = buildCoverFirstImages(retreat.cover_image, retreat.images);
+  const images = buildCoverFirstImages(retreat.cover_image, retreat.gallery);
   const averageRating = calculateAverageRating();
 
   try {

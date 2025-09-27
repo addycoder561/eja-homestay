@@ -666,13 +666,14 @@ function ExperiencesSection() {
   const [editExperience, setEditExperience] = useState<Experience | null>(null);
   const [form, setForm] = useState({
     title: '',
-    subtitle: '',
     description: '',
     location: '',
-    date: '',
+    categories: '', // comma-separated categories
+    mood: '',
     price: '',
-    duration: '',
-    images: '', // comma-separated URLs
+    duration_hours: '',
+    cover_image: '',
+    gallery: '', // JSON string for gallery
     is_active: true,
   });
 
@@ -687,13 +688,14 @@ function ExperiencesSection() {
   const handleAdd = () => {
     setForm({
       title: '',
-      subtitle: '',
       description: '',
       location: '',
-      date: '',
+      categories: '',
+      mood: '',
       price: '',
-      duration: '',
-      images: '',
+      duration_hours: '',
+      cover_image: '',
+      gallery: '',
       is_active: true,
     });
     setEditExperience(null);
@@ -702,13 +704,14 @@ function ExperiencesSection() {
   const handleEdit = (exp: Experience) => {
     setForm({
       title: exp.title,
-      subtitle: exp.subtitle || '',
       description: exp.description || '',
       location: exp.location,
-      date: exp.date,
+      categories: Array.isArray(exp.categories) ? exp.categories.join(',') : (exp.categories || ''),
+      mood: exp.mood || '',
       price: String(exp.price),
-      duration: exp.duration || '',
-      images: (exp.images || []).join(','),
+      duration_hours: String(exp.duration_hours || ''),
+      cover_image: exp.cover_image || '',
+      gallery: exp.gallery ? JSON.stringify(exp.gallery) : '',
       is_active: exp.is_active,
     });
     setEditExperience(exp);
@@ -725,8 +728,10 @@ function ExperiencesSection() {
     const payload = {
       ...form,
       price: Number(form.price),
-      images: form.images.split(',').map(s => s.trim()).filter(Boolean),
-      host_id: profile?.id || '',
+      duration_hours: form.duration_hours ? Number(form.duration_hours) : null,
+      categories: form.categories.split(',').map(s => s.trim()).filter(Boolean),
+      gallery: form.gallery ? JSON.parse(form.gallery) : null,
+      host_id: profile?.id || null,
     };
     if (editExperience) {
       // const updated = await updateExperience(editExperience.id, payload); // updateExperience is removed from imports
@@ -749,9 +754,9 @@ function ExperiencesSection() {
             <tr className="bg-gray-100">
               <th className="p-2">Title</th>
               <th className="p-2">Location</th>
-              <th className="p-2">Date</th>
               <th className="p-2">Price</th>
-              <th className="p-2">Duration</th>
+              <th className="p-2">Duration (hrs)</th>
+              <th className="p-2">Mood</th>
               <th className="p-2">Active</th>
               <th className="p-2">Actions</th>
             </tr>
@@ -761,9 +766,9 @@ function ExperiencesSection() {
               <tr key={exp.id} className="border-b">
                 <td className="p-2">{exp.title}</td>
                 <td className="p-2">{exp.location}</td>
-                <td className="p-2">{exp.date}</td>
                 <td className="p-2">₹{exp.price}</td>
-                <td className="p-2">{exp.duration || 'N/A'}</td>
+                <td className="p-2">{exp.duration_hours || 'N/A'}</td>
+                <td className="p-2">{exp.mood || 'N/A'}</td>
                 <td className="p-2">{exp.is_active ? 'Yes' : 'No'}</td>
                 <td className="p-2 flex gap-2">
                   <button className="px-2 py-1 bg-yellow-200 rounded" onClick={() => handleEdit(exp)}>Edit</button>
@@ -779,13 +784,14 @@ function ExperiencesSection() {
           <form className="bg-white p-8 rounded shadow w-96 space-y-4" onSubmit={handleSubmit}>
             <h3 className="text-xl font-bold mb-2">{editExperience ? 'Edit Experience' : 'Add Experience'}</h3>
             <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Subtitle" value={form.subtitle} onChange={e => setForm({ ...form, subtitle: e.target.value })} />
             <textarea className="w-full border p-2 rounded" placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             <input className="w-full border p-2 rounded" placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required />
-            <input className="w-full border p-2 rounded" type="date" placeholder="Date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+            <input className="w-full border p-2 rounded" placeholder="Categories (comma separated)" value={form.categories} onChange={e => setForm({ ...form, categories: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Mood" value={form.mood} onChange={e => setForm({ ...form, mood: e.target.value })} />
             <input className="w-full border p-2 rounded" placeholder="Price" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required />
-            <input className="w-full border p-2 rounded" placeholder="Duration (e.g., 2-3 hrs)" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} />
-            <input className="w-full border p-2 rounded" placeholder="Image URLs (comma separated)" value={form.images} onChange={e => setForm({ ...form, images: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Duration (hours)" type="number" value={form.duration_hours} onChange={e => setForm({ ...form, duration_hours: e.target.value })} />
+            <input className="w-full border p-2 rounded" placeholder="Cover Image URL" value={form.cover_image} onChange={e => setForm({ ...form, cover_image: e.target.value })} />
+            <textarea className="w-full border p-2 rounded" placeholder="Gallery (JSON format)" value={form.gallery} onChange={e => setForm({ ...form, gallery: e.target.value })} />
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />
               Active

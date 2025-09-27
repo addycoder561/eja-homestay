@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Optimize for Vercel deployment
   output: 'standalone',
   
+  // Fix workspace root detection
+  outputFileTracingRoot: __dirname,
+  
   // Enhanced Image optimization
   images: {
     remotePatterns: [

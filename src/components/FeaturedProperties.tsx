@@ -84,13 +84,13 @@ export function FeaturedProperties() {
                   <Card className="group hover:shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer h-full hover:-translate-y-2 hover:scale-105">
                     <div className="relative h-48 overflow-hidden rounded-t-lg">
                       <Image
-                        src={buildCoverFirstImages(property.cover_image, property.images)[0]}
+                        src={buildCoverFirstImages(property.cover_image, property.gallery)[0]}
                         alt={property.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-4 right-4 bg-white px-2 py-1 rounded-full text-sm font-semibold text-gray-900">
-                        ₹{property.price_per_night}/night
+                        ₹{property.base_price}/night
                       </div>
                     </div>
                     <CardContent className="p-4">

@@ -1,5 +1,0 @@
-[33m37ab138[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m style: migrate globals.css to Tailwind v3 syntax (@tailwind base/components/utilities, remove @theme)
-[33mac709d6[m build: move to Tailwind CSS v3 + autoprefixer; switch PostCSS config to plugins dict; add tailwind.config.cjs to remove lightningcss native dependency path on Vercel
-[33m9c9f7ea[m build: add lightningcss-wasm and use patch+WASM env to satisfy Tailwind on Vercel
-[33m9f52db8[m build: copy lightningcss-wasm/pkg into lightningcss/pkg on build and rely on CSS_TRANSFORMER_WASM=1 for WASM path
-[33mcb3860e[m build: ensure CSS_TRANSFORMER_WASM is set for Next build step as well

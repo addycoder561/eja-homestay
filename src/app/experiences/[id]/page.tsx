@@ -47,16 +47,17 @@ interface Experience {
   id: string;
   host_id: string | null;
   title: string;
-  subtitle?: string | null;
   description: string | null;
   location: string;
-  date: string;
+  // categories: string[]; // Removed - now using mood field
+  mood: string | null;
   price: number;
-  images: string[];
-  cover_image?: string;
-  duration?: string;
-  categories?: string | string[];
+  duration_hours: number | null;
+  cover_image: string | null;
+  gallery: any | null; // JSONB
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
   // Host-related fields
   host_name?: string;
   host_type?: string;
@@ -66,8 +67,6 @@ interface Experience {
   host_usps?: string[];
   // Unique propositions
   unique_propositions?: string[];
-  created_at: string;
-  updated_at: string;
 }
 
 interface Review {
@@ -671,14 +670,14 @@ export default function ExperienceDetailPage() {
                               <span className="text-gray-700">{experience.duration}</span>
                     </div>
                   )}
-                  {experience.categories && (
+                  {experience.mood && (
                             <div className="flex items-center space-x-1">
-                      <span className="text-2xl">{getCategoryIcon(Array.isArray(experience.categories) ? experience.categories[0] : experience.categories)}</span>
+                      <span className="text-2xl">{getCategoryIcon(experience.mood)}</span>
                               <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        {Array.isArray(experience.categories) ? experience.categories[0] : experience.categories}
+                        {experience.mood}
                       </span>
                     </div>
-              )}
+                  )}
             </div>
 
                 {/* Rating */}

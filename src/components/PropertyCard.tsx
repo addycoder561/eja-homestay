@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { PropertyWithHost } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -8,6 +7,7 @@ import { isWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database'
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import { BookmarkIcon as BookmarkOutline } from '@heroicons/react/24/outline';
 import { LiveRating } from './LiveRating';
+import PropertyModal from './PropertyModal';
 import { 
   MapPinIcon, 
   WifiIcon,
@@ -25,6 +25,7 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
   const { user } = useAuth();
   const [wishlisted, setWishlisted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -78,12 +79,13 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
   };
 
   return (
-    <div
-      className="group animate-fade-in"
-      style={{ animationDelay: `${index * 0.1}s` }}
-    >
-      <Link href={`/property/${property.id}`}>
-        <Card className="overflow-hidden bg-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer group hover:-translate-y-3 relative">
+    <>
+      <div
+        className="group animate-fade-in"
+        style={{ animationDelay: `${index * 0.1}s` }}
+      >
+        <div onClick={() => setIsModalOpen(true)}>
+          <Card className="overflow-hidden bg-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer group hover:-translate-y-3 relative">
           {/* Enhanced Image Section */}
           <div className="relative h-64 overflow-hidden">
             {/* Image */}
@@ -152,13 +154,20 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
             {/* Price */}
             <div className="flex items-center justify-between pt-3 border-t border-gray-100">
               <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-gray-900">₹{property.price_per_night.toLocaleString()}</span>
+                <span className="text-lg font-bold text-gray-900">₹{property.base_price?.toLocaleString() || '0'}</span>
                 <span className="text-sm text-gray-500">/ night</span>
               </div>
             </div>
           </CardContent>
         </Card>
-      </Link>
-    </div>
+        </div>
+      </div>
+      
+      <PropertyModal
+        property={property}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
   );
 }

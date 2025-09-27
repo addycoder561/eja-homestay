@@ -57,17 +57,18 @@ export const metadata: Metadata = {
     creator: '@eja_travel',
   },
   manifest: "/manifest.json",
-  themeColor: "#f59e0b",
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'EJA',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#f59e0b",
 };
 
 export default function RootLayout({

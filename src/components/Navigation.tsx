@@ -133,6 +133,12 @@ export function Navigation() {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
       
+      // Don't interfere with category cards or other navigation elements
+      if ((target as Element).closest('[data-category-card]') || 
+          (target as Element).closest('a[href*="/search"]')) {
+        return;
+      }
+      
       // Handle menu dropdown
       const menuButton = document.querySelector('[aria-label="Menu"]');
       const menuPopup = document.querySelector('[data-menu-popup]');
@@ -209,20 +215,11 @@ export function Navigation() {
                 </Link>
 
 
+
+
                 {/* About Dropdown */}
                 {/* Removed About dropdown as requested */}
 
-                {user && isHost && (
-                  <Link 
-                    href="/host/dashboard" 
-                    className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
-                      pathname?.startsWith('/host') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <BuildingOfficeIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    Host Dashboard
-                  </Link>
-                )}
               </div>
 
               {/* Enhanced User Menu */}

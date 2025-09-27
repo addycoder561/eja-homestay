@@ -4,6 +4,7 @@ import { Navigation } from '@/components/Navigation';
 import { HeroSection } from '@/components/HeroSection';
 import { Footer } from '@/components/Footer';
 import { OptimizedImage } from '@/components/OptimizedImage';
+import { CategoryCard } from '@/components/CategoryCard';
 import Link from 'next/link';
 import { 
   MapPinIcon
@@ -23,31 +24,36 @@ const EXPERIENCE_CATEGORIES = [
     name: 'Immersive', 
     description: 'Deep cultural experiences and local connections',
     image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=800&q=80',
-    icon: '🎭'
+    icon: '🎭',
+    type: 'experience'
   },
   { 
     name: 'Culinary', 
     description: 'Food tours and authentic local cuisine',
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
-    icon: '🍽️'
+    icon: '🍽️',
+    type: 'experience'
   },
   { 
     name: 'Try', 
     description: 'New experiences and exciting discoveries',
     image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=800&q=80',
-    icon: '✨'
+    icon: '✨',
+    type: 'retreat'
   },
   { 
     name: 'Group', 
     description: 'Group retreats and team experiences',
     image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
-    icon: '👥'
+    icon: '👥',
+    type: 'retreat'
   },
   { 
     name: 'Couple', 
     description: 'Romantic retreats and couple experiences',
     image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
-    icon: '💕'
+    icon: '💕',
+    type: 'retreat'
   }
 ];
 
@@ -184,52 +190,19 @@ export default function Home() {
               <h2 className="text-4xl font-bold text-gray-900 mb-4">Explore Happiness</h2>
             </div>
             
-            <div className="relative">
-              <div 
-                className="flex gap-5 overflow-x-auto pb-12 pt-8 px-8 -mx-8 scrollbar-hide"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none'
-                }}
-              >
-                {/* Experience Categories */}
-                {EXPERIENCE_CATEGORIES.map((category, index) => (
-                  <div
-                    key={`category-${category.name}`} 
-                    className="group animate-fade-in flex-shrink-0 w-72"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <Link 
-                      href={`/search?type=experiences&category=${encodeURIComponent(category.name)}`} 
-                      className="block relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:scale-105"
-                    >
-                      <div className="relative h-64">
-                        <img
-                          src={category.image}
-                          alt={`${category.name} experiences`}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            console.log('Category image failed to load:', target.src);
-                            // Fallback to a different image if the first one fails
-                            target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <div className="absolute top-4 right-4 text-4xl">{category.icon}</div>
-                      </div>
-                      
-                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <div className="mb-2">
-                          <h3 className="text-xl font-bold mb-1">{category.name}</h3>
-                          <p className="text-sm text-gray-200">Experiences</p>
-                        </div>
-                        <p className="text-sm text-gray-300">{category.description}</p>
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
+            {/* Simple Grid Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              {EXPERIENCE_CATEGORIES.map((category, index) => (
+                <CategoryCard
+                  key={category.name}
+                  name={category.name}
+                  description={category.description}
+                  image={category.image}
+                  icon={category.icon}
+                  type={category.type}
+                  index={index}
+                />
+              ))}
             </div>
           </div>
         </section>
@@ -244,7 +217,7 @@ export default function Home() {
             
             <div className="relative">
               <div 
-                className="flex gap-5 overflow-x-auto pb-12 pt-8 px-8 -mx-8 scrollbar-hide"
+                className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide"
                 style={{
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none'
@@ -307,63 +280,67 @@ export default function Home() {
                       mixedCards.push(
                         <div
                           key={`${isExperience ? 'experience' : 'retreat'}-${item.id || cardIndex}`}
-                    className="group animate-fade-in flex-shrink-0 w-72"
+                          className="group animate-fade-in flex-shrink-0 w-full sm:w-96 lg:w-[calc(50vw-2rem)] xl:w-[calc(25rem+1rem)] max-w-lg"
                           style={{ animationDelay: `${cardIndex * 0.1}s` }}
-                  >
-                    <div 
+                        >
+                          <div 
                             onClick={() => isExperience ? handleExperienceClick(item) : handleRetreatClick(item)}
-                      className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
-                    >
-                            <div className="relative h-48">
-                              <img
-                                src={getImageUrl(item, isExperience)}
-                                alt={item.title || (isExperience ? 'Experience' : 'Retreat')}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  console.log('Image failed to load:', target.src);
-                                  target.src = isExperience 
-                                    ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
-                                    : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
-                                }}
-                              />
-                        </div>
-                        
-                            <div className="p-6">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                                  isExperience 
-                                    ? 'text-green-600 bg-green-50' 
-                                    : 'text-blue-600 bg-blue-50'
-                                }`}>
-                                  {item.categories ? (
-                                    Array.isArray(item.categories) 
-                                      ? item.categories[0] 
-                                      : item.categories
-                                  ) : (
-                                    isExperience ? 'Experience' : 'Retreat'
-                                  )}
-                            </span>
-                          </div>
+                            className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-1"
+                          >
+                            <div className="flex flex-col md:flex-row h-48">
+                              {/* Image on the left */}
+                              <div className="relative w-full md:w-1/3 h-48 md:h-full">
+                                <img
+                                  src={getImageUrl(item, isExperience)}
+                                  alt={item.title || (isExperience ? 'Experience' : 'Retreat')}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    console.log('Image failed to load:', target.src);
+                                    target.src = isExperience 
+                                      ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                                      : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
+                                  }}
+                                />
+                              </div>
                               
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                                {item.title || (isExperience ? 'Experience' : 'Retreat')}
-                              </h3>
-                              
-                              <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                                {item.description || (isExperience ? 'Discover amazing experiences' : 'Discover amazing retreats')}
-                              </p>
-                              
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center text-gray-500 text-sm">
-                                  <MapPinIcon className="w-4 h-4 mr-1" />
-                                  <span>{item.location || 'Location TBD'}</span>
-                        </div>
-                                <div className="text-lg font-bold text-gray-900">
-                                  ₹{item.price ? item.price.toLocaleString() : '0'}
-                        </div>
-                      </div>
-                        </div>
+                              {/* Content on the right */}
+                              <div className="flex-1 p-6 flex flex-col justify-between">
+                                <div>
+                                  {/* Category */}
+                                  <div className="mb-2">
+                                    <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                                      isExperience 
+                                        ? 'text-green-600 bg-green-50' 
+                                        : 'text-blue-600 bg-blue-50'
+                                    }`}>
+                                      {item.mood || (isExperience ? 'Experience' : 'Retreat')}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Title */}
+                                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                    {item.title || (isExperience ? 'Experience' : 'Retreat')}
+                                  </h3>
+                                  
+                                  {/* Description */}
+                                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                    {item.description || (isExperience ? 'Discover amazing experiences' : 'Discover amazing retreats')}
+                                  </p>
+                                </div>
+                                
+                                {/* Bottom row: Location and Price */}
+                                <div className="flex items-center justify-between mt-auto">
+                                  <div className="flex items-center text-gray-500 text-sm">
+                                    <MapPinIcon className="w-4 h-4 mr-1" />
+                                    <span>{item.location || 'Location TBD'}</span>
+                                  </div>
+                                  <div className="text-lg font-bold text-gray-900">
+                                    ₹{item.price ? item.price.toLocaleString() : '0'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       );
@@ -379,69 +356,77 @@ export default function Home() {
                           id: `sample-exp-${mixedCards.length}`,
                           title: 'Mountain Adventure',
                           description: 'Experience breathtaking mountain views and thrilling adventures',
-                          location: 'Himalayas',
+                          location: 'Hyper-local',
+                          mood: 'Thrill',
                           price: 2500,
-                          categories: 'Mountain',
                           cover_image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
                         }
                       : {
                           id: `sample-retreat-${mixedCards.length}`,
                           title: 'Yoga Retreat',
                           description: 'Rejuvenate your mind and body with our peaceful yoga retreat',
-                          location: 'Rishikesh',
+                          location: 'Far-away retreats',
+                          mood: 'Soulful',
                           price: 5000,
-                          categories: 'Wellness',
                           cover_image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80'
                         };
                     
                     mixedCards.push(
                       <div
                         key={`sample-${isExperience ? 'experience' : 'retreat'}-${mixedCards.length}`}
-                    className="group animate-fade-in flex-shrink-0 w-72"
+                        className="group animate-fade-in flex-shrink-0 w-full sm:w-96 lg:w-[calc(50vw-2rem)] xl:w-[calc(25rem+1rem)] max-w-lg"
                         style={{ animationDelay: `${cardIndex * 0.1}s` }}
-                  >
+                      >
                         <div 
                           onClick={() => isExperience ? handleExperienceClick(sampleData) : handleRetreatClick(sampleData)}
-                      className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
-                    >
-                          <div className="relative h-48">
-                        <OptimizedImage 
-                              src={sampleData.cover_image}
-                              alt={sampleData.title}
-                          fill 
-                          className="object-cover group-hover:scale-110 transition-transform duration-500" 
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                        </div>
-                          
-                          <div className="p-6">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                                isExperience 
-                                  ? 'text-green-600 bg-green-50' 
-                                  : 'text-blue-600 bg-blue-50'
-                              }`}>
-                                {sampleData.categories}
-                              </span>
-                        </div>
+                          className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-1"
+                        >
+                          <div className="flex flex-col md:flex-row h-48">
+                            {/* Image on the left */}
+                            <div className="relative w-full md:w-1/3 h-48 md:h-full">
+                              <img
+                                src={sampleData.cover_image}
+                                alt={sampleData.title}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              />
+                            </div>
                             
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                              {sampleData.title}
-                            </h3>
-                            
-                            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                              {sampleData.description}
-                            </p>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center text-gray-500 text-sm">
-                                <MapPinIcon className="w-4 h-4 mr-1" />
-                                <span>{sampleData.location}</span>
-                      </div>
-                              <div className="text-lg font-bold text-gray-900">
-                                ₹{sampleData.price.toLocaleString()}
-                        </div>
-                        </div>
+                            {/* Content on the right */}
+                            <div className="flex-1 p-6 flex flex-col justify-between">
+                              <div>
+                                {/* Category */}
+                                <div className="mb-2">
+                                  <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                                    isExperience 
+                                      ? 'text-green-600 bg-green-50' 
+                                      : 'text-blue-600 bg-blue-50'
+                                  }`}>
+                                    {sampleData.mood}
+                                  </span>
+                                </div>
+                                
+                                {/* Title */}
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                  {sampleData.title}
+                                </h3>
+                                
+                                {/* Description */}
+                                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                  {sampleData.description}
+                                </p>
+                              </div>
+                              
+                              {/* Bottom row: Location and Price */}
+                              <div className="flex items-center justify-between mt-auto">
+                                <div className="flex items-center text-gray-500 text-sm">
+                                  <MapPinIcon className="w-4 h-4 mr-1" />
+                                  <span>{sampleData.location}</span>
+                                </div>
+                                <div className="text-lg font-bold text-gray-900">
+                                  ₹{sampleData.price.toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

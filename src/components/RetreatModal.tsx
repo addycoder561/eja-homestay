@@ -18,6 +18,7 @@ import {
   ShareIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  CheckIcon,
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -36,11 +37,10 @@ interface Retreat {
   description: string;
   price: number;
   location: string;
-  images: string[];
-  cover_image?: string;
-  categories?: string | string[];
+  categories: string[];
+  cover_image: string | null;
+  gallery: any | null; // JSONB
   unique_propositions?: string[];
-  subtitle?: string;
   host_name?: string;
   host_avatar?: string;
   host_bio?: string;
@@ -88,18 +88,217 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [canReview, setCanReview] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: '',
-    guests: 1,
-    specialRequests: ''
+    guests: 2,
+    specialRequests: '',
+    destination: '',
+    duration: 1,
+    budget: 'family comfort' as 'tight budget' | 'family comfort' | 'premium',
+    selectedRooms: [] as string[],
+    selectedExperiences: [] as string[],
+    selectedTransport: ''
   });
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [imageLoading, setImageLoading] = useState(true);
+  const [destinations, setDestinations] = useState<{state: string, cities: string[]}[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [experiences, setExperiences] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+  const [showRoomModal, setShowRoomModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<any>(null);
+  const [roomImageIndex, setRoomImageIndex] = useState(0);
+  const [roomImageIndices, setRoomImageIndices] = useState<{[key: string]: number}>({});
+  const [showExperienceModal, setShowExperienceModal] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
 
   // Build images list
-  const images = retreat ? buildCoverFirstImages(retreat.cover_image, retreat.images) : [];
+  const images = retreat ? buildCoverFirstImages(retreat.cover_image, retreat.gallery) : [];
+
+  // Fetch destinations, rooms, and experiences
+  useEffect(() => {
+    const fetchBookingData = async () => {
+      if (!retreat || !showBookingForm) return;
+      
+      setLoadingData(true);
+      try {
+        // Fetch cities and states from properties
+        const { data: locationsData } = await supabase
+          .from('properties')
+          .select('city, state')
+          .not('city', 'is', null)
+          .not('state', 'is', null);
+        
+        // Group cities by state
+        const groupedData: {[key: string]: string[]} = {};
+        locationsData?.forEach(location => {
+          if (location.state && location.city) {
+            if (!groupedData[location.state]) {
+              groupedData[location.state] = [];
+            }
+            if (!groupedData[location.state].includes(location.city)) {
+              groupedData[location.state].push(location.city);
+            }
+          }
+        });
+        
+        // Convert to array and sort
+        const destinationsArray = Object.keys(groupedData)
+          .sort()
+          .map(state => ({
+            state,
+            cities: groupedData[state].sort()
+          }));
+        
+        setDestinations(destinationsArray);
+
+        // First, let's check what price ranges exist in the database
+        const { data: allProperties, error: allPropertiesError } = await supabase
+          .from('properties')
+          .select('id, title, base_price, is_available')
+          .eq('is_available', true);
+        
+        
+        
+        // Fetch properties based on budget (using base price from search page)
+        const budgetRanges = {
+          'tight budget': { min: 1500, max: 2500 },
+          'family comfort': { min: 2501, max: 5000 },
+          'premium': { min: 5001, max: 7500 }
+        };
+        
+        const range = budgetRanges[bookingForm.budget];
+        const { data: propertiesData, error: propertiesError } = await supabase
+          .from('properties')
+          .select(`
+            id,
+            title,
+            base_price,
+            cover_image,
+            gallery,
+            amenities,
+            address,
+            city,
+            state,
+            is_available
+          `)
+          .eq('is_available', true)
+          .gte('base_price', range.min)
+          .lte('base_price', range.max);
+        
+        
+        // Convert properties to room-like format for the modal
+        if (propertiesData && propertiesData.length > 0) {
+          const roomFormatProperties = propertiesData.map(property => ({
+            id: property.id,
+            name: property.title,
+            room_type: 'Property',
+            price_per_night: property.base_price,
+            amenities: property.amenities || [],
+            property_id: property.id,
+            properties: {
+              id: property.id,
+              title: property.title,
+              cover_image: property.cover_image,
+              gallery: property.gallery || []
+            }
+          }));
+          setRooms(roomFormatProperties);
+        } else {
+          // If no properties found in budget range, try to fetch all available properties as fallback
+          const { data: fallbackProperties, error: fallbackError } = await supabase
+            .from('properties')
+            .select(`
+              id,
+              title,
+              base_price,
+              cover_image,
+              gallery,
+              amenities,
+              address,
+              city,
+              state,
+              is_available
+            `)
+            .eq('is_available', true)
+            .limit(10);
+          
+          if (fallbackProperties && fallbackProperties.length > 0) {
+            const roomFormatProperties = fallbackProperties.map(property => ({
+              id: property.id,
+              name: property.title,
+              room_type: 'Property',
+              price_per_night: property.base_price,
+              amenities: property.amenities || [],
+              property_id: property.id,
+              properties: {
+                id: property.id,
+                title: property.title,
+                cover_image: property.cover_image,
+                gallery: property.gallery || []
+              }
+            }));
+            setRooms(roomFormatProperties);
+          } else {
+            setRooms([]);
+          }
+        }
+
+        // Fetch experiences based on budget
+        const { data: experiencesData, error: experiencesError } = await supabase
+          .from('retreat_experiences')
+          .select('*')
+          .eq('experience_type', bookingForm.budget)
+          .eq('is_active', true);
+        
+        
+        // If no experiences found, try to fetch all experiences for this retreat to see what's available
+        if (!experiencesData || experiencesData.length === 0) {
+          const { data: allExperiences } = await supabase
+            .from('retreat_experiences')
+            .select('*')
+            .eq('retreat_id', retreat.id);
+          console.log('All experiences for this retreat:', allExperiences);
+          
+          // Add sample experiences for testing
+          const sampleExperiences = [
+            {
+              id: 'sample-exp-1',
+              title: 'Morning Yoga Session',
+              description: 'Start your day with a peaceful yoga session in nature',
+              experience_type: bookingForm.budget
+            },
+            {
+              id: 'sample-exp-2',
+              title: 'Guided Nature Walk',
+              description: 'Explore the beautiful surroundings with an expert guide',
+              experience_type: bookingForm.budget
+            },
+            {
+              id: 'sample-exp-3',
+              title: 'Meditation Workshop',
+              description: 'Learn mindfulness techniques in a serene environment',
+              experience_type: bookingForm.budget
+            }
+          ];
+          console.log('Using sample experiences:', sampleExperiences);
+          setExperiences(sampleExperiences);
+        } else {
+          setExperiences(experiencesData);
+        }
+      } catch (error) {
+        console.error('Error fetching booking data:', error);
+        toast.error('Failed to load booking options');
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    if (showBookingForm) {
+      fetchBookingData();
+    }
+  }, [retreat, showBookingForm, bookingForm.budget]);
 
   // Fetch reviews
   useEffect(() => {
@@ -185,7 +384,17 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
       setReviewRating(5);
       setReviewForm({ name: '', email: '' });
       setCanReview(false);
-      setBookingForm({ date: '', guests: 1, specialRequests: '' });
+      setBookingForm({ 
+        date: '', 
+        guests: 2, 
+        specialRequests: '', 
+        destination: '', 
+        duration: 1, 
+        budget: 'family comfort', 
+        selectedRooms: [], 
+        selectedExperiences: [], 
+        selectedTransport: '' 
+      });
       setShowCalendar(false);
       setImageLoading(true);
     }
@@ -353,7 +562,17 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
             if (bookingRes.ok) {
               toast.success('Retreat booked successfully!');
               setShowBookingForm(false);
-              setBookingForm({ date: '', guests: 1, specialRequests: '' });
+              setBookingForm({ 
+                date: '', 
+                guests: 2, 
+                specialRequests: '', 
+                destination: '', 
+                duration: 1, 
+                budget: 'family comfort', 
+                selectedRooms: [], 
+                selectedExperiences: [], 
+                selectedTransport: '' 
+              });
             } else {
               throw new Error('Failed to create booking');
             }
@@ -385,6 +604,53 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     if (reviews.length === 0) return 0;
     const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
     return sum / reviews.length;
+  };
+
+  // Calculate pricing based on budget and selections
+  const calculatePricing = () => {
+    if (!retreat) return { basePrice: 0, totalPrice: 0, breakdown: {} };
+
+    const basePrice = retreat.price; // Family comfort base price (for 2 adults)
+    const durationMultiplier = bookingForm.duration;
+    
+    // Budget adjustments
+    const budgetMultipliers = {
+      'tight budget': 0.7, // 30% discount
+      'family comfort': 1.0, // Base price
+      'premium': 1.3 // 30% premium
+    };
+    
+    const budgetMultiplier = budgetMultipliers[bookingForm.budget];
+    const adjustedBasePrice = basePrice * budgetMultiplier;
+    
+    // Hotel industry pricing: base price covers up to 2 guests, pro-rata for additional guests
+    const guestCount = bookingForm.guests;
+    const additionalGuests = Math.max(0, guestCount - 2); // Additional guests beyond 2
+    
+    // Base price covers up to 2 guests (no multiplication)
+    const basePriceForStay = adjustedBasePrice;
+    // Additional guests pay 50% of base price each
+    const additionalPrice = additionalGuests > 0 ? (adjustedBasePrice * 0.5 * additionalGuests) : 0;
+    
+    // Total price for the stay (before duration multiplier)
+    const stayPrice = basePriceForStay + additionalPrice;
+    // Apply duration multiplier
+    const totalPrice = stayPrice * durationMultiplier;
+    
+    return {
+      basePrice: adjustedBasePrice,
+      totalPrice,
+      breakdown: {
+        basePrice: basePrice,
+        budgetAdjustment: budgetMultiplier,
+        duration: durationMultiplier,
+        guests: guestCount,
+        baseGuests: 2,
+        additionalGuests: additionalGuests,
+        additionalPricePerGuest: adjustedBasePrice * 0.5,
+        stayPrice: stayPrice
+      }
+    };
   };
 
   const getCategoryIcon = (category: string | string[]) => {
@@ -892,11 +1158,12 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                   </div>
                 </div>
               ) : (
-                /* Booking Form */
+                /* New Comprehensive Booking Form */
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">Book this retreat</h3>
+                      <p className="text-sm text-gray-600 mt-1">Customize your retreat experience</p>
                     </div>
                     <button
                       onClick={() => setShowBookingForm(false)}
@@ -906,19 +1173,31 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                     </button>
                   </div>
 
-                  <form onSubmit={handleBookingSubmit} className="space-y-4">
-                    {/* Date and Guest Selection - Side by Side */}
+                  {loadingData ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <span className="ml-3 text-gray-600">Loading options...</span>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleBookingSubmit} className="space-y-6">
+                      {/* Step 1: Basic Information */}
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+                          Basic Information
+                        </h4>
+                        
                     <div className="grid grid-cols-2 gap-4">
                       {/* Date Selection */}
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 h-32 flex flex-col">
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
                         <label className="block text-sm font-semibold text-gray-900 mb-2">
                           Select Date
                         </label>
-                        <div className="relative flex-1">
+                            <div className="relative">
                           <button
                             type="button"
                             onClick={() => setShowCalendar(!showCalendar)}
-                            className="w-full h-full text-base py-3 px-3 pr-10 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer text-left flex items-center justify-between"
+                                className="w-full text-base py-3 px-3 pr-10 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer text-left flex items-center justify-between"
                           >
                             <span className={bookingForm.date ? 'text-gray-900' : 'text-gray-500'}>
                               {bookingForm.date 
@@ -1014,33 +1293,23 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                             </div>
                           )}
                         </div>
-                        <div className="mt-2 text-xs text-gray-600">
-                          {bookingForm.date ? new Date(bookingForm.date).toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          }) : 'Choose date'}
-                        </div>
                       </div>
                       
                       {/* Guest Selection */}
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100 h-32 flex flex-col">
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
                         <label className="block text-sm font-semibold text-gray-900 mb-2">
                           Number of Guests
                         </label>
-                        <div className="relative flex-1">
+                            <div className="relative">
                           <select
                             value={bookingForm.guests}
                             onChange={e => setBookingForm(prev => ({ ...prev, guests: Number(e.target.value) }))}
                             required
-                            className="w-full text-base py-3 px-3 pr-10 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer appearance-none"
-                            style={{ 
-                              color: '#111827',
-                              fontWeight: '500'
-                            }}
-                          >
-                            {Array.from({ length: 8 }, (_, i) => i + 1).map(num => (
-                              <option key={num} value={num} style={{ color: '#111827', fontWeight: '500', padding: '8px' }}>
+                                className="w-full text-base py-3 px-3 pr-10 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer appearance-none text-gray-900 font-medium"
+                                style={{ color: '#111827', fontWeight: '500' }}
+                              >
+                                {Array.from({ length: 7 }, (_, i) => i + 2).map(num => (
+                                  <option key={num} value={num} style={{ color: '#111827', fontWeight: '500' }}>
                                 {num} {num === 1 ? 'Guest' : 'Guests'}
                               </option>
                             ))}
@@ -1050,39 +1319,227 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                           </div>
                         </div>
                         <div className="mt-2 text-xs text-gray-600">
-                          Max 8 guests
+                              Max 8 guests (2-8 guests)
+                            </div>
                         </div>
                       </div>
                     </div>
                     
-                    {/* Special Requests */}
-                    <div className="bg-gray-50 rounded-xl p-4">
+                      {/* Step 2: Destination */}
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                          Destination
+                        </h4>
+                        
+                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
                       <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Special Requests
+                            Choose Destination
                       </label>
+                          <select
+                            value={bookingForm.destination}
+                            onChange={e => setBookingForm(prev => ({ ...prev, destination: e.target.value }))}
+                            required
+                            className="w-full text-base py-3 px-3 pr-10 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-200 focus:border-purple-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer appearance-none text-gray-900 font-medium"
+                            style={{ color: '#111827', fontWeight: '500' }}
+                          >
+                            <option value="" style={{ color: '#6B7280', fontWeight: '500' }}>Select a destination</option>
+                            {destinations.map(stateGroup => (
+                              <optgroup key={stateGroup.state} label={stateGroup.state} style={{ fontWeight: '600', color: '#374151' }}>
+                                {stateGroup.cities.map(city => (
+                                  <option key={`${stateGroup.state}-${city}`} value={city} style={{ color: '#111827', fontWeight: '500', paddingLeft: '20px' }}>
+                                    {city}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Step 3: Duration */}
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                          Duration
+                        </h4>
+                        
+                        <div className="grid grid-cols-3 gap-3">
+                          {[1, 3, 5].map(days => (
+                            <button
+                              key={days}
+                              type="button"
+                              onClick={() => setBookingForm(prev => ({ ...prev, duration: days }))}
+                              className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                                bookingForm.duration === days
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                              }`}
+                            >
+                              <div className="text-lg font-semibold">{days} Day{days > 1 ? 's' : ''}</div>
+                              <div className="text-sm text-gray-600">
+                                {days === 1 ? 'Quick getaway' : days === 3 ? 'Weekend retreat' : 'Extended stay'}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Step 4: Budget */}
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</span>
+                          Budget Category
+                        </h4>
+                        
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { key: 'tight budget', label: 'Tight Budget', color: 'green' },
+                            { key: 'family comfort', label: 'Family Comfort', color: 'blue' },
+                            { key: 'premium', label: 'Premium', color: 'purple' }
+                          ].map(({ key, label, color }) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setBookingForm(prev => ({ ...prev, budget: key as any }))}
+                              className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                                bookingForm.budget === key
+                                  ? `border-${color}-500 bg-${color}-50 text-${color}-700`
+                                  : `border-gray-200 bg-white text-gray-700 hover:border-${color}-300 hover:bg-${color}-50`
+                              }`}
+                            >
+                              <div className="text-lg font-semibold">{label}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Step 5: Room Selection (only shown after budget selection) */}
+                      {bookingForm.budget && (
+                        <div className="space-y-4">
+                          <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">5</span>
+                            Property Selection
+                          </h4>
+                          
+                          <div className="bg-gray-50 rounded-xl p-4">
+                            <div className="text-sm text-gray-600 mb-3">
+                              Choose your accommodation
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowRoomModal(true)}
+                              className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
+                            >
+                              <div className="text-gray-600 font-medium">
+                                {selectedRoom ? `Selected: ${selectedRoom.name || selectedRoom.room_type}` : 'Select a property'}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                Click to browse available properties
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 6: Experience Selection (only shown after budget selection) */}
+                      {bookingForm.budget && (
+                        <div className="space-y-4">
+                          <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">6</span>
+                            Experience Selection
+                          </h4>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setShowExperienceModal(true)}
+                            className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-left"
+                          >
+                            <div className="text-gray-600 font-medium mb-2">
+                              {bookingForm.selectedExperiences.length > 0 
+                                ? `Selected ${bookingForm.selectedExperiences.length} experiences` 
+                                : 'Select experiences'
+                              }
+                            </div>
+                            {bookingForm.selectedExperiences.length > 0 ? (
+                              <div className="space-y-1">
+                                {bookingForm.selectedExperiences.map(experienceId => {
+                                  const experience = experiences.find(exp => exp.id === experienceId);
+                                  return experience ? (
+                                    <div key={experienceId} className="text-sm text-gray-700 bg-blue-50 px-2 py-1 rounded">
+                                      • {experience.title}
+                                    </div>
+                                  ) : null;
+                                })}
+                                <div className="text-xs text-blue-600 mt-2">
+                                  Click to modify selection
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-500">
+                                Click to browse available experiences ({experiences.length} available)
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Special Requests */}
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">7</span>
+                          Special Requests
+                        </h4>
+                        
+                        <div className="bg-gray-50 rounded-xl p-4">
                       <textarea
-                        rows={2}
+                            rows={3}
                         value={bookingForm.specialRequests}
                         onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm transition-all"
                         placeholder="Any dietary restrictions, accessibility needs, or special requirements..."
                       />
+                        </div>
                     </div>
 
                     {/* Price Summary */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-700 font-medium">Price per person</span>
-                        <span className="text-lg font-semibold text-gray-900">₹{retreat.price?.toLocaleString()}</span>
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Price Breakdown</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Base price (for 2 adults)</span>
+                            <span className="font-semibold text-gray-900">₹{retreat.price?.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-700 font-medium">Number of guests</span>
-                        <span className="text-lg font-semibold text-gray-900">{bookingForm.guests}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Budget adjustment ({bookingForm.budget})</span>
+                            <span className="font-semibold text-gray-900">
+                              {bookingForm.budget === 'tight budget' ? '-30%' : 
+                               bookingForm.budget === 'family comfort' ? 'Base' : '+30%'}
+                            </span>
+                          </div>
+                          {calculatePricing().breakdown.additionalGuests > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">Additional guests ({calculatePricing().breakdown.additionalGuests})</span>
+                              <span className="font-semibold text-gray-900">
+                                ₹{calculatePricing().breakdown.additionalPricePerGuest.toLocaleString()} each
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Duration</span>
+                            <span className="font-semibold text-gray-900">{bookingForm.duration} day{bookingForm.duration > 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Total guests</span>
+                            <span className="font-semibold text-gray-900">{bookingForm.guests}</span>
                       </div>
                       <div className="border-t border-blue-200 pt-2">
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-bold text-gray-900">Total Price</span>
-                          <span className="text-xl font-bold text-blue-600">₹{(retreat.price * bookingForm.guests).toLocaleString()}</span>
+                              <span className="text-xl font-bold text-blue-600">
+                                ₹{calculatePricing().totalPrice.toLocaleString()}
+                              </span>
+                            </div>
                         </div>
                       </div>
                     </div>
@@ -1092,7 +1549,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                       type="submit" 
                       variant="primary"
                       size="lg"
-                      disabled={bookingLoading || !bookingForm.date || bookingForm.guests < 1}
+                        disabled={bookingLoading || !bookingForm.date || bookingForm.guests < 2 || !bookingForm.destination}
                       className="w-full py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       {bookingLoading ? (
@@ -1108,6 +1565,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                       )}
                     </Button>
                   </form>
+                  )}
                 </div>
               )}
             </div>
@@ -1133,6 +1591,327 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           </div>
         </div>
       </div>
+
+      {/* Room Selection Modal */}
+      {showRoomModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">Select Your Property</h3>
+                <p className="text-gray-600 mt-1">
+                  Choose from {rooms.length} available properties in your {bookingForm.budget} category
+                </p>
+                {rooms.length === 0 && (
+                  <p className="text-sm text-orange-600 mt-1">
+                    ⚠️ No properties found for this budget category
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowRoomModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Room Grid */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {rooms.map((room) => {
+                  return (
+                  <div
+                    key={room.id}
+                    onClick={() => {
+                      setSelectedRoom(room);
+                      setBookingForm(prev => ({ ...prev, selectedRooms: [room.id] }));
+                      setShowRoomModal(false);
+                    }}
+                    className={`cursor-pointer rounded-xl border-2 transition-all duration-200 ${
+                      selectedRoom?.id === room.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300 hover:shadow-lg'
+                    }`}
+                  >
+                    {/* Room Image with Carousel */}
+                    <div className="relative h-48 rounded-t-xl overflow-hidden group bg-gray-200">
+                      <Image
+                        src={room.properties?.gallery?.[roomImageIndices[room.id] || 0] || room.properties?.cover_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop'}
+                        alt={room.room_type}
+                        fill
+                        className="object-cover transition-all duration-300"
+                        onError={(e) => {
+                          console.log('Image failed to load, using fallback');
+                          // Fallback to a working image
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop';
+                        }}
+                        onLoad={() => console.log('Image loaded successfully for room:', room.room_type)}
+                      />
+                      
+                      {/* Property Badge */}
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-semibold text-gray-900">
+                        Property
+                      </div>
+                      
+                      {/* Image Navigation Arrows */}
+                      {room.properties?.gallery && room.properties.gallery.length > 1 && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const currentIndex = roomImageIndices[room.id] || 0;
+                              const newIndex = currentIndex > 0 ? currentIndex - 1 : room.properties.gallery.length - 1;
+                              setRoomImageIndices(prev => ({ ...prev, [room.id]: newIndex }));
+                            }}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          >
+                            <ChevronLeftIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const currentIndex = roomImageIndices[room.id] || 0;
+                              const newIndex = currentIndex < room.properties.gallery.length - 1 ? currentIndex + 1 : 0;
+                              setRoomImageIndices(prev => ({ ...prev, [room.id]: newIndex }));
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          >
+                            <ChevronRightIcon className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      
+                      {/* Image Indicators */}
+                      {room.properties?.gallery && room.properties.gallery.length > 1 && (
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+                          {room.properties.gallery.map((_, index) => (
+                            <div
+                              key={index}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                (roomImageIndices[room.id] || 0) === index ? 'bg-white' : 'bg-white/50'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Room Details */}
+                    <div className="p-4">
+                      <h4 className="font-semibold text-lg text-gray-900 mb-1">{room.name || room.room_type}</h4>
+                      <p className="text-sm text-gray-500 mb-3">{room.properties?.title || 'Property Name'}</p>
+                      
+                      {/* Amenities */}
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-gray-700">Amenities:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {(room.amenities || []).slice(0, 4).map((amenity: string, index: number) => (
+                            <span
+                              key={index}
+                              className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full"
+                            >
+                              {amenity}
+                            </span>
+                          ))}
+                          {(room.amenities || []).length > 4 && (
+                            <span className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                              +{(room.amenities || []).length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+
+              {rooms.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-lg font-medium">No rooms available</div>
+                  <div className="text-sm mt-1">Try selecting a different budget category</div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 p-6">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  {selectedRoom ? `Selected: ${selectedRoom.name}` : 'No room selected'}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowRoomModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setShowRoomModal(false)}
+                    disabled={!selectedRoom}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Confirm Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Experience Selection Modal */}
+      {showExperienceModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">Select Your Experiences</h3>
+                <p className="text-gray-600 mt-1">
+                  Choose up to 3 experiences from {experiences.length} available in your {bookingForm.budget} category
+                </p>
+                {experiences.length > 0 && experiences[0].id.startsWith('sample-') && (
+                  <p className="text-sm text-orange-600 mt-1">
+                    ⚠️ Showing sample data - no real experiences found in database
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowExperienceModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Experience Grid */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {experiences.map((experience) => {
+                  const isSelected = bookingForm.selectedExperiences.includes(experience.id);
+                  const canSelect = !isSelected && bookingForm.selectedExperiences.length < 3;
+                  
+                  return (
+                    <div
+                      key={experience.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setBookingForm(prev => ({
+                            ...prev,
+                            selectedExperiences: prev.selectedExperiences.filter(id => id !== experience.id)
+                          }));
+                        } else if (canSelect) {
+                          setBookingForm(prev => ({
+                            ...prev,
+                            selectedExperiences: [...prev.selectedExperiences, experience.id]
+                          }));
+                        }
+                      }}
+                      className={`relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:scale-105 ${
+                        isSelected
+                          ? 'ring-4 ring-blue-500 ring-opacity-50'
+                          : canSelect
+                          ? 'hover:shadow-xl'
+                          : 'opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      {/* Experience Image */}
+                      <div className="relative h-48 bg-gray-200">
+                        <Image
+                          src={experience.cover_image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
+                          alt={experience.title}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        
+                        {/* Selection Indicator */}
+                        <div className="absolute top-3 right-3">
+                          {isSelected ? (
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                              <CheckIcon className="w-5 h-5 text-white" />
+                            </div>
+                          ) : canSelect ? (
+                            <div className="w-8 h-8 border-2 border-white rounded-full bg-white/20 backdrop-blur-sm" />
+                          ) : (
+                            <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                              <XMarkIcon className="w-5 h-5 text-white" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Experience Type Badge */}
+                        <div className="absolute top-3 left-3">
+                          <span className="bg-white/90 backdrop-blur-sm text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                            {experience.experience_type}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Experience Content */}
+                      <div className="p-4">
+                        <h4 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">{experience.title}</h4>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{experience.description}</p>
+                        
+                        {/* Experience Details */}
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="w-4 h-4" />
+                            <span>2-3 hrs</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <UsersIcon className="w-4 h-4" />
+                            <span>Small group</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {experiences.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-lg font-medium">No experiences available</div>
+                  <div className="text-sm">for this budget category</div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <div className="text-sm text-gray-600">
+                {bookingForm.selectedExperiences.length > 0 
+                  ? `${bookingForm.selectedExperiences.length} experiences selected`
+                  : 'No experiences selected'
+                }
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowExperienceModal(false)}
+                  className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowExperienceModal(false)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Confirm Selection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

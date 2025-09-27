@@ -410,14 +410,14 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-2xl font-bold text-gray-900">₹{property.price_per_night}</h3>
+            <h3 className="text-2xl font-bold text-gray-900">₹{property.base_price}</h3>
             <div className="flex items-center gap-1 text-sm text-gray-600">
               <span>per night</span>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <StarIcon className="w-4 h-4 text-yellow-500 fill-current" />
-            <span>{property.google_rating || 4.5}</span>
+            <span>{property.google_average_rating || 4.5}</span>
             <span>•</span>
             <span>{property.google_reviews_count || 0} reviews</span>
           </div>

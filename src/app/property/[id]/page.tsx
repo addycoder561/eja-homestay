@@ -143,16 +143,10 @@ function DescriptionModal({ isOpen, onClose, description }: { isOpen: boolean; o
 // Room Type Component
 function RoomTypeCard({ 
   room, 
-  property,
-  onQuantityChange, 
-  selectedQuantity = 0,
-  maxAvailable = 1
+  property
 }: { 
   room: Room; 
   property: PropertyWithReviews;
-  onQuantityChange: (quantity: number) => void;
-  selectedQuantity?: number;
-  maxAvailable?: number;
 }) {
   return (
     <div className="border border-gray-200 rounded-2xl p-6 bg-white hover:shadow-lg transition-all duration-300">
@@ -161,11 +155,11 @@ function RoomTypeCard({
           <div className="relative h-32 rounded-lg overflow-hidden">
             <Image 
               src={
-                room.images && room.images.length > 0 
-                  ? room.images[0] 
-                  : property.images && property.images.length > 0 
-                    ? property.images[0] 
-                    : '/placeholder-experience.jpg'
+                room.cover_image || 
+                (room.gallery && Array.isArray(room.gallery) && room.gallery.length > 0 ? room.gallery[0] : null) ||
+                property.cover_image || 
+                (property.gallery && Array.isArray(property.gallery) && property.gallery.length > 0 ? property.gallery[0] : null) ||
+                '/placeholder-experience.jpg'
               } 
               alt={room.name} 
               fill 
@@ -195,18 +189,6 @@ function RoomTypeCard({
             <div className="text-sm text-gray-600">
               <span className="font-semibold">Capacity:</span> Up to {room.max_guests} guests
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Quantity:</span>
-              <select
-                value={selectedQuantity}
-                onChange={(e) => onQuantityChange(Number(e.target.value))}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
-              >
-                {Array.from({ length: maxAvailable + 1 }, (_, i) => (
-                  <option key={i} value={i}>{i}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
       </div>
@@ -214,324 +196,6 @@ function RoomTypeCard({
   );
 }
 
-// Simplified Booking Form Component
-function SimplifiedBookingForm({ 
-  property, 
-  rooms, 
-  roomSelections,
-  onRoomQuantityChange
-}: { 
-  property: PropertyWithReviews;
-  rooms: Room[];
-  roomSelections: Record<string, number>;
-  onRoomQuantityChange: (roomId: string, quantity: number) => void;
-}) {
-  console.log('🔍 SimplifiedBookingForm is rendering!');
-  console.log('🔍 Property:', property);
-  console.log('🔍 Rooms:', rooms);
-  
-  const { user, profile } = useAuth();
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
-  const [specialRequests, setSpecialRequests] = useState('');
-
-  useEffect(() => {
-    const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-    const dayAfter = format(addDays(new Date(), 2), 'yyyy-MM-dd');
-    setCheckIn(tomorrow);
-    setCheckOut(dayAfter);
-  }, []);
-
-  const calculateNights = () => {
-    if (!checkIn || !checkOut) return 0;
-    return differenceInDays(new Date(checkOut), new Date(checkIn));
-  };
-
-  // Calculate selected room price (price A from left side)
-  const calculateSelectedRoomPrice = () => {
-    let totalPrice = 0;
-    Object.entries(roomSelections).forEach(([roomId, quantity]) => {
-      const room = rooms.find(r => r.id === roomId);
-      if (room && quantity > 0) {
-        totalPrice += room.price * quantity;
-      }
-    });
-    return totalPrice;
-  };
-
-  // Calculate final total price (selected rooms × nights)
-  const calculateTotalPrice = () => {
-    const selectedRoomPrice = calculateSelectedRoomPrice();
-    const nights = calculateNights();
-    if (nights <= 0 || selectedRoomPrice <= 0) return 0;
-    return selectedRoomPrice * nights;
-  };
-
-  // Get display price (selected room price or base property price)
-  const getDisplayPrice = () => {
-    const selectedRoomPrice = calculateSelectedRoomPrice();
-    return selectedRoomPrice > 0 ? selectedRoomPrice : (property.price_per_night || 0);
-  };
-
-  return (
-    <Card className="sticky top-8 bg-white shadow-xl border-0">
-      {/* TEST BUTTON - Should be visible */}
-      <div style={{ position: 'fixed', top: '10px', left: '10px', zIndex: 9999 }}>
-        <button
-          onClick={() => {
-            console.log('🔍 SIMPLIFIED BOOKING FORM TEST BUTTON CLICKED!');
-            console.log('🔍 User:', user);
-            console.log('🔍 Property:', property);
-            console.log('🔍 Rooms:', rooms);
-          }}
-          style={{
-            backgroundColor: 'green',
-            color: 'white',
-            padding: '10px',
-            border: 'none',
-            borderRadius: '5px',
-            fontSize: '16px',
-            fontWeight: 'bold'
-          }}
-        >
-          🟢 SIMPLIFIED TEST
-        </button>
-      </div>
-
-      <CardContent className="p-6">
-        <div className="text-center mb-6">
-          <div className="text-3xl font-bold text-gray-900">₹{getDisplayPrice()?.toLocaleString()}</div>
-          <div className="text-gray-600">per night</div>
-        </div>
-
-        <div className="space-y-4">
-          {/* Room Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Rooms</label>
-            <div className="space-y-2">
-              {rooms.map(room => (
-                <div key={room.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                  <div>
-                    <div className="font-medium text-gray-900">{room.name}</div>
-                    <div className="text-sm text-gray-600">₹{room.price}/night</div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        const currentQty = roomSelections[room.id] || 0;
-                        if (currentQty > 0) {
-                          onRoomQuantityChange(room.id, currentQty - 1);
-                        }
-                      }}
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                      disabled={(roomSelections[room.id] || 0) <= 0}
-                    >
-                      -
-                    </button>
-                    <span className="w-8 text-center font-medium">{roomSelections[room.id] || 0}</span>
-                    <button
-                      onClick={() => {
-                        const currentQty = roomSelections[room.id] || 0;
-                        onRoomQuantityChange(room.id, currentQty + 1);
-                      }}
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
-              <input
-                type="date"
-                value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
-              <input
-                type="date"
-                value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Guests */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
-              <select
-                value={adults}
-                onChange={(e) => setAdults(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {Array.from({ length: 10 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
-              <select
-                value={children}
-                onChange={(e) => setChildren(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {Array.from({ length: 6 }, (_, i) => (
-                  <option key={i} value={i}>{i}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Special Requests */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
-            <textarea
-              value={specialRequests}
-              onChange={(e) => setSpecialRequests(e.target.value)}
-              placeholder="Any special requests..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Total */}
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-gray-700">Total for {calculateNights()} nights</span>
-              <span className="text-xl font-bold text-gray-900">₹{calculateTotalPrice().toLocaleString()}</span>
-            </div>
-            
-            <Button 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl"
-              disabled={!user || calculateTotalPrice() === 0}
-              onClick={async () => {
-                console.log('🔍 Book Now button clicked!');
-                console.log('🔍 User:', user);
-                console.log('🔍 Property:', property);
-                console.log('🔍 Check-in:', checkIn);
-                console.log('🔍 Check-out:', checkOut);
-                console.log('🔍 Adults:', adults);
-                console.log('🔍 Children:', children);
-                console.log('🔍 Total price:', calculateTotalPrice());
-                
-                if (!user) {
-                  toast.error('Please sign in to book');
-                  return;
-                }
-
-                if (calculateTotalPrice() === 0) {
-                  toast.error('Please select at least one room');
-                  return;
-                }
-
-                // Test profile API - Use auth context instead of API
-                try {
-                  console.log('🔍 Profile data from auth context:', {
-                    user: user,
-                    profile: profile // This comes from useAuth context
-                  });
-                  
-                  // Also try the API as backup
-                  const res = await fetch('/api/user/profile', {
-                    credentials: 'include'
-                  });
-                  const data = await res.json();
-                  console.log('🔍 Profile API response:', data);
-                } catch (error) {
-                  console.error('🔍 Profile API error:', error);
-                }
-                
-                // Create Razorpay order
-                try {
-                  console.log('🔍 Creating Razorpay order...');
-                  const orderRes = await fetch('/api/payments/order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                      amount: Math.round(calculateTotalPrice() * 100), // Convert to paise
-                      currency: 'INR',
-                      notes: {
-                        type: 'homestay',
-                        propertyId: property.id,
-                        checkIn,
-                        checkOut,
-                        guests: adults + children
-                      }
-                    }),
-                  });
-                  
-                  if (!orderRes.ok) {
-                    throw new Error('Failed to create payment order');
-                  }
-                  
-                  const { order } = await orderRes.json();
-                  console.log('🔍 Razorpay order created:', order);
-                  
-                  // Initialize Razorpay
-                  const options = {
-                    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                    amount: order.amount,
-                    currency: order.currency,
-                    name: property.title,
-                    description: `Booking for ${calculateNights()} night${calculateNights() > 1 ? 's' : ''}`,
-                    order_id: order.id,
-                    handler: async function (response: any) {
-                      console.log('🔍 Payment successful!', response);
-                      toast.success('Payment successful! Booking confirmed.');
-                      // Here you would create the booking in the database
-                    },
-                    prefill: {
-                      email: user.email || '',
-                      name: profile?.full_name || user.user_metadata?.full_name || '',
-                    },
-                    theme: { color: '#2563eb' },
-                    modal: {
-                      ondismiss: function () {
-                        console.log('🔍 Payment modal dismissed');
-                        toast.error('Payment was cancelled');
-                      }
-                    }
-                  };
-
-                  // Check if Razorpay is loaded
-                  if (typeof window !== 'undefined' && (window as any).Razorpay) {
-                    console.log('🔍 Opening Razorpay payment modal...');
-                    const rzp = new (window as any).Razorpay(options);
-                    rzp.open();
-                  } else {
-                    console.error('🔍 Razorpay not loaded');
-                    toast.error('Payment gateway not loaded. Please refresh the page.');
-                  }
-                  
-                } catch (error) {
-                  console.error('🔍 Payment error:', error);
-                  toast.error('Failed to process payment. Please try again.');
-                }
-              }}
-            >
-              {user ? 'Book Now' : 'Sign in to Book'}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function GoogleMap({ lat, lng }: { lat: number; lng: number }) {
   return (
@@ -565,7 +229,6 @@ export default function PropertyDetailPage() {
   const [showPropertyDetails, setShowPropertyDetails] = useState(true);
   const [hostModalOpen, setHostModalOpen] = useState(false);
   const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
-  const [roomSelections, setRoomSelections] = useState<Record<string, number>>({});
 
   console.log('PropertyDetailPage propertyId:', propertyId);
 
@@ -648,23 +311,7 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleRoomQuantityChange = (roomId: string, quantity: number) => {
-    setRoomSelections(prev => ({
-      ...prev,
-      [roomId]: quantity
-    }));
-  };
 
-  const calculateTotalPrice = () => {
-    let total = 0;
-    Object.entries(roomSelections).forEach(([roomId, quantity]) => {
-      const room = rooms.find(r => r.id === roomId);
-      if (room && quantity > 0) {
-        total += room.price * quantity;
-      }
-    });
-    return total;
-  };
 
   if (loading) {
     return (
@@ -754,10 +401,13 @@ export default function PropertyDetailPage() {
 
         {/* Property Image Gallery */}
         <div className="mb-8">
-          <PropertyImageGallery 
-            images={(property.cover_image ? [property.cover_image, ...property.images] : property.images).filter((v, i, a) => v && a.indexOf(v) === i)} 
-            propertyTitle={property.title} 
-          />
+        <PropertyImageGallery 
+          images={[
+            property.cover_image,
+            ...(property.gallery && Array.isArray(property.gallery) ? property.gallery : [])
+          ].filter((v, i, a) => v && a.indexOf(v) === i)} 
+          propertyTitle={property.title} 
+        />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -839,7 +489,7 @@ export default function PropertyDetailPage() {
                         <div className="flex items-center text-yellow-500">
                           <StarIcon className="w-4 h-4 fill-current" />
                           <span className="text-sm text-gray-600 ml-1">
-                            {property.google_rating || property.average_rating || 4.5}
+                            {property.google_average_rating || property.average_rating || 4.5}
                           </span>
                           <span className="text-sm text-gray-500 ml-1">
                             ({property.google_reviews_count || property.review_count || 0} reviews)
@@ -1028,20 +678,9 @@ export default function PropertyDetailPage() {
                             key={room.id}
                             room={room}
                             property={property}
-                            selectedQuantity={roomSelections[room.id] || 0}
-                            maxAvailable={room.total_inventory || 1}
-                            onQuantityChange={(quantity) => handleRoomQuantityChange(room.id, quantity)}
                           />
                         ))}
                       </div>
-                      {Object.values(roomSelections).some(qty => qty > 0) && (
-                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-gray-900">Total Price:</span>
-                            <span className="text-2xl font-bold text-blue-600">₹{calculateTotalPrice().toLocaleString()}</span>
-                          </div>
-                        </div>
-                      )}
                     </>
                   )}
                 </CardContent>
@@ -1131,15 +770,34 @@ export default function PropertyDetailPage() {
 
         </div>
 
-          {/* Right Sidebar - Simplified Booking Form */}
+          {/* Right Sidebar - Property Info */}
           <div className="lg:col-span-1">
-            <SimplifiedBookingForm 
-              property={property} 
-              rooms={rooms}
-              roomSelections={roomSelections}
-              onRoomQuantityChange={handleRoomQuantityChange}
-            />
-                    </div>
+            <Card className="sticky top-8 bg-white shadow-xl border-0">
+              <CardContent className="p-6">
+                <div className="text-center mb-6">
+                  <div className="text-3xl font-bold text-gray-900">₹{property.base_price?.toLocaleString()}</div>
+                  <div className="text-gray-600">per night</div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-4">
+                      This property is available for booking through our retreat packages.
+                    </p>
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl"
+                      onClick={() => {
+                        // This could open a retreat modal or redirect to retreats page
+                        window.location.href = '/search?type=retreats';
+                      }}
+                    >
+                      View Retreat Packages
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
       

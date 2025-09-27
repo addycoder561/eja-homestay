@@ -45,7 +45,7 @@ export interface Property {
   postal_code: string | null;
   latitude: number | null;
   longitude: number | null;
-  price_per_night: number;
+  base_price: number;
   max_guests: number;
   bedrooms: number;
   bathrooms: number;
@@ -69,7 +69,7 @@ export interface Property {
       child_breakfast_price: number;
     }[];
   };
-  google_rating?: number | null;
+  google_average_rating?: number | null;
   google_reviews_count?: number | null;
   google_place_id?: string | null;
   google_last_updated?: string | null;
@@ -189,16 +189,16 @@ export interface Experience {
   id: string;
   host_id: string | null;
   title: string;
-  subtitle?: string | null;
   description: string | null;
-  location: string;
-  date: string; // YYYY-MM-DD
+  location: string; // 'Hyper-local', 'Online', 'Far-away retreats'
+  mood: string | null; // Consolidated categories/mood
   price: number;
-  images: string[];
-  cover_image?: string;
-  duration?: string;
-  categories?: string | string[];
+  duration_hours: number | null; // NULL for retreats, filled for experiences
+  cover_image: string | null;
+  gallery: any | null; // JSONB
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
   // Host-related fields
   host_name?: string;
   host_type?: string;
@@ -208,8 +208,6 @@ export interface Experience {
   host_usps?: string[];
   // Unique propositions
   unique_propositions?: string[];
-  created_at: string;
-  updated_at: string;
 }
 
 export interface Trip {
@@ -234,15 +232,15 @@ export interface Retreat {
   id: string;
   host_id: string | null;
   title: string;
-  subtitle?: string | null;
   description: string | null;
   location: string;
+  categories: string[];
   price: number;
-  images: string[];
-  cover_image?: string | null;
-  duration?: string;
-  categories?: string | string[];
+  cover_image: string | null;
+  gallery: any | null; // JSONB
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
   // Host-related columns
   host_name?: string | null;
   host_type?: string | null;
@@ -252,6 +250,15 @@ export interface Retreat {
   host_usps?: string[];
   // Retreat features
   unique_propositions?: string[];
+}
+
+export interface RetreatExperience {
+  id: string;
+  retreat_id: string;
+  title: string;
+  description?: string | null;
+  experience_type: 'tight budget' | 'family comfort' | 'premium';
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -295,34 +302,6 @@ export interface CardCollaboration {
   updated_at: string;
 }
 
-// Marketing: Ad campaigns and coupons
-export interface AdCampaign {
-  id: string;
-  title: string;
-  description?: string | null;
-  image_url?: string | null;
-  target_url?: string | null;
-  start_date?: string | null; // YYYY-MM-DD
-  end_date?: string | null;   // YYYY-MM-DD
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Coupon {
-  id: string;
-  code: string;
-  description?: string | null;
-  discount_type: 'percent' | 'amount';
-  discount_value: number;
-  max_uses?: number | null;
-  used_count: number;
-  valid_from?: string | null; // YYYY-MM-DD
-  valid_to?: string | null;   // YYYY-MM-DD
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
 
 // Razorpay TypeScript declarations
 declare global {

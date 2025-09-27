@@ -50,14 +50,14 @@ export default function ExperiencesPage() {
     setSelectedExperience(null);
   };
 
-  const getCategoryIcon = (category: string | string[]) => {
-    if (!category) return '🌟';
-    const categoryStr = Array.isArray(category) ? category[0] : category;
-    const categoryLower = categoryStr.toLowerCase();
-    if (categoryLower.includes('immersive')) return '🧘';
-    if (categoryLower.includes('playful')) return '🎮';
-    if (categoryLower.includes('culinary')) return '🍽️';
-    if (categoryLower.includes('meaningful')) return '❤️';
+  const getMoodIcon = (mood: string | null) => {
+    if (!mood) return '🌟';
+    const moodLower = mood.toLowerCase();
+    if (moodLower.includes('thrill') || moodLower.includes('adventure')) return '🧗';
+    if (moodLower.includes('chill') || moodLower.includes('playful')) return '🎮';
+    if (moodLower.includes('foodie') || moodLower.includes('culinary')) return '🍽️';
+    if (moodLower.includes('soulful') || moodLower.includes('meaningful')) return '❤️';
+    if (moodLower.includes('artistic') || moodLower.includes('creative')) return '🎨';
     return '🌟';
   };
 
@@ -131,7 +131,7 @@ export default function ExperiencesPage() {
                 {/* Image Section */}
                 <div className="relative h-48 overflow-hidden">
                   <OptimizedImage 
-                    src={experience.cover_image || (Array.isArray(experience.images) ? experience.images[0] : experience.images) || '/placeholder-experience.jpg'} 
+                    src={experience.cover_image || '/placeholder-experience.jpg'} 
                     alt={experience.title} 
                     fill 
                     className="object-cover group-hover:scale-110 transition-transform duration-500" 
@@ -139,11 +139,11 @@ export default function ExperiencesPage() {
                   />
                   
                   {/* Category Badge */}
-                  {experience.categories && (
+                  {experience.mood && (
                     <div className="absolute top-4 left-4 z-10">
                       <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
-                        <span className="text-lg">{getCategoryIcon(experience.categories)}</span>
-                        {Array.isArray(experience.categories) ? experience.categories[0] : experience.categories}
+                        <span className="text-lg">{getMoodIcon(experience.mood)}</span>
+                        {experience.mood}
                       </span>
                     </div>
                   )}
@@ -166,10 +166,10 @@ export default function ExperiencesPage() {
                       <MapPinIcon className="w-4 h-4" />
                       <span className="truncate">{experience.location}</span>
                     </div>
-                    {experience.duration && (
+                    {experience.duration_hours && (
                       <div className="flex items-center gap-1">
                         <ClockIcon className="w-4 h-4" />
-                        <span>{experience.duration}</span>
+                        <span>{experience.duration_hours}h</span>
                       </div>
                     )}
                   </div>

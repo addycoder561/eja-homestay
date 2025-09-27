@@ -7,20 +7,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Navigation } from '@/components/Navigation';
-import { Footer } from '@/components/Footer';
 import toast from 'react-hot-toast';
 
 export default function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialRole = searchParams.get('role') === 'host' ? 'host' : 'guest';
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    birthday: {
+      day: '',
+      month: '',
+      year: ''
+    },
+    gender: '',
     role: initialRole,
   });
   const [loading, setLoading] = useState(false);
@@ -53,7 +58,8 @@ export default function SignUpForm() {
     }
 
     try {
-      const result = await signUp(formData.email, formData.password, formData.fullName, formData.role as 'guest' | 'host');
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      const result = await signUp(formData.email, formData.password, fullName, formData.role as 'guest' | 'host');
       console.log('Signup result:', result); // DEBUG LOG
       if (!result.error) {
         toast.success('Account created and logged in!');
@@ -72,74 +78,172 @@ export default function SignUpForm() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
       <main className="max-w-md mx-auto py-12 px-4">
         <Card>
           <CardHeader>
-            <h1 className="text-2xl font-bold mb-2">Sign Up</h1>
-            <p className="text-gray-600">Create your account to get started</p>
+            <h1 className="text-3xl font-bold text-center mb-2 text-gray-900">Create a new account</h1>
           </CardHeader>
           <CardContent>
-            <Button
-              type="button"
-              className="w-full mb-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
-              onClick={() => signInWithGoogle(searchParams.get('redirect') ? `${window.location.origin}${searchParams.get('redirect')}` : undefined)}
-            >
-              <svg className="w-5 h-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C36.68 2.69 30.77 0 24 0 14.82 0 6.71 5.13 2.69 12.56l7.98 6.2C12.13 13.09 17.62 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.64 7.02l7.19 5.59C43.93 37.13 46.1 31.3 46.1 24.55z"/><path fill="#FBBC05" d="M10.67 28.13c-1.01-2.99-1.01-6.27 0-9.26l-7.98-6.2C.99 16.09 0 19.93 0 24c0 4.07.99 7.91 2.69 11.33l7.98-6.2z"/><path fill="#EA4335" d="M24 48c6.48 0 11.92-2.15 15.89-5.85l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.38 0-11.87-3.59-14.33-8.79l-7.98 6.2C6.71 42.87 14.82 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
-              Sign up with Google
-            </Button>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                type="text"
-                placeholder="Full Name"
-                value={formData.fullName}
-                onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-                required
-              />
+              {/* First Name and Last Name in one line */}
+              <div className="flex gap-4">
+                <Input
+                  type="text"
+                  placeholder="First Name"
+                  value={formData.firstName}
+                  onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+                  required
+                  className="flex-1"
+                />
+                <Input
+                  type="text"
+                  placeholder="Last Name"
+                  value={formData.lastName}
+                  onChange={e => setFormData({ ...formData, lastName: e.target.value })}
+                  required
+                  className="flex-1"
+                />
+              </div>
+
+              {/* Birthday in one line */}
+              <div className="flex gap-2">
+                <select
+                  value={formData.birthday.day}
+                  onChange={e => setFormData({ ...formData, birthday: { ...formData.birthday, day: e.target.value } })}
+                  required
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="" className="text-gray-500">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                    <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
+                <select
+                  value={formData.birthday.month}
+                  onChange={e => setFormData({ ...formData, birthday: { ...formData.birthday, month: e.target.value } })}
+                  required
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="" className="text-gray-500">Month</option>
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+                <select
+                  value={formData.birthday.year}
+                  onChange={e => setFormData({ ...formData, birthday: { ...formData.birthday, year: e.target.value } })}
+                  required
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                >
+                  <option value="" className="text-gray-500">Year</option>
+                  {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Gender in one line */}
+              <div className="flex gap-4">
+                <label className="flex items-center flex-1">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="female"
+                    checked={formData.gender === 'female'}
+                    onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-900 font-medium">Female</span>
+                </label>
+                <label className="flex items-center flex-1">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="male"
+                    checked={formData.gender === 'male'}
+                    onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-900 font-medium">Male</span>
+                </label>
+                <label className="flex items-center flex-1">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="custom"
+                    checked={formData.gender === 'custom'}
+                    onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-900 font-medium">Custom</span>
+                </label>
+              </div>
+
+              {/* Mobile or Email in one line */}
               <Input
                 type="email"
-                placeholder="Email"
+                placeholder="Mobile or Email"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                 required
                 error={emailError}
               />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
-              <Input
-                type="password"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
-                required
-              />
+
+              {/* New Password and Confirm Password in one line */}
               <div className="flex gap-4">
-                <label className="flex items-center">
+                <Input
+                  type="password"
+                  placeholder="New Password"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  className="flex-1"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={formData.confirmPassword}
+                  onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  required
+                  className="flex-1"
+                />
+              </div>
+
+              {/* Role Selection */}
+              <div className="flex gap-4">
+                <label className="flex items-center flex-1">
                   <input
                     type="radio"
                     name="role"
                     value="guest"
                     checked={formData.role === 'guest'}
                     onChange={() => setFormData({ ...formData, role: 'guest' })}
+                    className="mr-2"
                   />
-                  <span className="ml-2">Guest</span>
+                  <span className="text-gray-900 font-medium">Guest</span>
                 </label>
-                <label className="flex items-center">
+                <label className="flex items-center flex-1">
                   <input
                     type="radio"
                     name="role"
                     value="host"
                     checked={formData.role === 'host'}
                     onChange={() => setFormData({ ...formData, role: 'host' })}
+                    className="mr-2"
                   />
-                  <span className="ml-2">Host</span>
+                  <span className="text-gray-900 font-medium">Host</span>
                 </label>
               </div>
+
               <Button type="submit" className="w-full" loading={loading} disabled={loading}>
                 {loading ? 'Signing Up...' : 'Sign Up'}
               </Button>
@@ -153,7 +257,6 @@ export default function SignUpForm() {
           </CardContent>
         </Card>
       </main>
-      <Footer />
     </div>
   );
 } 

@@ -40,11 +40,14 @@ export function LiveRating({ propertyId, propertyTitle, size = 'md' }: LiveRatin
       setLoading(true);
       setError(null);
 
+      console.log('🔍 LiveRating - Fetching rating data for property:', propertyId);
+
       // 1. Fetch platform ratings from reviews table
       const { data: reviews, error: reviewsError } = await supabase
         .from('reviews')
         .select('rating')
-        .eq('property_id', propertyId);
+        .eq('item_id', propertyId)
+        .eq('review_type', 'property');
 
       if (reviewsError) {
         console.error('Error fetching reviews:', reviewsError);
@@ -57,10 +60,12 @@ export function LiveRating({ propertyId, propertyTitle, size = 'md' }: LiveRatin
         ? reviews.reduce((sum, review) => sum + review.rating, 0) / platformReviewCount
         : 0;
 
+      console.log('🔍 LiveRating - Platform rating:', platformRating, 'count:', platformReviewCount);
+
       // 2. Fetch Google ratings from properties table
       const { data: property, error: propertyError } = await supabase
         .from('properties')
-        .select('google_rating, google_reviews_count')
+        .select('google_average_rating, google_reviews_count')
         .eq('id', propertyId)
         .single();
 
@@ -70,10 +75,12 @@ export function LiveRating({ propertyId, propertyTitle, size = 'md' }: LiveRatin
         return;
       }
 
+      console.log('🔍 LiveRating - Google rating data:', property);
+
       setRatingData({
         platformRating,
         platformReviewCount,
-        googleRating: property?.google_rating || 0,
+        googleRating: property?.google_average_rating || 0,
         googleReviewCount: property?.google_reviews_count || 0
       });
 
@@ -148,8 +155,8 @@ export function LiveRating({ propertyId, propertyTitle, size = 'md' }: LiveRatin
         <span className={`text-gray-600 ml-1 ${sizeClasses[size]}`}>
           ({ratingData.googleReviewCount})
         </span>
-        <span className={`text-gray-500 ${sizeClasses[size]}`}>
-          Google
+        <span className={`text-blue-500 ${sizeClasses[size]} font-bold`}>
+          G
         </span>
       </div>
     );

@@ -14,9 +14,7 @@ import {
   Experience,
   Trip,
   BookingWithPropertyAndGuest,
-  CardCollaboration,
-  AdCampaign,
-  Coupon
+  CardCollaboration
 } from './types';
 
 // Profile functions
@@ -112,12 +110,11 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
 
 // Property functions
 export async function getProperties(filters?: SearchFilters): Promise<PropertyWithHost[]> {
+  console.log('🔍 DEBUG - getProperties called with filters:', filters);
+  
   let query = supabase
     .from('properties')
-    .select(`
-      *,
-      reviews(*)
-    `)
+    .select('*')
     .eq('is_available', true);
 
   if (filters?.location) {
@@ -125,11 +122,11 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
   }
 
   if (filters?.minPrice) {
-    query = query.gte('price_per_night', filters.minPrice);
+    query = query.gte('base_price', filters.minPrice);
   }
 
   if (filters?.maxPrice) {
-    query = query.lte('price_per_night', filters.maxPrice);
+    query = query.lte('base_price', filters.maxPrice);
   }
 
   if (filters?.propertyType) {
@@ -143,10 +140,11 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
     return [];
   }
 
+  console.log('🔍 DEBUG - getProperties found', data?.length || 0, 'properties');
+  console.log('🔍 DEBUG - First few properties:', data?.slice(0, 3).map(p => ({ id: p.id, title: p.title, is_available: p.is_available })));
+
   // Keep original platform ratings separate from Google ratings
   const propertiesWithRatings = (data || []).map(property => {
-    const reviews = property.reviews || [];
-    
     return {
       ...property,
       host: null, // Placeholder since we don't have host relationship
@@ -194,7 +192,7 @@ export async function getPropertyWithHost(id: string): Promise<PropertyWithHost 
 export async function getPropertyWithReviews(id: string): Promise<PropertyWithReviews | null> {
   const { data, error } = await supabase
     .from('properties')
-    .select(`*, reviews(*)`)
+    .select(`*`)
     .eq('id', id)
     .single();
 
@@ -205,12 +203,20 @@ export async function getPropertyWithReviews(id: string): Promise<PropertyWithRe
 
   if (!data) return null;
 
-  // Keep original platform ratings separate from Google ratings
-  const reviews = data.reviews || [];
+  // Fetch reviews separately
+  const { data: reviews, error: reviewsError } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('item_id', id)
+    .eq('review_type', 'property');
+
+  if (reviewsError) {
+    console.error('Error fetching reviews:', reviewsError);
+  }
 
   return {
     ...data,
-    reviews,
+    reviews: reviews || [],
     average_rating: data.average_rating || 0, // Keep original platform rating
     review_count: data.review_count || 0 // Keep original platform review count
   };
@@ -370,10 +376,7 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   
   let query = supabase
     .from('properties')
-    .select(`
-      *,
-      reviews(*)
-    `)
+    .select('*')
     .eq('is_available', true);
 
   if (filters.location) {
@@ -381,16 +384,16 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   if (filters.minPrice) {
-    query = query.gte('price_per_night', filters.minPrice);
+    query = query.gte('base_price', filters.minPrice);
   }
 
   if (filters.maxPrice) {
-    query = query.lte('price_per_night', filters.maxPrice);
+    query = query.lte('base_price', filters.maxPrice);
   }
 
   if (filters.propertyType) {
     console.log('🔍 DEBUG - Applying propertyType filter:', filters.propertyType);
-    query = query.eq('property_type', filters.propertyType.toLowerCase());
+    query = query.eq('property_type', filters.propertyType);
   }
 
   if (filters.amenities && filters.amenities.length > 0) {
@@ -516,8 +519,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
 
   // Keep original platform ratings separate from Google ratings
   const propertiesWithRatings = filteredProperties.map(property => {
-    const reviews = property.reviews || [];
-    
     return {
       ...property,
       host: null, // Placeholder since we don't have host relationship
@@ -687,40 +688,6 @@ export async function getUserCollaborations(userId: string): Promise<any[]> {
   return error ? [] : (data || []);
 } 
 
-// --- Marketing: Ad campaigns and coupons ---
-export async function getAdCampaigns(limit = 4): Promise<AdCampaign[]> {
-  const today = new Date().toISOString().split('T')[0];
-  const { data, error } = await supabase
-    .from('ad_campaigns')
-    .select('*')
-    .eq('is_active', true)
-    .or(`start_date.is.null,and(start_date.lte.${today})`)
-    .or(`end_date.is.null,and(end_date.gte.${today})`)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.error('Error fetching ad campaigns:', error);
-    return [];
-  }
-  return (data || []) as AdCampaign[];
-}
-
-export async function getActiveCoupons(limit = 10): Promise<Coupon[]> {
-  const today = new Date().toISOString().split('T')[0];
-  const { data, error } = await supabase
-    .from('coupons')
-    .select('*')
-    .eq('is_active', true)
-    .or(`valid_from.is.null,and(valid_from.lte.${today})`)
-    .or(`valid_to.is.null,and(valid_to.gte.${today})`)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.error('Error fetching active coupons:', error);
-    return [];
-  }
-  return (data || []) as Coupon[];
-}
 
 // Test function to check if wishlist table exists
 export async function testWishlistTable() {
@@ -989,7 +956,7 @@ export async function createMultiRoomBooking(
 // Experience functions
 export async function getExperiences(): Promise<Experience[]> {
   const { data, error } = await supabase
-    .from('experiences')
+    .from('experiences_unified')
     .select('*')
     .eq('is_active', true)
     .order('created_at', { ascending: false });
@@ -1002,7 +969,7 @@ export async function getExperiences(): Promise<Experience[]> {
 
 export async function getExperience(id: string): Promise<Experience | null> {
   const { data, error } = await supabase
-    .from('experiences')
+    .from('experiences_unified')
     .select('*')
     .eq('id', id)
     .single();
@@ -1015,7 +982,7 @@ export async function getExperience(id: string): Promise<Experience | null> {
 
 export async function createExperience(experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>): Promise<Experience | null> {
   const { data, error } = await supabase
-    .from('experiences')
+    .from('experiences_unified')
     .insert(experience)
     .select()
     .single();
@@ -1028,7 +995,7 @@ export async function createExperience(experience: Omit<Experience, 'id' | 'crea
 
 export async function updateExperience(id: string, updates: Partial<Experience>): Promise<Experience | null> {
   const { data, error } = await supabase
-    .from('experiences')
+    .from('experiences_unified')
     .update(updates)
     .eq('id', id)
     .select()
@@ -1042,7 +1009,7 @@ export async function updateExperience(id: string, updates: Partial<Experience>)
 
 export async function deleteExperience(id: string): Promise<boolean> {
   const { error } = await supabase
-    .from('experiences')
+    .from('experiences_unified')
     .delete()
     .eq('id', id);
   if (error) {
@@ -1058,41 +1025,25 @@ export async function getTrips(): Promise<Trip[]> {
   return getRetreats() as any;
 }
 
-// New: Retreat functions
+// New: Retreat functions (now using unified table)
 export async function getRetreats(): Promise<any[]> {
   try {
-    // First try to fetch from retreats table
+    // Fetch from unified table, filtering for Far-away retreats
     const { data, error } = await supabase
-      .from('retreats')
+      .from('experiences_unified')
       .select('*')
       .eq('is_active', true)
+      .eq('location', 'Far-away retreats')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching from retreats table:', error);
-      // Fallback to trips table if retreats table doesn't exist
-      const { data: tripsData, error: tripsError } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (tripsError) {
-        console.error('Error fetching from trips table:', tripsError);
-        return [];
-      }
-
-      const trips = (tripsData || []).map((row: any) => ({
-        ...row,
-        image: row.cover_image || (Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null),
-      }));
-
-      return trips;
+      console.error('Error fetching retreats from unified table:', error);
+      return [];
     }
 
     const retreats = (data || []).map((row: any) => ({
       ...row,
-      image: row.cover_image || (Array.isArray(row.images) && row.images.length > 0 ? row.images[0] : null),
+      image: row.cover_image,
     }));
 
     return retreats;
@@ -1103,14 +1054,15 @@ export async function getRetreats(): Promise<any[]> {
 }
 
 export async function getTrip(id: string): Promise<Trip | null> {
-  console.log('⚠️ getTrip() called - trips table doesn\'t exist, redirecting to retreats');
+  console.log('⚠️ getTrip() called - using unified table for retreats');
   const { data, error } = await supabase
-    .from('retreats')
+    .from('experiences_unified')
     .select('*')
     .eq('id', id)
+    .eq('location', 'Far-away retreats')
     .single();
   if (error) {
-    console.error('Error fetching trip from retreats:', error);
+    console.error('Error fetching trip from unified table:', error);
     return null;
   }
   return data;

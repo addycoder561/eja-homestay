@@ -33,25 +33,26 @@ interface Experience {
   id: string;
   host_id: string | null;
   title: string;
-  subtitle?: string | null;
   description: string | null;
   location: string;
-  date: string;
+  categories: string[];
+  mood: string | null;
   price: number;
-  images: string[];
-  cover_image?: string;
-  duration?: string;
-  categories?: string | string[];
+  duration_hours: number | null;
+  cover_image: string | null;
+  gallery: any | null; // JSONB
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Host-related fields
   host_name?: string;
   host_type?: string;
   host_tenure?: string;
   host_description?: string;
   host_image?: string;
   host_usps?: string[];
+  // Unique propositions
   unique_propositions?: string[];
-  created_at: string;
-  updated_at: string;
 }
 
 interface Review {
@@ -994,86 +995,86 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                              <ChevronDownIcon className={`w-4 h-4 text-blue-500 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
                            </button>
                            
-                           {/* Custom Calendar Dropdown */}
-                           {showCalendar && (
-                             <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-blue-200 rounded-xl shadow-xl z-50 p-4">
-                               {/* Calendar Header */}
-                               <div className="flex items-center justify-between mb-4">
-                                 <button
-                                   type="button"
-                                   onClick={() => navigateMonth('prev')}
-                                   className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                                 >
-                                   <ChevronLeftIcon className="w-4 h-4 text-blue-600" />
-                                 </button>
-                                 
-                                 <h3 className="text-lg font-semibold text-gray-900">
-                                   {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                                 </h3>
-                                 
-                                 <button
-                                   type="button"
-                                   onClick={() => navigateMonth('next')}
-                                   className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                                 >
-                                   <ChevronRightIcon className="w-4 h-4 text-blue-600" />
-                                 </button>
-                               </div>
-                               
-                               {/* Calendar Grid */}
-                               <div className="grid grid-cols-7 gap-1 mb-4">
-                                 {/* Day headers */}
-                                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                                   <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                                     {day}
-                                   </div>
-                                 ))}
-                                 
-                                 {/* Calendar days */}
-                                 {getDaysArray(currentMonth).map((day, index) => (
-                                   <button
-                                     key={index}
-                                     type="button"
-                                     onClick={() => day && handleDateSelect(day)}
-                                     disabled={!day || isPastDate(day, currentMonth)}
-                                     className={`
-                                       h-8 w-8 text-sm rounded-lg transition-all duration-200 flex items-center justify-center
-                                       ${!day 
-                                         ? 'invisible' 
-                                         : isPastDate(day, currentMonth)
-                                         ? 'text-gray-300 cursor-not-allowed'
-                                         : isToday(day, currentMonth)
-                                         ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200'
-                                         : isSelected(day, currentMonth)
-                                         ? 'bg-blue-600 text-white font-semibold'
-                                         : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                                       }
-                                     `}
-                                   >
-                                     {day}
-                                   </button>
-                                 ))}
-                               </div>
-                               
-                               {/* Calendar Footer */}
-                               <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                                 <button
-                                   type="button"
-                                   onClick={clearDate}
-                                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                 >
-                                   Clear
-                                 </button>
-                                 <button
-                                   type="button"
-                                   onClick={goToToday}
-                                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                 >
-                                   Today
-                                 </button>
-                               </div>
-                             </div>
-                           )}
+                          {/* Custom Calendar Dropdown */}
+                          {showCalendar && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-blue-200 rounded-xl shadow-xl z-50 p-3">
+                              {/* Calendar Header */}
+                              <div className="flex items-center justify-between mb-3">
+                                <button
+                                  type="button"
+                                  onClick={() => navigateMonth('prev')}
+                                  className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                  <ChevronLeftIcon className="w-4 h-4 text-blue-600" />
+                                </button>
+                                
+                                <h3 className="text-base font-semibold text-gray-900">
+                                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </h3>
+                                
+                                <button
+                                  type="button"
+                                  onClick={() => navigateMonth('next')}
+                                  className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                  <ChevronRightIcon className="w-4 h-4 text-blue-600" />
+                                </button>
+                              </div>
+                              
+                              {/* Calendar Grid */}
+                              <div className="grid grid-cols-7 gap-1 mb-3">
+                                {/* Day headers */}
+                                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                  <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+                                    {day}
+                                  </div>
+                                ))}
+                                
+                                {/* Calendar days */}
+                                {getDaysArray(currentMonth).map((day, index) => (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => day && handleDateSelect(day)}
+                                    disabled={!day || isPastDate(day, currentMonth)}
+                                    className={`
+                                      h-7 w-7 text-xs rounded-lg transition-all duration-200 flex items-center justify-center
+                                      ${!day 
+                                        ? 'invisible' 
+                                        : isPastDate(day, currentMonth)
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : isToday(day, currentMonth)
+                                        ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200'
+                                        : isSelected(day, currentMonth)
+                                        ? 'bg-blue-600 text-white font-semibold'
+                                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                                      }
+                                    `}
+                                  >
+                                    {day}
+                                  </button>
+                                ))}
+                              </div>
+                              
+                              {/* Calendar Footer */}
+                              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                <button
+                                  type="button"
+                                  onClick={clearDate}
+                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded"
+                                >
+                                  Clear
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={goToToday}
+                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded"
+                                >
+                                  Today
+                                </button>
+                              </div>
+                            </div>
+                          )}
                          </div>
                          <div className="mt-2 text-xs text-gray-600">
                            {bookingForm.date ? new Date(bookingForm.date).toLocaleDateString('en-US', { 

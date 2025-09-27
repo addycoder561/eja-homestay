@@ -5,16 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Navigation } from '@/components/Navigation';
-import { Footer } from '@/components/Footer';
 import toast from 'react-hot-toast';
 
 function SignInInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn, signInWithGoogle, profile } = useAuth();
+  const { signIn, profile } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -61,36 +57,30 @@ function SignInInner() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto flex items-center justify-center mb-4">
-                <img 
-                  src="/eja_02.svg" 
-                  alt="EJA Logo" 
-                  className="w-[225px] h-[225px]"
-                />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900">Sign in to your account</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Welcome back! Please enter your details.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <Button
-                type="button"
-                className="w-full mb-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
-                onClick={() => signInWithGoogle(searchParams.get('redirect') ? `${window.location.origin}${searchParams.get('redirect')}` : undefined)}
-              >
-                <svg className="w-5 h-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C36.68 2.69 30.77 0 24 0 14.82 0 6.71 5.13 2.69 12.56l7.98 6.2C12.13 13.09 17.62 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.64 7.02l7.19 5.59C43.93 37.13 46.1 31.3 46.1 24.55z"/><path fill="#FBBC05" d="M10.67 28.13c-1.01-2.99-1.01-6.27 0-9.26l-7.98-6.2C.99 16.09 0 19.93 0 24c0 4.07.99 7.91 2.69 11.33l7.98-6.2z"/><path fill="#EA4335" d="M24 48c6.48 0 11.92-2.15 15.89-5.85l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.38 0-11.87-3.59-14.33-8.79l-7.98 6.2C6.71 42.87 14.82 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
-                Sign in with Google
-              </Button>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <Input
-                  label="Email address"
+    <div className="min-h-screen bg-gray-100">
+      <div className="flex h-screen">
+        {/* Left Section - EJA Branding */}
+        <div className="flex-1 flex items-center justify-center px-8 lg:px-12">
+          <div className="max-w-md">
+            <div className="mb-8">
+              <img 
+                src="/eja_02.svg" 
+                alt="EJA Logo" 
+                className="w-32 h-32 mb-6"
+              />
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
+              Experience the world on EJA.
+            </h1>
+          </div>
+        </div>
+
+        {/* Right Section - Sign In Form */}
+        <div className="flex-1 flex items-center justify-center px-8 lg:px-12">
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-lg shadow-sm p-8">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
                   type="email"
                   required
                   value={formData.email}
@@ -98,57 +88,60 @@ function SignInInner() {
                     setFormData({ ...formData, email: e.target.value });
                     setEmailError('');
                   }}
-                  placeholder="Enter your email"
-                  error={emailError}
+                  placeholder="Email or phone number"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {emailError && (
+                  <p className="text-red-500 text-sm">{emailError}</p>
+                )}
 
-                <Input
-                  label="Password"
+                <input
                   type="password"
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter your password"
+                  placeholder="Password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      id="remember-me"
-                      name="remember-me"
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                      Remember me
-                    </label>
-                  </div>
-
-                  <div className="text-sm">
-                    <Link href="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                      Forgot your password?
-                    </Link>
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full" loading={loading} disabled={loading}>
-                  Sign In
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-lg"
+                  loading={loading} 
+                  disabled={loading}
+                >
+                  Log In
                 </Button>
 
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">
-                    Don&apos;t have an account?{' '}
-                    <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                      Sign up
-                    </Link>
-                  </p>
+                  <Link href="/auth/forgot-password" className="text-yellow-500 hover:underline text-sm font-bold">
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <div className="border-t border-gray-300 my-6"></div>
+
+                <div className="flex justify-center">
+                  <Link href="/auth/signup">
+                    <Button 
+                      type="button"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg text-base whitespace-nowrap"
+                    >
+                      Create new account
+                    </Button>
+                  </Link>
                 </div>
               </form>
-            </CardContent>
-          </Card>
+
+              <div className="text-center mt-6">
+                <p className="text-sm text-gray-600">
+                  Create a club for a creator, brand, or business.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-      <Footer />
+      </div>
     </div>
   );
 }
