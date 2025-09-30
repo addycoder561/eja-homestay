@@ -121,47 +121,45 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     const fetchBookingData = async () => {
       if (!retreat || !showBookingForm) return;
       
+      console.log('🔍 Fetching booking data for retreat:', retreat.id, 'budget:', bookingForm.budget);
       setLoadingData(true);
       try {
-        // Fetch cities and states from properties
-        const { data: locationsData } = await supabase
+        // Fetch destinations from properties table
+        const { data: locationsData, error: locationsError } = await supabase
           .from('properties')
           .select('city, state')
           .not('city', 'is', null)
           .not('state', 'is', null);
         
-        // Group cities by state
-        const groupedData: {[key: string]: string[]} = {};
-        locationsData?.forEach(location => {
-          if (location.state && location.city) {
-            if (!groupedData[location.state]) {
-              groupedData[location.state] = [];
+        if (locationsError) {
+          console.error('Error fetching locations:', locationsError);
+        } else {
+          // Group cities by state
+          const groupedData: {[key: string]: string[]} = {};
+          locationsData?.forEach(location => {
+            if (location.state && location.city) {
+              if (!groupedData[location.state]) {
+                groupedData[location.state] = [];
+              }
+              if (!groupedData[location.state].includes(location.city)) {
+                groupedData[location.state].push(location.city);
+              }
             }
-            if (!groupedData[location.state].includes(location.city)) {
-              groupedData[location.state].push(location.city);
-            }
-          }
-        });
-        
-        // Convert to array and sort
-        const destinationsArray = Object.keys(groupedData)
-          .sort()
-          .map(state => ({
-            state,
-            cities: groupedData[state].sort()
-          }));
-        
-        setDestinations(destinationsArray);
+          });
+          
+          // Convert to array and sort
+          const destinationsArray = Object.keys(groupedData)
+            .sort()
+            .map(state => ({
+              state,
+              cities: groupedData[state].sort()
+            }));
+          
+          setDestinations(destinationsArray);
+          console.log('🔍 Destinations loaded:', destinationsArray.length, 'states');
+        }
 
-        // First, let's check what price ranges exist in the database
-        const { data: allProperties, error: allPropertiesError } = await supabase
-          .from('properties')
-          .select('id, title, base_price, is_available')
-          .eq('is_available', true);
-        
-        
-        
-        // Fetch properties based on budget (using base price from search page)
+        // Fetch properties based on budget
         const budgetRanges = {
           'tight budget': { min: 1500, max: 2500 },
           'family comfort': { min: 2501, max: 5000 },
@@ -187,45 +185,12 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           .gte('base_price', range.min)
           .lte('base_price', range.max);
         
-        
-        // Convert properties to room-like format for the modal
-        if (propertiesData && propertiesData.length > 0) {
-          const roomFormatProperties = propertiesData.map(property => ({
-            id: property.id,
-            name: property.title,
-            room_type: 'Property',
-            price_per_night: property.base_price,
-            amenities: property.amenities || [],
-            property_id: property.id,
-            properties: {
-              id: property.id,
-              title: property.title,
-              cover_image: property.cover_image,
-              gallery: property.gallery || []
-            }
-          }));
-          setRooms(roomFormatProperties);
+        if (propertiesError) {
+          console.error('Error fetching properties:', propertiesError);
         } else {
-          // If no properties found in budget range, try to fetch all available properties as fallback
-          const { data: fallbackProperties, error: fallbackError } = await supabase
-            .from('properties')
-            .select(`
-              id,
-              title,
-              base_price,
-              cover_image,
-              gallery,
-              amenities,
-              address,
-              city,
-              state,
-              is_available
-            `)
-            .eq('is_available', true)
-            .limit(10);
-          
-          if (fallbackProperties && fallbackProperties.length > 0) {
-            const roomFormatProperties = fallbackProperties.map(property => ({
+          // Convert properties to room-like format
+          if (propertiesData && propertiesData.length > 0) {
+            const roomFormatProperties = propertiesData.map(property => ({
               id: property.id,
               name: property.title,
               room_type: 'Property',
@@ -240,52 +205,99 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
               }
             }));
             setRooms(roomFormatProperties);
+            console.log('🔍 Properties loaded:', roomFormatProperties.length, 'properties');
           } else {
-            setRooms([]);
+            // Fallback: fetch all available properties
+            const { data: fallbackProperties } = await supabase
+              .from('properties')
+              .select(`
+                id,
+                title,
+                base_price,
+                cover_image,
+                gallery,
+                amenities,
+                address,
+                city,
+                state,
+                is_available
+              `)
+              .eq('is_available', true)
+              .limit(10);
+            
+            if (fallbackProperties && fallbackProperties.length > 0) {
+              const roomFormatProperties = fallbackProperties.map(property => ({
+                id: property.id,
+                name: property.title,
+                room_type: 'Property',
+                price_per_night: property.base_price,
+                amenities: property.amenities || [],
+                property_id: property.id,
+                properties: {
+                  id: property.id,
+                  title: property.title,
+                  cover_image: property.cover_image,
+                  gallery: property.gallery || []
+                }
+              }));
+              setRooms(roomFormatProperties);
+            } else {
+              setRooms([]);
+            }
           }
         }
 
-        // Fetch experiences based on budget
+        // Fetch experiences from retreat_experiences table
         const { data: experiencesData, error: experiencesError } = await supabase
           .from('retreat_experiences')
           .select('*')
           .eq('experience_type', bookingForm.budget)
           .eq('is_active', true);
         
+        if (experiencesError) {
+          console.error('Error fetching experiences:', experiencesError);
+        }
         
-        // If no experiences found, try to fetch all experiences for this retreat to see what's available
-        if (!experiencesData || experiencesData.length === 0) {
+        if (experiencesData && experiencesData.length > 0) {
+          setExperiences(experiencesData);
+          console.log('🔍 Experiences loaded:', experiencesData.length, 'experiences');
+        } else {
+          // Fallback: try to get all experiences for this retreat
           const { data: allExperiences } = await supabase
             .from('retreat_experiences')
             .select('*')
             .eq('retreat_id', retreat.id);
-          console.log('All experiences for this retreat:', allExperiences);
           
-          // Add sample experiences for testing
-          const sampleExperiences = [
-            {
-              id: 'sample-exp-1',
-              title: 'Morning Yoga Session',
-              description: 'Start your day with a peaceful yoga session in nature',
-              experience_type: bookingForm.budget
-            },
-            {
-              id: 'sample-exp-2',
-              title: 'Guided Nature Walk',
-              description: 'Explore the beautiful surroundings with an expert guide',
-              experience_type: bookingForm.budget
-            },
-            {
-              id: 'sample-exp-3',
-              title: 'Meditation Workshop',
-              description: 'Learn mindfulness techniques in a serene environment',
-              experience_type: bookingForm.budget
-            }
-          ];
-          console.log('Using sample experiences:', sampleExperiences);
-          setExperiences(sampleExperiences);
-        } else {
-          setExperiences(experiencesData);
+          if (allExperiences && allExperiences.length > 0) {
+            setExperiences(allExperiences);
+          } else {
+            // Sample experiences as final fallback
+            const sampleExperiences = [
+              {
+                id: 'sample-exp-1',
+                title: 'Morning Yoga Session',
+                description: 'Start your day with a peaceful yoga session in nature',
+                experience_type: bookingForm.budget,
+                cover_image: null
+              },
+              {
+                id: 'sample-exp-2',
+                title: 'Guided Nature Walk',
+                description: 'Explore the beautiful surroundings with an expert guide',
+                experience_type: bookingForm.budget,
+                cover_image: null
+              },
+              {
+                id: 'sample-exp-3',
+                title: 'Meditation Workshop',
+                description: 'Learn mindfulness techniques in a serene environment',
+                experience_type: bookingForm.budget,
+                cover_image: null
+              }
+            ];
+            setExperiences(sampleExperiences);
+            console.log('🔍 Using sample experiences:', sampleExperiences.length, 'experiences');
+          }
         }
       } catch (error) {
         console.error('Error fetching booking data:', error);
@@ -1158,7 +1170,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                   </div>
                 </div>
               ) : (
-                /* New Comprehensive Booking Form */
+                /* Clean Booking Form - Rewritten from Scratch */
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -1179,152 +1191,151 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                       <span className="ml-3 text-gray-600">Loading options...</span>
                     </div>
                   ) : (
+                    <div>
+                      {console.log('🔍 Booking form data:', { 
+                        destinations: destinations.length, 
+                        rooms: rooms.length, 
+                        experiences: experiences.length,
+                        budget: bookingForm.budget 
+                      })}
                     <form onSubmit={handleBookingSubmit} className="space-y-6">
-                      {/* Step 1: Basic Information */}
+                      {/* Step 1: Date & Guests */}
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold text-gray-900 flex items-center">
                           <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
-                          Basic Information
+                          Date & Guests
                         </h4>
                         
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Date Selection */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Date Selection */}
                           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Select Date
-                        </label>
+                            <label className="block text-sm font-semibold text-gray-900 mb-2">
+                              Select Date
+                            </label>
                             <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setShowCalendar(!showCalendar)}
+                              <button
+                                type="button"
+                                onClick={() => setShowCalendar(!showCalendar)}
                                 className="w-full text-base py-3 px-3 pr-10 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer text-left flex items-center justify-between"
-                          >
-                            <span className={bookingForm.date ? 'text-gray-900' : 'text-gray-500'}>
-                              {bookingForm.date 
-                                ? new Date(bookingForm.date).toLocaleDateString('en-US', { 
-                                    weekday: 'short', 
-                                    month: 'short', 
-                                    day: 'numeric' 
-                                  })
-                                : 'Choose date'
-                              }
-                            </span>
-                            <ChevronDownIcon className={`w-4 h-4 text-blue-500 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
-                          </button>
-                          
-                          {/* Custom Calendar Dropdown */}
-                          {showCalendar && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-blue-200 rounded-xl shadow-xl z-50 p-4">
-                              {/* Calendar Header */}
-                              <div className="flex items-center justify-between mb-4">
-                                <button
-                                  type="button"
-                                  onClick={() => navigateMonth('prev')}
-                                  className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                  <ChevronLeftIcon className="w-4 h-4 text-blue-600" />
-                                </button>
-                                
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                                </h3>
-                                
-                                <button
-                                  type="button"
-                                  onClick={() => navigateMonth('next')}
-                                  className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                  <ChevronRightIcon className="w-4 h-4 text-blue-600" />
-                                </button>
-                              </div>
+                              >
+                                <span className={bookingForm.date ? 'text-gray-900' : 'text-gray-500'}>
+                                  {bookingForm.date 
+                                    ? new Date(bookingForm.date).toLocaleDateString('en-US', { 
+                                        weekday: 'short', 
+                                        month: 'short', 
+                                        day: 'numeric' 
+                                      })
+                                    : 'Choose date'
+                                  }
+                                </span>
+                                <ChevronDownIcon className={`w-4 h-4 text-blue-500 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
+                              </button>
                               
-                              {/* Calendar Grid */}
-                              <div className="grid grid-cols-7 gap-1 mb-4">
-                                {/* Day headers */}
-                                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                                  <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                                    {day}
+                              {/* Calendar Dropdown */}
+                              {showCalendar && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-blue-200 rounded-xl shadow-xl z-50 p-4">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => navigateMonth('prev')}
+                                      className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                    >
+                                      <ChevronLeftIcon className="w-4 h-4 text-blue-600" />
+                                    </button>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                    </h3>
+                                    <button
+                                      type="button"
+                                      onClick={() => navigateMonth('next')}
+                                      className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                    >
+                                      <ChevronRightIcon className="w-4 h-4 text-blue-600" />
+                                    </button>
                                   </div>
+                                  
+                                  <div className="grid grid-cols-7 gap-1 mb-4">
+                                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                      <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                                        {day}
+                                      </div>
+                                    ))}
+                                    
+                                    {getDaysArray(currentMonth).map((day, index) => (
+                                      <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => day && handleDateSelect(day)}
+                                        disabled={!day || isPastDate(day, currentMonth)}
+                                        className={`
+                                          h-8 w-8 text-sm rounded-lg transition-all duration-200 flex items-center justify-center
+                                          ${!day 
+                                            ? 'invisible' 
+                                            : isPastDate(day, currentMonth)
+                                            ? 'text-gray-300 cursor-not-allowed'
+                                            : isToday(day, currentMonth)
+                                            ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200'
+                                            : isSelected(day, currentMonth)
+                                            ? 'bg-blue-600 text-white font-semibold'
+                                            : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                                          }
+                                        `}
+                                      >
+                                        {day}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  
+                                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                    <button
+                                      type="button"
+                                      onClick={clearDate}
+                                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                    >
+                                      Clear
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={goToToday}
+                                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                    >
+                                      Today
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Guest Selection */}
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                            <label className="block text-sm font-semibold text-gray-900 mb-2">
+                              Number of Guests
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={bookingForm.guests}
+                                onChange={e => setBookingForm(prev => ({ ...prev, guests: Number(e.target.value) }))}
+                                required
+                                className="w-full text-base py-3 px-3 pr-10 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer appearance-none text-gray-900 font-medium"
+                              >
+                                {Array.from({ length: 7 }, (_, i) => i + 2).map(num => (
+                                  <option key={num} value={num}>
+                                    {num} {num === 1 ? 'Guest' : 'Guests'}
+                                  </option>
                                 ))}
-                                
-                                {/* Calendar days */}
-                                {getDaysArray(currentMonth).map((day, index) => (
-                                  <button
-                                    key={index}
-                                    type="button"
-                                    onClick={() => day && handleDateSelect(day)}
-                                    disabled={!day || isPastDate(day, currentMonth)}
-                                    className={`
-                                      h-8 w-8 text-sm rounded-lg transition-all duration-200 flex items-center justify-center
-                                      ${!day 
-                                        ? 'invisible' 
-                                        : isPastDate(day, currentMonth)
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : isToday(day, currentMonth)
-                                        ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200'
-                                        : isSelected(day, currentMonth)
-                                        ? 'bg-blue-600 text-white font-semibold'
-                                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                                      }
-                                    `}
-                                  >
-                                    {day}
-                                  </button>
-                                ))}
-                              </div>
-                              
-                              {/* Calendar Footer */}
-                              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                                <button
-                                  type="button"
-                                  onClick={clearDate}
-                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                >
-                                  Clear
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={goToToday}
-                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                >
-                                  Today
-                                </button>
+                              </select>
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <UsersIcon className="w-4 h-4 text-green-500" />
                               </div>
                             </div>
-                          )}
+                            <div className="mt-2 text-xs text-gray-600">
+                              Max 8 guests (2-8 guests)
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
-                      {/* Guest Selection */}
-                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Number of Guests
-                        </label>
-                            <div className="relative">
-                          <select
-                            value={bookingForm.guests}
-                            onChange={e => setBookingForm(prev => ({ ...prev, guests: Number(e.target.value) }))}
-                            required
-                                className="w-full text-base py-3 px-3 pr-10 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer appearance-none text-gray-900 font-medium"
-                                style={{ color: '#111827', fontWeight: '500' }}
-                              >
-                                {Array.from({ length: 7 }, (_, i) => i + 2).map(num => (
-                                  <option key={num} value={num} style={{ color: '#111827', fontWeight: '500' }}>
-                                {num} {num === 1 ? 'Guest' : 'Guests'}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <UsersIcon className="w-4 h-4 text-green-500" />
-                          </div>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-600">
-                              Max 8 guests (2-8 guests)
-                            </div>
-                        </div>
-                      </div>
-                    </div>
-                    
                       {/* Step 2: Destination */}
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -1333,21 +1344,20 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </h4>
                         
                         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">
                             Choose Destination
-                      </label>
+                          </label>
                           <select
                             value={bookingForm.destination}
                             onChange={e => setBookingForm(prev => ({ ...prev, destination: e.target.value }))}
                             required
                             className="w-full text-base py-3 px-3 pr-10 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-200 focus:border-purple-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md cursor-pointer appearance-none text-gray-900 font-medium"
-                            style={{ color: '#111827', fontWeight: '500' }}
                           >
-                            <option value="" style={{ color: '#6B7280', fontWeight: '500' }}>Select a destination</option>
+                            <option value="">Select a destination</option>
                             {destinations.map(stateGroup => (
-                              <optgroup key={stateGroup.state} label={stateGroup.state} style={{ fontWeight: '600', color: '#374151' }}>
+                              <optgroup key={stateGroup.state} label={stateGroup.state}>
                                 {stateGroup.cities.map(city => (
-                                  <option key={`${stateGroup.state}-${city}`} value={city} style={{ color: '#111827', fontWeight: '500', paddingLeft: '20px' }}>
+                                  <option key={`${stateGroup.state}-${city}`} value={city}>
                                     {city}
                                   </option>
                                 ))}
@@ -1385,7 +1395,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </div>
                       </div>
 
-                      {/* Step 4: Budget */}
+                      {/* Step 4: Budget Category */}
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold text-gray-900 flex items-center">
                           <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</span>
@@ -1414,7 +1424,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </div>
                       </div>
 
-                      {/* Step 5: Room Selection (only shown after budget selection) */}
+                      {/* Step 5: Property Selection */}
                       {bookingForm.budget && (
                         <div className="space-y-4">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -1442,7 +1452,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </div>
                       )}
 
-                      {/* Step 6: Experience Selection (only shown after budget selection) */}
+                      {/* Step 6: Experience Selection */}
                       {bookingForm.budget && (
                         <div className="space-y-4">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -1484,7 +1494,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </div>
                       )}
 
-                      {/* Special Requests */}
+                      {/* Step 7: Special Requests */}
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold text-gray-900 flex items-center">
                           <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">7</span>
@@ -1492,24 +1502,24 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </h4>
                         
                         <div className="bg-gray-50 rounded-xl p-4">
-                      <textarea
+                          <textarea
                             rows={3}
-                        value={bookingForm.specialRequests}
-                        onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm transition-all"
-                        placeholder="Any dietary restrictions, accessibility needs, or special requirements..."
-                      />
+                            value={bookingForm.specialRequests}
+                            onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm transition-all"
+                            placeholder="Any dietary restrictions, accessibility needs, or special requirements..."
+                          />
                         </div>
-                    </div>
+                      </div>
 
-                    {/* Price Summary */}
+                      {/* Price Summary */}
                       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                         <h4 className="text-lg font-semibold text-gray-900 mb-4">Price Breakdown</h4>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-700">Base price (for 2 adults)</span>
                             <span className="font-semibold text-gray-900">₹{retreat.price?.toLocaleString()}</span>
-                      </div>
+                          </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-700">Budget adjustment ({bookingForm.budget})</span>
                             <span className="font-semibold text-gray-900">
@@ -1532,39 +1542,40 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                           <div className="flex justify-between items-center">
                             <span className="text-gray-700">Total guests</span>
                             <span className="font-semibold text-gray-900">{bookingForm.guests}</span>
-                      </div>
-                      <div className="border-t border-blue-200 pt-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-gray-900">Total Price</span>
+                          </div>
+                          <div className="border-t border-blue-200 pt-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-gray-900">Total Price</span>
                               <span className="text-xl font-bold text-blue-600">
                                 ₹{calculatePricing().totalPrice.toLocaleString()}
                               </span>
                             </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Booking Button */}
-                    <Button 
-                      type="submit" 
-                      variant="primary"
-                      size="lg"
+                      {/* Booking Button */}
+                      <Button 
+                        type="submit" 
+                        variant="primary"
+                        size="lg"
                         disabled={bookingLoading || !bookingForm.date || bookingForm.guests < 2 || !bookingForm.destination}
-                      className="w-full py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      {bookingLoading ? (
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Processing...
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center">
-                          <CalendarIcon className="w-6 h-6 mr-2" />
-                          Confirm Booking
-                        </div>
-                      )}
-                    </Button>
-                  </form>
+                        className="w-full py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        {bookingLoading ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Processing...
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <CalendarIcon className="w-6 h-6 mr-2" />
+                            Confirm Booking
+                          </div>
+                        )}
+                      </Button>
+                    </form>
+                    </div>
                   )}
                 </div>
               )}

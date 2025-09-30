@@ -25,8 +25,7 @@ import {
   CalendarIcon,
   ClockIcon,
   UsersIcon,
-  BookmarkIcon as BookmarkOutline,
-  ChevronDownIcon
+  BookmarkIcon as BookmarkOutline
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import Link from 'next/link';
@@ -56,8 +55,7 @@ export default function SearchPageClient() {
   const [loadingExperiences, setLoadingExperiences] = useState(true);
   const [loadingRetreats, setLoadingRetreats] = useState(true);
   // Content filter chip: hyper-local | online | retreats
-  const [contentFilter, setContentFilter] = useState<'hyper-local' | 'online' | 'retreats'>('hyper-local');
-  const [showTypeMenu, setShowTypeMenu] = useState(false);
+  const [contentFilter, setContentFilter] = useState<'hyper-local' | 'online' | 'retreats' | 'all'>('all');
   const [filters, setFilters] = useState<SearchFiltersType>({
     location: searchParams.get('location') || '',
     checkIn: searchParams.get('checkIn') || '',
@@ -147,6 +145,7 @@ export default function SearchPageClient() {
       try {
         setLoadingRetreats(true);
         const data = await getRetreats();
+        console.log('🔍 DEBUG - Retreats fetched:', data?.length || 0, 'retreats');
         setRetreats(data || []);
       } catch (error) {
         console.error('Error fetching retreats:', error);
@@ -276,7 +275,7 @@ export default function SearchPageClient() {
     
     try {
       if (wishlisted) {
-        const success = await removeFromWishlist(user.id, retreatId, 'trip');
+        const success = await removeFromWishlist(user.id, retreatId, 'retreat');
         if (success) {
           setWishlistedRetreatIds(ids => ids.filter(id => id !== retreatId));
           toast.success('Retreat removed from wishlist');
@@ -284,7 +283,7 @@ export default function SearchPageClient() {
           toast.error('Failed to remove from wishlist');
         }
       } else {
-        const success = await addToWishlist(user.id, retreatId, 'trip');
+        const success = await addToWishlist(user.id, retreatId, 'retreat');
         if (success) {
           setWishlistedRetreatIds(ids => [...ids, retreatId]);
           toast.success('Retreat added to wishlist');
@@ -584,18 +583,22 @@ export default function SearchPageClient() {
   // Determine if an experience is "online"
   const isOnlineExperience = (exp: any) => {
     const loc = (exp?.location || '').toLowerCase();
-    return loc.includes('online') || loc.includes('virtual') || loc.includes('remote');
+    return loc === 'online' || loc.includes('virtual') || loc.includes('remote');
   };
 
   // Apply chip filter to experiences
   const filteredExperiences = experiences.filter((exp) => {
     if (contentFilter === 'retreats') return false;
     if (contentFilter === 'online') return isOnlineExperience(exp);
-    // hyper-local => exclude online items if detectable
-    return !isOnlineExperience(exp);
+    if (contentFilter === 'hyper-local') return !isOnlineExperience(exp);
+    if (contentFilter === 'all') {
+      // When showing all, exclude retreats from experiences section (they have their own section)
+      return exp.location !== 'Retreats';
+    }
+    return true; // Default fallback
   });
 
-  const filteredRetreats = contentFilter === 'retreats' ? retreats : [];
+  const filteredRetreats = (contentFilter === 'retreats' || contentFilter === 'all') ? retreats : [];
 
   // Filter properties based on content type toggle - Properties moved to search page
   const filteredProperties = properties.filter((property) => {
@@ -621,7 +624,10 @@ export default function SearchPageClient() {
   console.log('🔍 Filtered results:', {
     contentFilter,
     experiences: filteredExperiences.length,
-    retreats: filteredRetreats.length
+    retreats: filteredRetreats.length,
+    totalExperiences: experiences.length,
+    onlineExperiences: experiences.filter(isOnlineExperience).length,
+    hyperLocalExperiences: experiences.filter(exp => !isOnlineExperience(exp)).length
   });
 
   return (
@@ -652,54 +658,6 @@ export default function SearchPageClient() {
       <Navigation />
       <div className="relative">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Single content chip */}
-          <div className="mb-4">
-            <div className="flex items-center justify-end gap-3">
-              <div className="relative inline-block">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowTypeMenu(v => !v);
-                  }}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-gray-900 text-sm shadow-sm hover:bg-gray-50"
-                >
-                  <span className="font-medium">
-                    {contentFilter === 'hyper-local' ? 'Hyper-local' : contentFilter === 'online' ? 'Online' : 'Retreats'}
-                  </span>
-                  <ChevronDownIcon className="w-4 h-4 text-gray-600" />
-                </button>
-                {showTypeMenu && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
-                    {[
-                      { id: 'hyper-local', label: 'Hyper-local' },
-                      { id: 'online', label: 'Online' },
-                      { id: 'retreats', label: 'Retreats' }
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setContentFilter(opt.id as any);
-                          setShowTypeMenu(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                          contentFilter === opt.id 
-                            ? 'bg-yellow-50 text-yellow-700 font-semibold' 
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Header Section */}
           <div className="mb-8">

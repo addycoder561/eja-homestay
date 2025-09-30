@@ -22,7 +22,7 @@ import Image from 'next/image';
 
 interface WishlistItem {
   id: string;
-  _type: 'property' | 'experience' | 'retreat'; // Changed 'trip' to 'retreat' for display
+  _type: 'property' | 'hyper-local' | 'online' | 'retreat'; // Updated classifications
   title: string;
   description?: string;
   city?: string;
@@ -37,7 +37,7 @@ interface WishlistItem {
   review_count?: number; // Added for experiences and retreats
 }
 
-type FilterType = 'all' | 'property' | 'experience' | 'retreat'; // Changed 'trip' to 'retreat'
+type FilterType = 'all' | 'property' | 'hyper-local' | 'online' | 'retreat';
 
 // Loading skeleton for wishlist cards
 function WishlistCardSkeleton({ index = 0 }: { index?: number }) {
@@ -71,12 +71,20 @@ function EmptyWishlistState({ activeFilter }: { activeFilter: FilterType }) {
           buttonText: "Explore Properties",
           buttonLink: "/search"
         };
-      case 'experience':
+      case 'hyper-local':
         return {
-          title: "No saved experiences yet", 
-          message: "Discover unique experiences and add them to your wishlist",
+          title: "No saved hyper-local experiences yet", 
+          message: "Discover unique local experiences and add them to your wishlist",
           icon: "🌟",
-          buttonText: "Take Experiences",
+          buttonText: "Explore Local Experiences",
+          buttonLink: "/discover"
+        };
+      case 'online':
+        return {
+          title: "No saved online experiences yet", 
+          message: "Discover amazing online experiences and add them to your wishlist",
+          icon: "💻",
+          buttonText: "Explore Online Experiences",
           buttonLink: "/discover"
         };
       case 'retreat':
@@ -107,7 +115,7 @@ function EmptyWishlistState({ activeFilter }: { activeFilter: FilterType }) {
       <p className="text-gray-600 mb-8 max-w-md mx-auto">{message}</p>
       <button 
         onClick={() => window.location.href = buttonLink}
-        className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        className="bg-yellow-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-yellow-600 transition-colors"
       >
         {buttonText}
       </button>
@@ -164,7 +172,7 @@ export default function MyWishlistPage() {
           .map(b => b.item_id);
         
         const retreatIds = wishlistRecords
-          .filter(b => b.item_type === 'trip') // Retreats are stored as 'trip' in database
+          .filter(b => b.item_type === 'retreat') // Retreats are stored as 'retreat' in database
           .map(b => b.item_id);
 
         const allItems: WishlistItem[] = [];
@@ -172,14 +180,15 @@ export default function MyWishlistPage() {
         console.log('🔍 Processing wishlist items:', {
           propertyIds,
           experienceIds,
-          retreatIds
+          retreatIds,
+          totalRecords: wishlistRecords.length
         });
         
         console.log('📊 Total wishlist records:', wishlistRecords);
         console.log('🔍 Wishlist records breakdown:', {
           properties: wishlistRecords.filter(b => b.item_type === 'property').length,
           experiences: wishlistRecords.filter(b => b.item_type === 'experience').length,
-          trips: wishlistRecords.filter(b => b.item_type === 'trip').length
+          retreats: wishlistRecords.filter(b => b.item_type === 'retreat').length
         });
 
         // Fetch properties
@@ -207,22 +216,28 @@ export default function MyWishlistPage() {
           }
         }
 
-        // Fetch experiences
+        // Fetch experiences from unified table and separate by location
         if (experienceIds.length > 0) {
           const { data: experiences, error: expError } = await supabase
-            .from('experiences')
+            .from('experiences_unified')
             .select('*')
-            .in('id', experienceIds);
+            .in('id', experienceIds)
+            .neq('location', 'Retreats'); // Exclude retreats from experiences
           
           if (!expError && experiences) {
             experiences.forEach(exp => {
+              // Determine if it's online or hyper-local based on location
+              const isOnline = exp.location?.toLowerCase() === 'online' || 
+                              exp.location?.toLowerCase().includes('virtual') || 
+                              exp.location?.toLowerCase().includes('remote');
+              
               allItems.push({
                 id: exp.id,
-                _type: 'experience',
+                _type: isOnline ? 'online' : 'hyper-local',
                 title: exp.title,
                 description: exp.description,
                 location: exp.location,
-                image: exp.image,
+                image: exp.cover_image,
                 price: exp.price,
                 rating: exp.rating,
                 review_count: exp.review_count
@@ -231,14 +246,15 @@ export default function MyWishlistPage() {
           }
         }
 
-        // Fetch retreats (stored as 'trip' in database, but fetched from 'retreats' table)
+        // Fetch retreats from unified table
         if (retreatIds.length > 0) {
           console.log('🔍 Fetching retreats with IDs:', retreatIds);
           
           const { data: retreats, error: retreatError } = await supabase
-            .from('retreats')
+            .from('experiences_unified')
             .select('*')
-            .in('id', retreatIds);
+            .in('id', retreatIds)
+            .eq('location', 'Retreats'); // Only fetch retreats
           
           if (!retreatError && retreats) {
             console.log('✅ Found retreats:', retreats);
@@ -249,7 +265,7 @@ export default function MyWishlistPage() {
                 title: ret.title,
                 description: ret.description,
                 location: ret.location,
-                image: ret.cover_image || ret.image || (Array.isArray(ret.images) && ret.images.length > 0 ? ret.images[0] : null),
+                image: ret.cover_image,
                 price: ret.price,
                 rating: ret.rating,
                 review_count: ret.review_count
@@ -264,7 +280,8 @@ export default function MyWishlistPage() {
         console.log('✅ All items processed:', allItems);
         console.log('📋 Final items breakdown:', {
           properties: allItems.filter(item => item._type === 'property').length,
-          experiences: allItems.filter(item => item._type === 'experience').length,
+          hyperLocal: allItems.filter(item => item._type === 'hyper-local').length,
+          online: allItems.filter(item => item._type === 'online').length,
           retreats: allItems.filter(item => item._type === 'retreat').length
         });
         setItems(allItems);
@@ -313,7 +330,8 @@ export default function MyWishlistPage() {
       case 'property':
         router.push(`/property/${item.id}`);
         break;
-      case 'experience':
+      case 'hyper-local':
+      case 'online':
         router.push(`/experiences/${item.id}`);
         break;
       case 'retreat':
@@ -331,7 +349,9 @@ export default function MyWishlistPage() {
     switch (type) {
       case 'property':
         return <BookmarkIcon className="w-4 h-4" />;
-      case 'experience':
+      case 'hyper-local':
+        return <StarIcon className="w-4 h-4" />;
+      case 'online':
         return <StarIcon className="w-4 h-4" />;
       case 'retreat':
         return <HeartIcon className="w-4 h-4" />;
@@ -344,8 +364,10 @@ export default function MyWishlistPage() {
     switch (type) {
       case 'property':
         return 'Stays';
-      case 'experience':
-        return 'Experiences';
+      case 'hyper-local':
+        return 'Hyper-local';
+      case 'online':
+        return 'Online';
       case 'retreat':
         return 'Retreats';
       default:
@@ -388,7 +410,7 @@ export default function MyWishlistPage() {
             <p className="text-gray-600 mb-8">Please sign in to access your saved places and experiences.</p>
             <button 
               onClick={() => router.push('/auth/signin')}
-              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              className="bg-yellow-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-yellow-600 transition-colors"
             >
               Sign In
             </button>
@@ -410,7 +432,7 @@ export default function MyWishlistPage() {
             <p className="text-gray-600 mb-8">{error}</p>
             <button 
               onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              className="bg-yellow-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-yellow-600 transition-colors"
             >
               Try Again
             </button>
@@ -433,13 +455,13 @@ export default function MyWishlistPage() {
         {/* Filter Tabs */}
         <div className="flex justify-center mb-8">
           <div className="bg-white rounded-2xl p-2 shadow-lg flex gap-2">
-            {(['all', 'property', 'experience', 'retreat'] as FilterType[]).map((filter) => (
+            {(['all', 'property', 'hyper-local', 'online', 'retreat'] as FilterType[]).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
                   activeFilter === filter
-                    ? 'bg-blue-600 text-white shadow-md'
+                    ? 'bg-yellow-500 text-white shadow-md'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
@@ -517,7 +539,7 @@ export default function MyWishlistPage() {
 
                     {/* Content Section */}
                     <div className="p-6">
-                      <h3 className="font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-2">
+                      <h3 className="font-bold text-xl text-gray-900 group-hover:text-yellow-600 transition-colors mb-2 line-clamp-2">
                         {item.title}
                       </h3>
                       
@@ -564,7 +586,7 @@ export default function MyWishlistPage() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => handleBookNow(item)}
-                          className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                          className="flex-1 bg-yellow-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-yellow-600 transition-colors flex items-center justify-center gap-2"
                         >
                           <CalendarIcon className="w-4 h-4" />
                           Book

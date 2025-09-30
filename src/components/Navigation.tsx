@@ -73,7 +73,6 @@ export function Navigation() {
           console.log('🔍 Item types breakdown:', {
             properties: wishlist?.filter(item => item.item_type === 'property').length || 0,
             experiences: wishlist?.filter(item => item.item_type === 'experience').length || 0,
-            trips: wishlist?.filter(item => item.item_type === 'trip').length || 0,
             retreats: wishlist?.filter(item => item.item_type === 'retreat').length || 0
           });
           setWishlistCount(count);

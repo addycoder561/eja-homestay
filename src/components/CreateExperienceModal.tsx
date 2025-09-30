@@ -13,7 +13,7 @@ interface CreateExperienceModalProps {
 const EXPERIENCE_TYPES = [
   { id: 'online', label: 'Online' },
   { id: 'hyper-local', label: 'Hyper-local' },
-  { id: 'far-away', label: 'Far-away retreats' }
+  { id: 'far-away', label: 'Retreats' }
 ];
 
 const CATEGORIES = [

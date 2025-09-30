@@ -1028,12 +1028,12 @@ export async function getTrips(): Promise<Trip[]> {
 // New: Retreat functions (now using unified table)
 export async function getRetreats(): Promise<any[]> {
   try {
-    // Fetch from unified table, filtering for Far-away retreats
+    // Fetch from unified table, filtering for Retreats
     const { data, error } = await supabase
       .from('experiences_unified')
       .select('*')
       .eq('is_active', true)
-      .eq('location', 'Far-away retreats')
+      .eq('location', 'Retreats')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -1059,7 +1059,7 @@ export async function getTrip(id: string): Promise<Trip | null> {
     .from('experiences_unified')
     .select('*')
     .eq('id', id)
-    .eq('location', 'Far-away retreats')
+    .eq('location', 'Retreats')
     .single();
   if (error) {
     console.error('Error fetching trip from unified table:', error);

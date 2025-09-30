@@ -190,7 +190,7 @@ export interface Experience {
   host_id: string | null;
   title: string;
   description: string | null;
-  location: string; // 'Hyper-local', 'Online', 'Far-away retreats'
+  location: string; // 'Hyper-local', 'Online', 'Retreats'
   mood: string | null; // Consolidated categories/mood
   price: number;
   duration_hours: number | null; // NULL for retreats, filled for experiences
