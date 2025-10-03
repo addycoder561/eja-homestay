@@ -94,6 +94,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
   const [isWishlistedState, setIsWishlistedState] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
+  const [showMobileBooking, setShowMobileBooking] = useState(false);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [showAllRooms, setShowAllRooms] = useState(false);
@@ -185,19 +186,37 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
       return;
     }
 
+    console.log('🔖 PropertyModal wishlist toggle:', { 
+      userId: user.id, 
+      propertyId: property.id, 
+      currentState: isWishlistedState 
+    });
+
     try {
       if (isWishlistedState) {
-        await removeFromWishlist(user.id, property.id, 'property');
-        setIsWishlistedState(false);
-        toast.success('Removed from wishlist');
+        console.log('🗑️ Removing from wishlist...');
+        const success = await removeFromWishlist(user.id, property.id, 'property');
+        console.log('🗑️ Remove result:', success);
+        if (success) {
+          setIsWishlistedState(false);
+          toast.success('Removed from saved');
+        } else {
+          toast.error('Failed to remove from saved');
+        }
       } else {
-        await addToWishlist(user.id, property.id, 'property');
-        setIsWishlistedState(true);
-        toast.success('Added to wishlist');
+        console.log('➕ Adding to wishlist...');
+        const success = await addToWishlist(user.id, property.id, 'property');
+        console.log('➕ Add result:', success);
+        if (success) {
+          setIsWishlistedState(true);
+          toast.success('Added to saved');
+        } else {
+          toast.error('Failed to add to saved');
+        }
       }
     } catch (error) {
-      console.error('Error updating wishlist:', error);
-      toast.error('Failed to update wishlist');
+      console.error('❌ PropertyModal wishlist error:', error);
+      toast.error('Failed to update saved items');
     }
   };
 
@@ -275,11 +294,11 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
         {/* Modal Container */}
         <div 
           ref={modalRef}
-          className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex overflow-hidden shadow-2xl"
+          className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Left Side - Image Carousel */}
-          <div className="w-1/2 relative bg-black">
+          {/* Top/Left Side - Image Carousel */}
+          <div className="w-full md:w-1/2 h-64 md:h-auto relative bg-black">
             <Image
               src={images[currentImageIndex] || '/placeholder-property.jpg'}
               alt={property.title}
@@ -349,17 +368,17 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
             </button>
           </div>
 
-          {/* Right Side - Content */}
-          <div className="w-1/2 flex flex-col">
+          {/* Bottom/Right Side - Content */}
+          <div className="w-full md:w-1/2 flex flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-4 md:p-6 border-b border-gray-200">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{property.title}</h1>
-                  <div className="flex items-center gap-4 text-gray-600 mb-3">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 truncate">{property.title}</h1>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-gray-600 mb-3">
                     <div className="flex items-center gap-1">
-                      <MapPinIcon className="w-4 h-4" />
-                      <span className="text-sm">{property.location}, {property.city}, {property.state}</span>
+                      <MapPinIcon className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm truncate">{property.location}, {property.city}, {property.state}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <HomeIcon className="w-4 h-4" />
@@ -392,7 +411,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 md:space-y-8">
               {/* Description */}
               {property.description && (
                 <div>

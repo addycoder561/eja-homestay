@@ -25,7 +25,8 @@ import {
   CalendarIcon,
   ClockIcon,
   UsersIcon,
-  BookmarkIcon as BookmarkOutline
+  BookmarkIcon as BookmarkOutline,
+  FunnelIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import Link from 'next/link';
@@ -56,6 +57,11 @@ export default function SearchPageClient() {
   const [loadingRetreats, setLoadingRetreats] = useState(true);
   // Content filter chip: hyper-local | online | retreats
   const [contentFilter, setContentFilter] = useState<'hyper-local' | 'online' | 'retreats' | 'all'>('all');
+  
+  // Mood filter states
+  const [selectedMood, setSelectedMood] = useState<string>('all');
+  const [availableMoods, setAvailableMoods] = useState<string[]>([]);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [filters, setFilters] = useState<SearchFiltersType>({
     location: searchParams.get('location') || '',
     checkIn: searchParams.get('checkIn') || '',
@@ -100,13 +106,11 @@ export default function SearchPageClient() {
       const startTime = Date.now();
       
       try {
-        let data;
-        
         // Property search retained for future use; Discover shows experiences/retreats
         console.log('No property filters applied on Discover; fetching all properties');
         const combinedFilters = { ...filters };
         console.log('🔍 DEBUG - Filters (properties unused on Discover):', combinedFilters);
-        data = await getProperties();
+        const data = await getProperties();
         
         console.log('Fetched properties:', data);
         setProperties(data || []);
@@ -129,9 +133,16 @@ export default function SearchPageClient() {
         setLoadingExperiences(true);
         const data = await getExperiences();
         setExperiences(data || []);
+        
+        // Extract unique mood values
+        console.log('🔍 DEBUG - All experiences with moods:', data?.map(exp => ({ id: exp.id, title: exp.title, mood: exp.mood })));
+        const moods = [...new Set(data?.map(exp => exp.mood).filter(mood => mood && mood.trim() !== '') || [])];
+        console.log('🔍 DEBUG - Extracted moods:', moods);
+        setAvailableMoods(moods);
       } catch (error) {
         console.error('Error fetching experiences:', error);
         setExperiences([]);
+        setAvailableMoods([]);
       } finally {
         setLoadingExperiences(false);
       }
@@ -586,19 +597,33 @@ export default function SearchPageClient() {
     return loc === 'online' || loc.includes('virtual') || loc.includes('remote');
   };
 
-  // Apply chip filter to experiences
+  // Apply mood filter to ALL experiences (regardless of content type)
   const filteredExperiences = experiences.filter((exp) => {
+    console.log('🔍 DEBUG - Filtering experience:', { title: exp.title, mood: exp.mood, selectedMood, location: exp.location });
+    
+    // If a specific mood is selected, ONLY filter by mood (ignore content filters)
+    if (selectedMood !== 'all') {
+      const expMood = exp.mood?.trim();
+      const filterMood = selectedMood?.trim();
+      const moodMatch = expMood === filterMood;
+      console.log('🔍 DEBUG - Mood filtering:', { expMood, filterMood, moodMatch });
+      return moodMatch;
+    }
+    
+    // If "All Moods" is selected, apply content filters
     if (contentFilter === 'retreats') return false;
     if (contentFilter === 'online') return isOnlineExperience(exp);
     if (contentFilter === 'hyper-local') return !isOnlineExperience(exp);
     if (contentFilter === 'all') {
       // When showing all, exclude retreats from experiences section (they have their own section)
-      return exp.location !== 'Retreats';
+      if (exp.location === 'Retreats') return false;
     }
-    return true; // Default fallback
+    
+    return true;
   });
 
-  const filteredRetreats = (contentFilter === 'retreats' || contentFilter === 'all') ? retreats : [];
+  // Only show retreats section when no specific mood is selected and content filter allows it
+  const filteredRetreats = (selectedMood === 'all' && (contentFilter === 'retreats' || contentFilter === 'all')) ? retreats : [];
 
   // Filter properties based on content type toggle - Properties moved to search page
   const filteredProperties = properties.filter((property) => {
@@ -622,13 +647,24 @@ export default function SearchPageClient() {
 
   // Debug filtered results
   console.log('🔍 Filtered results:', {
+    selectedMood,
     contentFilter,
     experiences: filteredExperiences.length,
     retreats: filteredRetreats.length,
     totalExperiences: experiences.length,
     onlineExperiences: experiences.filter(isOnlineExperience).length,
-    hyperLocalExperiences: experiences.filter(exp => !isOnlineExperience(exp)).length
+    hyperLocalExperiences: experiences.filter(exp => !isOnlineExperience(exp)).length,
+    experiencesWithSelectedMood: selectedMood !== 'all' ? experiences.filter(exp => exp.mood?.trim() === selectedMood?.trim()).length : 0
   });
+  
+  // Debug mood distribution
+  console.log('🔍 Mood distribution in all experiences:', 
+    experiences.reduce((acc, exp) => {
+      const mood = exp.mood?.trim() || 'No Mood';
+      acc[mood] = (acc[mood] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -666,10 +702,49 @@ export default function SearchPageClient() {
                 {/* Removed "Discover" title and results count as requested */}
               </div>
               
-
+              {/* Mobile Filter Icon */}
+              <div className="md:hidden">
+                <button
+                  onClick={() => setIsMobileFilterOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  <FunnelIcon className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Filters</span>
+                  {selectedMood !== 'all' && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">1</span>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Active filter chips removed */}
+            {/* Desktop Mood Filter Chips */}
+            <div className="hidden md:block mt-4">
+              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+                <button
+                  onClick={() => setSelectedMood('all')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    selectedMood === 'all'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  All Moods
+                </button>
+                {availableMoods.map((mood) => (
+                  <button
+                    key={mood}
+                    onClick={() => setSelectedMood(mood)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      selectedMood === mood
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {mood}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Combined Results Section */}
@@ -872,6 +947,71 @@ export default function SearchPageClient() {
           )}
         </main>
       </div>
+
+      {/* Mobile Filter Drawer */}
+      {isMobileFilterOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsMobileFilterOpen(false)}
+          />
+          
+          {/* Drawer - Increased height to show all chips */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl h-[45vh] overflow-hidden">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1 bg-gray-300 rounded-full" />
+            </div>
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Filter by Mood</h3>
+              <button
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <XMarkIcon className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Content - Flexbox Layout for Variable Chip Sizes */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedMood('all');
+                    setIsMobileFilterOpen(false);
+                  }}
+                  className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                    selectedMood === 'all'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                  }`}
+                >
+                  All Moods
+                </button>
+                {availableMoods.map((mood) => (
+                  <button
+                    key={mood}
+                    onClick={() => {
+                      setSelectedMood(mood);
+                      setIsMobileFilterOpen(false);
+                    }}
+                    className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                      selectedMood === mood
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                  >
+                    {mood}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Booking Modal */}
       <Modal open={bookingOpen} onClose={closeBooking}>

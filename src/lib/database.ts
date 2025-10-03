@@ -779,43 +779,59 @@ export async function addToWishlist(userId: string, itemId: string, itemType: st
   }
   
   console.log('🔄 Attempting to insert into wishlist table...');
-  const { data, error } = await supabase
-    .from('wishlist')
-    .insert({ user_id: userId, item_id: itemId, item_type: itemType })
-    .select();
+  try {
+    const { data, error } = await supabase
+      .from('wishlist')
+      .insert({ user_id: userId, item_id: itemId, item_type: itemType })
+      .select();
+      
+    if (error) {
+      console.error('❌ Error adding to wishlist:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return false;
+    }
     
-  if (error) {
-    console.error('❌ Error adding to wishlist:', error);
-    console.error('❌ Error details:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
+    console.log('✅ Item added to wishlist successfully:', data);
+    return true;
+  } catch (err) {
+    console.error('❌ Exception in addToWishlist:', err);
     return false;
   }
-  
-  console.log('✅ Item added to wishlist successfully:', data);
-  return true;
 }
 
 export async function removeFromWishlist(userId: string, itemId: string, itemType: string) {
   console.log('🗑️ removeFromWishlist called:', { userId, itemId, itemType });
   
-  const { error } = await supabase
-    .from('wishlist')
-    .delete()
-    .eq('user_id', userId)
-    .eq('item_id', itemId)
-    .eq('item_type', itemType);
+  try {
+    const { error } = await supabase
+      .from('wishlist')
+      .delete()
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .eq('item_type', itemType);
+      
+    if (error) {
+      console.error('❌ Error removing from wishlist:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return false;
+    }
     
-  if (error) {
-    console.error('❌ Error removing from wishlist:', error);
+    console.log('✅ Item removed from wishlist successfully');
+    return true;
+  } catch (err) {
+    console.error('❌ Exception in removeFromWishlist:', err);
     return false;
   }
-  
-  console.log('✅ Item removed from wishlist successfully');
-  return true;
 } 
 
 // --- Multi-room inventory functions ---

@@ -80,6 +80,8 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [isWishlistedState, setIsWishlistedState] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'About' | 'Reviews'>('About');
+  const [showMobileBooking, setShowMobileBooking] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
@@ -484,16 +486,11 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
       currentState: isWishlistedState 
     });
 
-    // Test if wishlist table exists first
-    const tableExists = await testWishlistTable();
-    if (!tableExists) {
-      toast.error('Wishlist table not accessible. Please check database setup.');
-      return;
-    }
-
     try {
       if (isWishlistedState) {
+        console.log('🗑️ Removing from wishlist...');
         const success = await removeFromWishlist(user.id, retreat.id, 'retreat');
+        console.log('🗑️ Remove result:', success);
         if (success) {
           setIsWishlistedState(false);
           toast.success('Removed from saved');
@@ -501,7 +498,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           toast.error('Failed to remove from saved');
         }
       } else {
+        console.log('➕ Adding to wishlist...');
         const success = await addToWishlist(user.id, retreat.id, 'retreat');
+        console.log('➕ Add result:', success);
         if (success) {
           setIsWishlistedState(true);
           toast.success('Added to saved');
@@ -801,11 +800,11 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
         {/* Modal */}
         <div 
           ref={modalRef}
-          className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex overflow-hidden shadow-2xl"
+          className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Left Side - Image Carousel */}
-          <div className="w-1/2 relative bg-black">
+          {/* Top/Left Side - Image Carousel */}
+          <div className="w-full md:w-1/2 h-64 md:h-auto relative bg-black">
             {images.length > 0 ? (
               <>
                 <div className="relative w-full h-full">
@@ -878,22 +877,22 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
             )}
           </div>
 
-          {/* Right Side - Content */}
-          <div ref={rightPanelRef} className="w-1/2 flex flex-col">
+          {/* Bottom/Right Side - Content */}
+          <div ref={rightPanelRef} className="w-full md:w-1/2 flex flex-col">
             {/* Sticky Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 md:p-6 z-10">
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{retreat.title}</h1>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 truncate">{retreat.title}</h1>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
-                      <MapPinIcon className="w-4 h-4" />
-                      <span>{retreat.location}</span>
+                      <MapPinIcon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{retreat.location}</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
                   <button
                     onClick={() => {
                       if (navigator.share) {
@@ -938,116 +937,51 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto">
               {!showBookingForm ? (
-                <div className="p-6 space-y-6">
+                <div className="p-4 md:p-6 space-y-6 md:space-y-8">
+                  {/* Cylindrical Toggle */}
+                  <div className="flex justify-center mb-6">
+                    <div className="relative bg-gray-200 rounded-full p-1 flex">
+                      <button
+                        onClick={() => setActiveTab('About')}
+                        className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          activeTab === 'About'
+                            ? 'text-white shadow-md'
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                      >
+                        About
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('Reviews')}
+                        className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          activeTab === 'Reviews'
+                            ? 'text-white shadow-md'
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                      >
+                        Reviews
+                      </button>
+                      {/* Sliding background */}
+                      <div
+                        className={`absolute top-1 bottom-1 w-1/2 bg-blue-600 rounded-full transition-transform duration-200 ${
+                          activeTab === 'About' ? 'translate-x-0' : 'translate-x-full'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tab Content */}
+                  {activeTab === 'About' ? (
+                    <>
                   {/* About this retreat */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">About this retreat</h3>
                     <p className="text-gray-700 leading-relaxed">{retreat.description}</p>
                   </div>
-
-                  {/* What's included */}
-                  {retreat.unique_propositions && retreat.unique_propositions.length > 0 && (
+                    </>
+                  ) : (
+                    /* Reviews Tab Content */
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">What's included</h3>
-                      <ul className="space-y-2">
-                        {retreat.unique_propositions.map((item, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <CheckCircleIcon className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-gray-700">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* What makes this retreat special */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <CheckCircleIcon className="w-5 h-5 mr-2 text-green-600" />
-                      What makes this retreat special
-                    </h3>
-                    <div className="space-y-3">
-                      {(retreat.unique_propositions || [
-                        'Exclusive access to premium retreat facilities',
-                        'Personalized wellness and mindfulness experience',
-                        'Professional guidance and support throughout'
-                      ]).map((proposition, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <CheckCircleIcon className="w-3 h-3 text-green-600" />
-                          </div>
-                          <span className="text-gray-700">{proposition}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Important Information */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Important Information</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-2">
-                        <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-gray-900 text-sm">Cancellation Policy</h4>
-                          <p className="text-gray-600 text-xs">Free cancellation up to 24 hours before the retreat start time.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-gray-900 text-sm">What to Bring</h4>
-                          <p className="text-gray-600 text-xs">Comfortable clothing and any specific requirements will be communicated before the retreat.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Host Information */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Information</h3>
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        {retreat.host_image ? (
-                          <div className="w-12 h-12 rounded-full overflow-hidden">
-                            <Image 
-                              src={retreat.host_image} 
-                              alt={retreat.host_name || 'Host'} 
-                              width={48} 
-                              height={48} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-bold">
-                            {(retreat.host_name || 'E').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-base font-semibold text-gray-900 mb-1">
-                          Hosted by {retreat.host_name || 'EJA'}
-                        </h4>
-                        <p className="text-gray-600 mb-2 text-sm">
-                          {retreat.host_type || 'Retreat Guide'} • {retreat.host_tenure || '3 years'} hosting
-                        </p>
-                        <p className="text-gray-700 mb-3 text-sm">
-                          {(retreat.host_bio || 'Experienced guide passionate about creating transformative retreat experiences and wellness journeys.').slice(0, 100)}...
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {(retreat.host_usps || ['Local Expertise', 'Safety First', 'Personalized Experience']).slice(0, 2).map((usp, index) => (
-                            <span 
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                            >
-                              {usp}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Guest Reviews */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -1168,6 +1102,8 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                       <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to review!</p>
                     )}
                   </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* Clean Booking Form - Rewritten from Scratch */
@@ -1581,7 +1517,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
               )}
             </div>
 
-            {/* Sticky Footer - Book Now Button */}
+            {/* Sticky Footer - Check-in Button */}
             {!showBookingForm && (
               <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6">
                 <div className="flex items-center justify-between">
@@ -1590,11 +1526,17 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                     <div className="text-sm text-gray-500">for 2 adults</div>
                   </div>
                   <Button
-                    onClick={() => setShowBookingForm(true)}
+                    onClick={() => {
+                      if (window.innerWidth < 768) {
+                        setShowMobileBooking(true);
+                      } else {
+                        setShowBookingForm(true);
+                      }
+                    }}
                     variant="primary"
                     className="px-8 py-3 text-lg font-semibold"
                   >
-                    Book Now
+                    Check-in
                   </Button>
                 </div>
               </div>
@@ -1918,6 +1860,112 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                 >
                   Confirm Selection
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Booking Drawer */}
+      {showMobileBooking && (
+        <div className="md:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+            onClick={() => setShowMobileBooking(false)}
+          />
+          
+          {/* Drawer */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[60vh] flex flex-col">
+            {/* Handle */}
+            <div className="flex justify-center py-3">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="px-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Book Retreat</h3>
+                <button
+                  onClick={() => setShowMobileBooking(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Content - Compact Layout */}
+            <div className="p-4 space-y-4 flex-1">
+                {/* Date and Guest Selection */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Date Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Date</label>
+                    <input
+                      type="date"
+                      value={bookingForm.date}
+                      onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      required
+                    />
+                  </div>
+                  
+                  {/* Guest Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
+                    <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setBookingForm({...bookingForm, guests: Math.max(1, bookingForm.guests - 1)})}
+                        className="w-7 h-7 bg-white border border-gray-300 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                      >
+                        -
+                      </button>
+                      <span className="font-medium text-gray-900 text-sm">{bookingForm.guests}</span>
+                      <button
+                        type="button"
+                        onClick={() => setBookingForm({...bookingForm, guests: bookingForm.guests + 1})}
+                        className="w-7 h-7 bg-white border border-gray-300 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Special Requests */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests (Optional)</label>
+                  <textarea
+                    value={bookingForm.specialRequests}
+                    onChange={(e) => setBookingForm({...bookingForm, specialRequests: e.target.value})}
+                    rows={2}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                    placeholder="Any special requirements?"
+                  />
+                </div>
+            </div>
+            
+            {/* Footer - Fixed at Bottom */}
+            <div className="border-t border-gray-200 p-4 bg-white">
+              <div className="space-y-3">
+                {/* Price Summary */}
+                <div className="flex justify-between items-center bg-blue-50 rounded-lg p-3">
+                  <span className="text-gray-700 font-medium text-sm">Total for {bookingForm.guests} guest{bookingForm.guests !== 1 ? 's' : ''}</span>
+                  <span className="text-lg font-bold text-blue-600">₹{((retreat?.price || 0) * bookingForm.guests).toLocaleString()}</span>
+                </div>
+                
+                {/* Confirm Booking Button */}
+                <Button
+                  onClick={handleBookingSubmit}
+                  disabled={!bookingForm.date || bookingLoading}
+                  className="w-full py-3 text-base font-semibold"
+                  variant="primary"
+                >
+                  {bookingLoading ? 'Processing...' : 'Confirm Booking'}
+                </Button>
               </div>
             </div>
           </div>

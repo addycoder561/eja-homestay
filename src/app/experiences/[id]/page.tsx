@@ -708,135 +708,6 @@ export default function ExperienceDetailPage() {
                   </div>
                       </div>
 
-              {/* What's Included Section - Hardcoded as requested */}
-                      <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">What's included</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                              <span className="text-gray-700 text-sm">Professional guide</span>
-                      </div>
-                            <div className="flex items-center gap-2">
-                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                              <span className="text-gray-700 text-sm">All necessary equipment</span>
-                      </div>
-                            <div className="flex items-center gap-2">
-                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                              <span className="text-gray-700 text-sm">Safety briefing</span>
-                      </div>
-                    </div>
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                              <span className="text-gray-700 text-sm">Local insights</span>
-                      </div>
-                            <div className="flex items-center gap-2">
-                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                              <span className="text-gray-700 text-sm">Memorable photos</span>
-                      </div>
-                            <div className="flex items-center gap-2">
-                              <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                              <span className="text-gray-700 text-sm">Insurance coverage</span>
-                      </div>
-                    </div>
-                  </div>
-                      </div>
-
-              {/* Important Information Section */}
-                      <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Important Information</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-2">
-                            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                              <h4 className="font-semibold text-gray-900 text-sm">Cancellation Policy</h4>
-                              <p className="text-gray-600 text-xs">Free cancellation up to 24 hours before the experience start time.</p>
-                      </div>
-                    </div>
-                          <div className="flex items-start gap-2">
-                            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                              <h4 className="font-semibold text-gray-900 text-sm">What to Bring</h4>
-                              <p className="text-gray-600 text-xs">Comfortable clothing and any specific requirements will be communicated before the experience.</p>
-                      </div>
-                    </div>
-                          <div className="flex items-start gap-2">
-                            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                              <h4 className="font-semibold text-gray-900 text-sm">Health & Safety</h4>
-                              <p className="text-gray-600 text-xs">All experiences follow strict health and safety protocols. Please inform us of any special requirements.</p>
-                      </div>
-                    </div>
-                  </div>
-                      </div>
-
-                      {/* Host Information */}
-                      <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Information</h3>
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            {experience.host_image ? (
-                              <div className="w-16 h-16 rounded-full overflow-hidden">
-                                <Image 
-                                  src={experience.host_image} 
-                                  alt={experience.host_name || 'Host'} 
-                                  width={64} 
-                                  height={64} 
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-                                {(experience.host_name || 'E').charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-base font-semibold text-gray-900 mb-1">
-                              Hosted by {experience.host_name || 'EJA'}
-                            </h4>
-                            <p className="text-gray-600 mb-3 text-sm">
-                              {experience.host_type || 'Experience Guide'} • {experience.host_tenure || '3 years'} hosting
-                            </p>
-                            <p className="text-gray-700 mb-4 text-sm">
-                              {(experience.host_description || 'Experienced guide passionate about sharing local culture and creating memorable experiences.').slice(0, 120)}...
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {(experience.host_usps || ['Local Expertise', 'Safety First', 'Personalized Experience']).map((usp, index) => (
-                                <span 
-                                  key={index}
-                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                >
-                                  {usp}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Unique Propositions */}
-                      <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                          <CheckCircleIcon className="w-5 h-5 mr-2 text-green-600" />
-                          What makes this experience special
-                        </h3>
-                        <div className="space-y-3">
-                          {(experience.unique_propositions || [
-                            'Exclusive access to hidden local spots',
-                            'Authentic cultural immersion experience',
-                            'Professional photography included'
-                          ]).map((proposition, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                              <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <CheckCircleIcon className="w-3 h-3 text-green-600" />
-                              </div>
-                              <span className="text-gray-700 text-sm">{proposition}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -1021,7 +892,7 @@ export default function ExperienceDetailPage() {
                     </div>
                     </div>
 
-                    {/* Book Now Button */}
+                    {/* Check-in Button */}
                 <Button 
                   type="submit" 
                       variant="primary"
@@ -1034,7 +905,7 @@ export default function ExperienceDetailPage() {
                       ) : (
                         <>
                   <CalendarIcon className="w-5 h-5 mr-2" />
-                          Book Now
+                          Check-in
                         </>
                       )}
                 </Button>

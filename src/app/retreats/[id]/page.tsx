@@ -666,123 +666,6 @@ export default function RetreatDetailPage() {
                   </div>
                       </div>
 
-                        {/* What's Included Section - Hardcoded as requested */}
-                        <div className="border-t pt-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4">What's included</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                <span className="text-gray-700 text-sm">Accommodation</span>
-                    </div>
-                              <div className="flex items-center gap-2">
-                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                <span className="text-gray-700 text-sm">All meals included</span>
-                    </div>
-                              <div className="flex items-center gap-2">
-                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                <span className="text-gray-700 text-sm">Guided activities</span>
-                    </div>
-                    </div>
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                <span className="text-gray-700 text-sm">Wellness sessions</span>
-                    </div>
-                              <div className="flex items-center gap-2">
-                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                <span className="text-gray-700 text-sm">Transportation</span>
-                    </div>
-                              <div className="flex items-center gap-2">
-                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                                <span className="text-gray-700 text-sm">24/7 support</span>
-                  </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Important Information Section - Hardcoded as requested */}
-                        <div className="border-t pt-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Important Information</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                                <h4 className="font-semibold text-gray-900">Cancellation Policy</h4>
-                        <p className="text-gray-600 text-sm">Free cancellation up to 7 days before the retreat start date.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                                <h4 className="font-semibold text-gray-900">What to Bring</h4>
-                        <p className="text-gray-600 text-sm">Comfortable clothing, personal items, and any specific requirements will be communicated before arrival.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                                <h4 className="font-semibold text-gray-900">Health & Safety</h4>
-                        <p className="text-gray-600 text-sm">All retreats follow strict health and safety protocols. Please inform us of any special requirements.</p>
-                      </div>
-                    </div>
-                  </div>
-                        </div>
-
-                        {/* Host Information */}
-                        <div className="border-t pt-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Information</h3>
-                          <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
-                            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                              <Image
-                                src={retreat.host_image || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80"}
-                                alt={retreat.host_name || "Host"}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-semibold text-gray-900">Hosted by {retreat.host_name || "EJA"}</h4>
-                                <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                                  {retreat.host_type || "Retreat Guide"}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{retreat.host_tenure || "4 years"} hosting</p>
-                              <p className="text-sm text-gray-700 line-clamp-2">
-                                {retreat.host_description || "EJA is a trusted wellness partner committed to providing exceptional retreat experiences."}
-                              </p>
-                              {retreat.host_usps && retreat.host_usps.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {retreat.host_usps.slice(0, 3).map((usp, index) => (
-                                    <span key={index} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                      {usp}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Unique Propositions */}
-                        {retreat.unique_propositions && retreat.unique_propositions.length > 0 && (
-                          <div className="border-t pt-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <SparklesIcon className="w-5 h-5 text-yellow-500" />
-                              What makes this retreat special
-                            </h3>
-                            <div className="space-y-3">
-                              {retreat.unique_propositions.map((proposition, index) => (
-                                <div key={index} className="flex items-start gap-3">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                  <p className="text-gray-700 text-sm">{proposition}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                     </div>
                   )}
                 </CardContent>
@@ -969,7 +852,7 @@ export default function RetreatDetailPage() {
                 </div>
               )}
 
-                    {/* Book Now Button */}
+                    {/* Check-in Button */}
                 <Button 
                   type="submit" 
                       variant="primary" 
@@ -979,7 +862,7 @@ export default function RetreatDetailPage() {
                       className="w-full"
                 >
                   <CalendarIcon className="w-5 h-5 mr-2" />
-                      Book Now
+                      Check-in
                 </Button>
 
                     <div className="text-center text-sm text-gray-500">

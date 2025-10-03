@@ -64,9 +64,9 @@ function SignInInner() {
           <div className="max-w-md">
             <div className="mb-8">
               <img 
-                src="/eja_02.svg" 
+                src="/eja_transparent svg.svg" 
                 alt="EJA Logo" 
-                className="w-32 h-32 mb-6"
+                className="w-56 h-22 mb-6 object-contain"
               />
             </div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">

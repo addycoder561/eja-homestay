@@ -651,6 +651,142 @@ export default function AboutUsPage() {
             </div>
           </section>
 
+          {/* Careers Section */}
+          <section className="mb-16">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Join Our Team</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Help us create meaningful connections between travelers and local hosts, 
+                making every journey an authentic and memorable experience.
+              </p>
+            </div>
+
+            {/* Why Work With Us */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mb-12">
+              <div className="text-center mb-8">
+                <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Work With Us</h3>
+                <p className="text-lg text-gray-600">We take care of our team so you can focus on doing your best work</p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <HeartIcon className="w-12 h-12 text-blue-600 mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Health & Wellness</h4>
+                  <p className="text-gray-600">Comprehensive health insurance, mental health support, and wellness programs</p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <UserGroupIcon className="w-12 h-12 text-blue-600 mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Flexible Work</h4>
+                  <p className="text-gray-600">Remote work options, flexible hours, and work-life balance initiatives</p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <GlobeAltIcon className="w-12 h-12 text-blue-600 mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Travel Perks</h4>
+                  <p className="text-gray-600">Discounted stays at our partner homestays and travel allowances</p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <StarIcon className="w-12 h-12 text-blue-600 mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Learning & Growth</h4>
+                  <p className="text-gray-600">Professional development budget, training programs, and career advancement</p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <UserGroupIcon className="w-12 h-12 text-blue-600 mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Team Culture</h4>
+                  <p className="text-gray-600">Collaborative environment, team events, and inclusive workplace culture</p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <LightBulbIcon className="w-12 h-12 text-blue-600 mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Innovation</h4>
+                  <p className="text-gray-600">Work on cutting-edge technology and shape the future of travel</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Open Positions */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="text-center mb-8">
+                <h3 className="text-3xl font-bold text-gray-900 mb-4">Open Positions</h3>
+                <p className="text-lg text-gray-600">Join our growing team and help shape the future of travel</p>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                    <div>
+                      <h4 className="text-xl font-semibold text-gray-900 mb-2">Frontend Developer</h4>
+                      <p className="text-gray-600 mb-2">Build beautiful, responsive user interfaces for our homestay platform using React, Next.js, and modern web technologies.</p>
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                        <span>Engineering</span>
+                        <span>Remote / Delhi</span>
+                        <span>Full-time</span>
+                        <span>2-4 years</span>
+                        <span>₹8-15 LPA</span>
+                      </div>
+                    </div>
+                    <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                      Apply Now
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                    <div>
+                      <h4 className="text-xl font-semibold text-gray-900 mb-2">Backend Developer</h4>
+                      <p className="text-gray-600 mb-2">Develop robust backend services and APIs to power our homestay booking platform using Node.js and PostgreSQL.</p>
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                        <span>Engineering</span>
+                        <span>Remote / Bangalore</span>
+                        <span>Full-time</span>
+                        <span>3-5 years</span>
+                        <span>₹12-20 LPA</span>
+                      </div>
+                    </div>
+                    <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                      Apply Now
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                    <div>
+                      <h4 className="text-xl font-semibold text-gray-900 mb-2">Product Manager</h4>
+                      <p className="text-gray-600 mb-2">Lead product strategy and development for our homestay platform, focusing on user experience and business growth.</p>
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                        <span>Product</span>
+                        <span>Delhi / Mumbai</span>
+                        <span>Full-time</span>
+                        <span>4-6 years</span>
+                        <span>₹15-25 LPA</span>
+                      </div>
+                    </div>
+                    <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                      Apply Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center mt-8">
+                <p className="text-gray-600 mb-4">Don't see the right role? We're always looking for talented individuals!</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Send Resume
+                  </button>
+                  <button className="border border-blue-600 text-blue-600 px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors">
+                    Contact HR
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Contact */}
           <section className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
             <div className="text-center">

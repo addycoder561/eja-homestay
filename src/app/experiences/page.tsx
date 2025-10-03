@@ -179,10 +179,10 @@ export default function ExperiencesPage() {
                     <span className="text-gray-500 text-sm">/person</span>
                   </div>
                   
-                  {/* Book Now Button */}
+                  {/* Check-in Button */}
                   <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
                     <CalendarIcon className="w-4 h-4" />
-                    Book Now
+                    Check-in
                   </button>
                 </div>
               </div>

@@ -10,26 +10,13 @@ import {
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
-  const footerLinks = {
-    company: [
-      { name: 'About Us', href: '/about-us' },
-      { name: 'Careers', href: '/careers' },
-      { name: 'Press', href: '/press' },
-      { name: 'Blog', href: '/blog' },
-    ],
-    support: [
-      { name: 'Help Center', href: '/help-center' },
-      { name: 'Contact Us', href: '/contact-us' },
-      { name: 'Safety Information', href: '/safety-information' },
-      { name: 'Cancellation Options', href: '/cancellation-options' },
-    ],
-    legal: [
-      { name: 'Terms of Service', href: '/terms' },
-      { name: 'Privacy Policy', href: '/privacy' },
-      { name: 'Cookie Policy', href: '/cookie-policy' },
-      { name: 'Accessibility', href: '/accessibility' },
-    ]
-  };
+  const footerLinks = [
+    { name: 'About', href: '/about-us' },
+    { name: 'Blog', href: '/blog' },
+    { name: 'Help', href: '/help-center' },
+    { name: 'Terms', href: '/terms' },
+    { name: 'Privacy', href: '/privacy' },
+  ];
 
   const socialLinks = [
     {
@@ -72,38 +59,17 @@ export function Footer() {
 
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          {/* Company Info */}
-          <div className="md:col-span-1">
-            <div 
-              className="flex items-center mb-6 animate-fade-in -ml-8 sm:-ml-12"
-            >
-              <img 
-                src="/eja_02.svg" 
-                alt="EJA Logo" 
-                className="w-[200px] h-[200px] sm:w-[225px] sm:h-[225px]"
-              />
-            </div>
-          </div>
-
-          {/* Footer Links - Three columns in one row */}
-          {Object.entries(footerLinks).map(([category, links], index) => (
-            <div
-              key={category}
-              className="animate-fade-in"
-              style={{ animationDelay: `${0.1 + index * 0.1}s` }}
-            >
-              <h3 className="text-lg font-semibold mb-4 capitalize">
-                {category}
-              </h3>
-              <ul className="space-y-3">
-                {links.map((link) => (
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Footer Content */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Footer Links */}
+            <div className="animate-fade-in">
+              <ul className="flex flex-wrap gap-6">
+                {footerLinks.map((link) => (
                   <li key={link.name}>
                     <Link 
                       href={link.href} 
-                      className="text-gray-300 hover:text-white transition-colors duration-200"
+                      className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                     >
                       {link.name}
                     </Link>
@@ -111,36 +77,30 @@ export function Footer() {
                 ))}
               </ul>
             </div>
-          ))}
+
+            {/* Copyright */}
+            <div 
+              className="text-gray-400 text-sm animate-fade-in-delay-4"
+            >
+              © {currentYear} EJA. All rights reserved.
+            </div>
+
+            {/* Social Links */}
+            <div 
+              className="flex items-center gap-4 animate-fade-in-delay-4"
+            >
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  className="text-gray-400 hover:text-white transition-colors duration-200"
+                  aria-label={social.name}
+                >
+                  {social.icon}
+                </a>
+              ))}
+            </div>
         </div>
-
-                 {/* Bottom Section */}
-         <div className="border-t border-gray-800 pt-8">
-           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-             {/* Copyright */}
-             <div 
-               className="text-gray-400 text-sm animate-fade-in-delay-4"
-             >
-               © {currentYear} EJA. All rights reserved.
-             </div>
-
-             {/* Social Links */}
-             <div 
-               className="flex items-center gap-4 animate-fade-in-delay-4"
-             >
-               {socialLinks.map((social) => (
-                 <a
-                   key={social.name}
-                   href={social.href}
-                   className="text-gray-400 hover:text-white transition-colors duration-200"
-                   aria-label={social.name}
-                 >
-                   {social.icon}
-                 </a>
-               ))}
-             </div>
-           </div>
-         </div>
       </div>
     </footer>
   );

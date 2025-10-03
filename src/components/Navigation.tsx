@@ -184,9 +184,9 @@ export function Navigation() {
               {/* Enhanced Logo - Extreme Left Aligned */}
               <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200 -ml-4 sm:-ml-8">
                 <img 
-                  src="/eja_02.svg" 
+                  src="/eja_transparent svg.svg" 
                   alt="EJA Logo" 
-                  className="w-[200px] h-[200px] sm:w-[225px] sm:h-[225px]"
+                  className="w-48 h-20 sm:w-60 sm:h-24 object-contain"
                 />
               </Link>
 
@@ -367,9 +367,9 @@ export function Navigation() {
               {/* Mobile Logo */}
               <Link href="/" className="flex items-center">
                 <img 
-                  src="/eja_02.svg" 
+                  src="/eja_transparent svg.svg" 
                   alt="EJA Logo" 
-                  className="w-[120px] h-[120px]"
+                  className="w-40 h-16 object-contain"
                 />
               </Link>
 
