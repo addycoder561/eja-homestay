@@ -3,7 +3,7 @@ import { PropertyWithHost } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
-import { isWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
+import { isBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import { BookmarkIcon as BookmarkOutline } from '@heroicons/react/24/outline';
 import { LiveRating } from './LiveRating';
@@ -30,7 +30,7 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
   useEffect(() => {
     let ignore = false;
     if (user) {
-      isWishlisted(user.id, property.id, 'property').then((b) => {
+      isBucketlisted(user.id, property.id, 'property').then((b) => {
         if (!ignore) setWishlisted(b);
       });
     } else {
@@ -47,10 +47,10 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
     setIsLoading(true);
     try {
       if (wishlisted) {
-        await removeFromWishlist(user.id, property.id, 'property');
+        await removeFromBucketlist(user.id, property.id, 'property');
         setWishlisted(false);
       } else {
-        await addToWishlist(user.id, property.id, 'property');
+        await addToBucketlist(user.id, property.id, 'property');
         setWishlisted(true);
       }
     } catch (error) {

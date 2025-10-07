@@ -22,10 +22,13 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  DocumentTextIcon,
+  HeartIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist, testWishlistTable } from '@/lib/database';
+import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist, testWishlistTable } from '@/lib/database';
 import Image from 'next/image';
 import Script from 'next/script';
 
@@ -120,11 +123,12 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     email: ''
   });
   const [canReview, setCanReview] = useState(false);
-  const [isWishlistedState, setIsWishlistedState] = useState(false);
+  const [isBucketlistedState, setIsBucketlistedState] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'About' | 'Reviews'>('About');
   const [showMobileBooking, setShowMobileBooking] = useState(false);
+  const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'reviews' | 'checkin' | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: '',
@@ -168,23 +172,23 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     fetchReviews();
   }, [experience]);
 
-  // Check wishlist status
+  // Check bucketlist status
   useEffect(() => {
-    const checkWishlistStatus = async () => {
+    const checkBucketlistStatus = async () => {
       if (user && experience) {
         try {
-          const wishlisted = await checkIsWishlisted(user.id, experience.id, 'experience');
-          setIsWishlistedState(wishlisted);
+          const bucketlisted = await checkIsBucketlisted(user.id, experience.id, 'experience');
+          setIsBucketlistedState(bucketlisted);
         } catch (err) {
-          console.error('Error checking wishlist status:', err);
-          setIsWishlistedState(false);
+          console.error('Error checking bucketlist status:', err);
+          setIsBucketlistedState(false);
         }
       } else {
-        setIsWishlistedState(false);
+        setIsBucketlistedState(false);
       }
     };
     
-    checkWishlistStatus();
+    checkBucketlistStatus();
   }, [user, experience]);
 
   // Check if user can review
@@ -281,42 +285,42 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     }
   };
 
-  const handleWishlistToggle = async () => {
+  const handleBucketlistToggle = async () => {
     if (!user || !experience) {
-      toast.error('Please sign in to add experiences to wishlist');
+      toast.error('Please sign in to add experiences to bucketlist');
       return;
     }
 
-    console.log('🔖 Modal wishlist toggle:', { 
+    console.log('🔖 Modal bucketlist toggle:', { 
       userId: user.id, 
       experienceId: experience.id, 
-      currentState: isWishlistedState 
+      currentState: isBucketlistedState 
     });
 
     try {
-      if (isWishlistedState) {
-        console.log('🗑️ Removing from wishlist...');
-        const success = await removeFromWishlist(user.id, experience.id, 'experience');
+      if (isBucketlistedState) {
+        console.log('🗑️ Removing from bucketlist...');
+        const success = await removeFromBucketlist(user.id, experience.id, 'experience');
         console.log('🗑️ Remove result:', success);
         if (success) {
-          setIsWishlistedState(false);
+          setIsBucketlistedState(false);
           toast.success('Removed from saved');
         } else {
           toast.error('Failed to remove from saved');
         }
       } else {
-        console.log('➕ Adding to wishlist...');
-        const success = await addToWishlist(user.id, experience.id, 'experience');
+        console.log('➕ Adding to bucketlist...');
+        const success = await addToBucketlist(user.id, experience.id, 'experience');
         console.log('➕ Add result:', success);
         if (success) {
-          setIsWishlistedState(true);
+          setIsBucketlistedState(true);
           toast.success('Added to saved');
         } else {
           toast.error('Failed to add to saved');
         }
       }
     } catch (err) {
-      console.error('❌ Modal wishlist error:', err);
+      console.error('❌ Modal bucketlist error:', err);
       toast.error('Failed to update saved items');
     }
   };
@@ -564,11 +568,95 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
+      {/* Mobile Full Screen Gallery */}
+      <div className="md:hidden fixed inset-0 z-50 bg-black">
+        {/* Close Button and Counter - Floating */}
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
+          <button
+            onClick={onClose}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+          {images.length > 1 && (
+            <div className="bg-black/60 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
+              {currentImageIndex + 1} / {images.length}
+            </div>
+          )}
+        </div>
+
+        {/* Full Screen Image */}
+        <div className="relative w-full h-full">
+          {images.length > 0 ? (
+            <>
+              <Image
+                src={images[currentImageIndex]}
+                alt={experience.title}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                priority
+              />
+              
+              {/* Navigation Arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+                  >
+                    <ChevronLeftIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+                  >
+                    <ChevronRightIcon className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+
+              {/* Floating Action Buttons - Over Image */}
+              <div className="absolute bottom-24 right-4 flex flex-col space-y-3">
+                {/* Details Button */}
+                <button
+                  onClick={() => setMobileDrawerType('about')}
+                  className="bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                >
+                  <DocumentTextIcon className="w-5 h-5" />
+                </button>
+
+                {/* Reviews Button */}
+                <button
+                  onClick={() => setMobileDrawerType('reviews')}
+                  className="bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                >
+                  <HeartIcon className="w-5 h-5" />
+                </button>
+
+                {/* Check-in Button */}
+                <button
+                  onClick={() => setMobileDrawerType('checkin')}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-full p-3 shadow-xl transition-all border-2 border-yellow-400"
+                >
+                  <CalendarDaysIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <div className="text-gray-500 text-center">
+                <div className="text-4xl mb-2">📸</div>
+                <div>No images available</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Desktop Modal */}
+      <div className="hidden md:block fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         {/* Modal Container */}
         <div 
           ref={modalRef}
@@ -672,13 +760,13 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                   </button>
                    {user && (
                      <button
-                       onClick={handleWishlistToggle}
+                       onClick={handleBucketlistToggle}
                        className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${
-                         isWishlistedState ? 'text-yellow-500' : 'text-gray-600'
+                         isBucketlistedState ? 'text-yellow-500' : 'text-gray-600'
                        }`}
-                       aria-label={isWishlistedState ? 'Remove from saved' : 'Add to saved'}
+                       aria-label={isBucketlistedState ? 'Remove from saved' : 'Add to saved'}
                      >
-                       {isWishlistedState ? (
+                       {isBucketlistedState ? (
                          <BookmarkSolid className="w-5 h-5" />
                        ) : (
                          <BookmarkIcon className="w-5 h-5" />
@@ -1238,6 +1326,247 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                   {bookingLoading ? 'Processing...' : 'Confirm Booking'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Drawers */}
+      {mobileDrawerType && (
+        <div className="md:hidden fixed inset-0 z-[60]">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+            onClick={() => setMobileDrawerType(null)}
+          />
+          
+          {/* Drawer */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col">
+            {/* Handle */}
+            <div className="flex justify-center py-3">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="px-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {mobileDrawerType === 'about' && 'About'}
+                  {mobileDrawerType === 'reviews' && 'Reviews'}
+                  {mobileDrawerType === 'checkin' && 'Check-in'}
+                </h3>
+                <button
+                  onClick={() => setMobileDrawerType(null)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {mobileDrawerType === 'about' && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Description</h4>
+                    <p className="text-gray-700 leading-relaxed">{experience.description}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">What's Included</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center text-gray-700">
+                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span>Professional guide</span>
+                      </li>
+                      <li className="flex items-center text-gray-700">
+                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span>All necessary equipment</span>
+                      </li>
+                      <li className="flex items-center text-gray-700">
+                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span>Safety briefing</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Important Information</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center text-gray-700">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
+                        <span>Bring comfortable walking shoes</span>
+                      </li>
+                      <li className="flex items-center text-gray-700">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
+                        <span>Weather-dependent activity</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {mobileDrawerType === 'reviews' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <StarSolid key={i} className="w-5 h-5 text-yellow-400" />
+                          ))}
+                        </div>
+                        <span className="ml-2 text-gray-600">({averageRating.toFixed(1)})</span>
+                      </div>
+                      <p className="text-gray-600 text-sm">{reviews.length} reviews</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {reviews.map((review, index) => (
+                      <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-sm font-medium text-gray-600">
+                                {review.guest_name?.charAt(0) || 'A'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{review.guest_name}</div>
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <StarSolid 
+                                    key={i} 
+                                    className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {new Date(review.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Review Form */}
+                  {user && !hasReviewed && (
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-3">Write a Review</h4>
+                      <form onSubmit={handleReviewSubmit} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setReviewRating(star)}
+                                className="text-2xl"
+                              >
+                                {star <= reviewRating ? '⭐' : '☆'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                          <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                            placeholder="Share your experience..."
+                          />
+                        </div>
+                        <Button type="submit" disabled={submitting} className="w-full">
+                          {submitting ? 'Submitting...' : 'Submit Review'}
+                        </Button>
+                      </form>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {mobileDrawerType === 'checkin' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-gray-900 mb-2">₹{experience.price?.toLocaleString()}</div>
+                    <div className="text-gray-700 font-semibold">per person</div>
+                  </div>
+
+                  <form className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Select Date</label>
+                        <input
+                          type="date"
+                          value={bookingForm.date}
+                          onChange={(e) => setBookingForm(prev => ({ ...prev, date: e.target.value }))}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Number of Guests</label>
+                        <div className="flex items-center justify-center space-x-3 px-3 py-2 border-2 border-gray-400 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => setBookingForm(prev => ({ ...prev, guests: Math.max(1, prev.guests - 1) }))}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
+                          >
+                            <span className="text-lg font-bold text-gray-700">-</span>
+                          </button>
+                          <span className="text-lg font-semibold text-gray-900">{bookingForm.guests}</span>
+                          <button
+                            type="button"
+                            onClick={() => setBookingForm(prev => ({ ...prev, guests: prev.guests + 1 }))}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
+                          >
+                            <span className="text-lg font-bold text-gray-700">+</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Special Requests (Optional)</label>
+                      <textarea
+                        value={bookingForm.specialRequests}
+                        onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                        placeholder="Any special requirements or requests..."
+                      />
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-400">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-900 font-semibold">Total</span>
+                        <span className="text-xl font-bold text-gray-900">₹{(experience.price * bookingForm.guests).toLocaleString()}</span>
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Includes all taxes and fees</div>
+                    </div>
+
+                    <Button 
+                      onClick={() => {
+                        setMobileDrawerType(null);
+                        setShowMobileBooking(true);
+                      }}
+                      className="w-full"
+                      size="lg"
+                    >
+                      Confirm Booking
+                    </Button>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </div>

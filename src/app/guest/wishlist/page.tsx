@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getWishlist, removeFromWishlist } from "@/lib/database";
+import { getBucketlist, removeFromBucketlist } from "@/lib/database";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Navigation } from "@/components/Navigation";
@@ -20,7 +20,7 @@ import {
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import Image from 'next/image';
 
-interface WishlistItem {
+interface BucketlistItem {
   id: string;
   _type: 'property' | 'hyper-local' | 'online' | 'retreat'; // Updated classifications
   title: string;
@@ -37,10 +37,10 @@ interface WishlistItem {
   review_count?: number; // Added for experiences and retreats
 }
 
-type FilterType = 'all' | 'property' | 'hyper-local' | 'online' | 'retreat';
+type FilterType = 'stays' | 'experiences';
 
 // Loading skeleton for wishlist cards
-function WishlistCardSkeleton({ index = 0 }: { index?: number }) {
+function BucketlistCardSkeleton({ index = 0 }: { index?: number }) {
   return (
     <div 
       className="bg-white rounded-2xl shadow-lg overflow-hidden animate-fade-in"
@@ -60,47 +60,31 @@ function WishlistCardSkeleton({ index = 0 }: { index?: number }) {
 }
 
 // Empty state component
-function EmptyWishlistState({ activeFilter }: { activeFilter: FilterType }) {
+function EmptyBucketlistState({ activeFilter }: { activeFilter: FilterType }) {
   const getEmptyMessage = () => {
     switch (activeFilter) {
-      case 'property':
+      case 'stays':
         return {
           title: "No saved stays yet",
-          message: "Start exploring amazing properties and save your favorites",
+          message: "",
           icon: "🏠",
-          buttonText: "Explore Properties",
+          buttonText: "Explore",
           buttonLink: "/search"
         };
-      case 'hyper-local':
+      case 'experiences':
         return {
-          title: "No saved hyper-local experiences yet", 
-          message: "Discover unique local experiences and add them to your wishlist",
+          title: "No saved experiences yet", 
+          message: "",
           icon: "🌟",
-          buttonText: "Explore Local Experiences",
-          buttonLink: "/discover"
-        };
-      case 'online':
-        return {
-          title: "No saved online experiences yet", 
-          message: "Discover amazing online experiences and add them to your wishlist",
-          icon: "💻",
-          buttonText: "Explore Online Experiences",
-          buttonLink: "/discover"
-        };
-      case 'retreat':
-        return {
-          title: "No saved retreats yet",
-          message: "Find perfect retreats and save them for later",
-          icon: "🧘‍♀️",
-          buttonText: "Find Retreats",
+          buttonText: "Explore",
           buttonLink: "/discover"
         };
       default:
         return {
-          title: "Your wishlist is empty",
+          title: "Your bucketlist is empty",
           message: "Start exploring and save places you love",
           icon: "💝",
-          buttonText: "Explore Properties",
+          buttonText: "Explore",
           buttonLink: "/search"
         };
     }
@@ -123,16 +107,16 @@ function EmptyWishlistState({ activeFilter }: { activeFilter: FilterType }) {
   );
 }
 
-export default function MyWishlistPage() {
+export default function MyBucketlistPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<WishlistItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<WishlistItem[]>([]);
+  const [items, setItems] = useState<BucketlistItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<BucketlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removingIds, setRemovingIds] = useState<string[]>([]);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('stays');
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -148,13 +132,13 @@ export default function MyWishlistPage() {
       return;
     }
 
-    const fetchWishlist = async () => {
+    const fetchBucketlist = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        const wishlistRecords = await getWishlist(user.id);
-        console.log('Wishlist records:', wishlistRecords);
+        const wishlistRecords = await getBucketlist(user.id);
+        console.log('Bucketlist records:', wishlistRecords);
         
         if (!wishlistRecords || wishlistRecords.length === 0) {
           setItems([]);
@@ -172,23 +156,23 @@ export default function MyWishlistPage() {
           .map(b => b.item_id);
         
         const retreatIds = wishlistRecords
-          .filter(b => b.item_type === 'retreat') // Retreats are stored as 'retreat' in database
+          .filter(b => b.item_type === 'trip') // Retreats are stored as 'trip' in database
           .map(b => b.item_id);
 
-        const allItems: WishlistItem[] = [];
+        const allItems: BucketlistItem[] = [];
 
-        console.log('🔍 Processing wishlist items:', {
+        console.log('🔍 Processing bucketlist items:', {
           propertyIds,
           experienceIds,
           retreatIds,
           totalRecords: wishlistRecords.length
         });
         
-        console.log('📊 Total wishlist records:', wishlistRecords);
-        console.log('🔍 Wishlist records breakdown:', {
+        console.log('📊 Total bucketlist records:', wishlistRecords);
+        console.log('🔍 Bucketlist records breakdown:', {
           properties: wishlistRecords.filter(b => b.item_type === 'property').length,
           experiences: wishlistRecords.filter(b => b.item_type === 'experience').length,
-          retreats: wishlistRecords.filter(b => b.item_type === 'retreat').length
+          retreats: wishlistRecords.filter(b => b.item_type === 'trip').length
         });
 
         // Fetch properties
@@ -287,45 +271,54 @@ export default function MyWishlistPage() {
         setItems(allItems);
         setDataLoaded(true);
       } catch (err) {
-        console.error('Error fetching wishlist:', err);
-        setError('Failed to load your wishlist. Please try again.');
+        console.error('Error fetching bucketlist:', err);
+        setError('Failed to load your bucketlist. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchWishlist();
+    fetchBucketlist();
   }, [user]); // Remove dataLoaded from dependencies to prevent infinite loop
 
   useEffect(() => {
-    if (activeFilter === 'all') {
-      setFilteredItems(items);
-    } else {
-      setFilteredItems(items.filter(item => item._type === activeFilter));
+    if (activeFilter === 'stays') {
+      setFilteredItems(items.filter(item => item._type === 'property'));
+    } else if (activeFilter === 'experiences') {
+      setFilteredItems(items.filter(item => 
+        item._type === 'hyper-local' || 
+        item._type === 'online' || 
+        item._type === 'retreat'
+      ));
     }
   }, [items, activeFilter]);
 
-  const handleRemoveFromWishlist = async (item: WishlistItem) => {
+  const handleRemoveFromBucketlist = async (item: BucketlistItem) => {
     const itemKey = item.id + '-' + item._type;
     setRemovingIds(prev => [...prev, itemKey]);
     
     try {
       // Map display type back to database type
-      const dbItemType = item._type === 'retreat' ? 'trip' : item._type;
-      await removeFromWishlist(user!.id, item.id, dbItemType);
+      let dbItemType = item._type;
+      if (item._type === 'retreat') {
+        dbItemType = 'trip'; // Retreats are stored as 'trip' in the database
+      } else if (item._type === 'hyper-local' || item._type === 'online') {
+        dbItemType = 'experience'; // Both hyper-local and online are stored as 'experience'
+      }
+      await removeFromBucketlist(user!.id, item.id, dbItemType);
       setItems(prev => prev.filter(i => !(i.id === item.id && i._type === item._type)));
-      // Refresh wishlist count in navigation
-      if ((window as any).refreshWishlistCount) {
-        (window as any).refreshWishlistCount();
+      // Refresh bucketlist count in navigation
+      if ((window as any).refreshBucketlistCount) {
+        (window as any).refreshBucketlistCount();
       }
     } catch (error) {
-      console.error('Error removing from wishlist:', error);
+      console.error('Error removing from bucketlist:', error);
     } finally {
       setRemovingIds(prev => prev.filter(id => id !== itemKey));
     }
   };
 
-  const handleBookNow = (item: WishlistItem) => {
+  const handleBookNow = (item: BucketlistItem) => {
     switch (item._type) {
       case 'property':
         router.push(`/property/${item.id}`);
@@ -341,20 +334,21 @@ export default function MyWishlistPage() {
   };
 
   const getFilterCount = (type: FilterType) => {
-    if (type === 'all') return items.length;
-    return items.filter(item => item._type === type).length;
+    if (type === 'stays') return items.filter(item => item._type === 'property').length;
+    if (type === 'experiences') return items.filter(item => 
+      item._type === 'hyper-local' || 
+      item._type === 'online' || 
+      item._type === 'retreat'
+    ).length;
+    return 0;
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'property':
+      case 'stays':
         return <BookmarkIcon className="w-4 h-4" />;
-      case 'hyper-local':
+      case 'experiences':
         return <StarIcon className="w-4 h-4" />;
-      case 'online':
-        return <StarIcon className="w-4 h-4" />;
-      case 'retreat':
-        return <HeartIcon className="w-4 h-4" />;
       default:
         return <BookmarkIcon className="w-4 h-4" />;
     }
@@ -362,14 +356,10 @@ export default function MyWishlistPage() {
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'property':
+      case 'stays':
         return 'Stays';
-      case 'hyper-local':
-        return 'Hyper-local';
-      case 'online':
-        return 'Online';
-      case 'retreat':
-        return 'Retreats';
+      case 'experiences':
+        return 'Experiences';
       default:
         return 'All';
     }
@@ -379,7 +369,7 @@ export default function MyWishlistPage() {
     setImageErrors(prev => new Set(prev).add(imageUrl));
   };
 
-  const getImageUrl = (item: WishlistItem) => {
+  const getImageUrl = (item: BucketlistItem) => {
     const imageUrl = item.images?.[0] || item.image || '/placeholder-property.jpg';
     return imageErrors.has(imageUrl) ? '/placeholder-property.jpg' : imageUrl;
   };
@@ -391,7 +381,7 @@ export default function MyWishlistPage() {
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your wishlist...</p>
+            <p className="text-gray-600">Loading your bucketlist...</p>
           </div>
         </main>
         <Footer />
@@ -406,7 +396,7 @@ export default function MyWishlistPage() {
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-16">
             <div className="text-6xl mb-6">🔐</div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign in to view your wishlist</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign in to view your bucketlist</h1>
             <p className="text-gray-600 mb-8">Please sign in to access your saved places and experiences.</p>
             <button 
               onClick={() => router.push('/auth/signin')}
@@ -449,13 +439,13 @@ export default function MyWishlistPage() {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">My Wishlist</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">My Bucketlist</h1>
         </div>
 
         {/* Filter Tabs */}
         <div className="flex justify-center mb-8">
           <div className="bg-white rounded-2xl p-2 shadow-lg flex gap-2">
-            {(['all', 'property', 'hyper-local', 'online', 'retreat'] as FilterType[]).map((filter) => (
+            {(['stays', 'experiences'] as FilterType[]).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -483,14 +473,14 @@ export default function MyWishlistPage() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, index) => (
-              <WishlistCardSkeleton key={index} index={index} />
+              <BucketlistCardSkeleton key={index} index={index} />
             ))}
           </div>
         ) : filteredItems.length === 0 ? (
-          <EmptyWishlistState activeFilter={activeFilter} />
+          <EmptyBucketlistState activeFilter={activeFilter} />
         ) : (
           <>
-            {/* Wishlist Grid */}
+            {/* Bucketlist Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredItems.map((item, index) => {
                 const isRemoving = removingIds.includes(item.id + '-' + item._type);
@@ -526,9 +516,9 @@ export default function MyWishlistPage() {
                         className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-gray-900 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRemoveFromWishlist(item);
+                          handleRemoveFromBucketlist(item);
                         }}
-                        aria-label="Remove from wishlist"
+                        aria-label="Remove from bucketlist"
                       >
                         <TrashIcon className="w-5 h-5" />
                       </button>

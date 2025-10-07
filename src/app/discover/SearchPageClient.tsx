@@ -12,7 +12,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { PropertyCard } from '@/components/PropertyCard';
-import { getProperties, searchProperties, getExperiences, getRetreats, getExperienceCategories, getRetreatCategories, createExperienceBooking, createTripBooking, isWishlisted, addToWishlist, removeFromWishlist, ensureProfile, testWishlistTable } from '@/lib/database';
+import { getProperties, searchProperties, getExperiences, getRetreats, getExperienceCategories, getRetreatCategories, createExperienceBooking, createTripBooking, isBucketlisted, addToBucketlist, removeFromBucketlist, ensureProfile, testWishlistTable } from '@/lib/database';
 import { PropertyWithHost, SearchFilters as SearchFiltersType, Experience, PropertyType } from '@/lib/types';
 import ExperienceModal from '@/components/ExperienceModal';
 import RetreatModal from '@/components/RetreatModal';
@@ -62,6 +62,14 @@ export default function SearchPageClient() {
   const [selectedMood, setSelectedMood] = useState<string>('all');
   const [availableMoods, setAvailableMoods] = useState<string[]>([]);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // Read mood parameter from URL on component mount
+  useEffect(() => {
+    const moodParam = searchParams.get('mood');
+    if (moodParam) {
+      setSelectedMood(moodParam);
+    }
+  }, [searchParams]);
   const [filters, setFilters] = useState<SearchFiltersType>({
     location: searchParams.get('location') || '',
     checkIn: searchParams.get('checkIn') || '',
@@ -180,7 +188,7 @@ export default function SearchPageClient() {
         if (user && experiences.length > 0) {
           const wishlist = await Promise.all(
             experiences.map(exp => 
-              exp && exp.id ? isWishlisted(user.id, exp.id, 'experience') : Promise.resolve(false)
+              exp && exp.id ? isBucketlisted(user.id, exp.id, 'experience') : Promise.resolve(false)
             )
           );
           if (!ignore) {
@@ -208,7 +216,7 @@ export default function SearchPageClient() {
         if (user && retreats.length > 0) {
           const wishlist = await Promise.all(
             retreats.map(retreat => 
-              retreat && retreat.id ? isWishlisted(user.id, retreat.id, 'trip') : Promise.resolve(false)
+              retreat && retreat.id ? isBucketlisted(user.id, retreat.id, 'trip') : Promise.resolve(false)
             )
           );
           if (!ignore) {
@@ -254,7 +262,7 @@ export default function SearchPageClient() {
     
     try {
       if (wishlisted) {
-        const success = await removeFromWishlist(user.id, expId, 'experience');
+        const success = await removeFromBucketlist(user.id, expId, 'experience');
         if (success) {
           setWishlistedExperienceIds(ids => ids.filter(id => id !== expId));
           toast.success('Experience removed from saved');
@@ -262,7 +270,7 @@ export default function SearchPageClient() {
           toast.error('Failed to remove from saved');
         }
       } else {
-        const success = await addToWishlist(user.id, expId, 'experience');
+        const success = await addToBucketlist(user.id, expId, 'experience');
         if (success) {
           setWishlistedExperienceIds(ids => [...ids, expId]);
           toast.success('Experience added to saved');
@@ -286,7 +294,7 @@ export default function SearchPageClient() {
     
     try {
       if (wishlisted) {
-        const success = await removeFromWishlist(user.id, retreatId, 'retreat');
+        const success = await removeFromBucketlist(user.id, retreatId, 'retreat');
         if (success) {
           setWishlistedRetreatIds(ids => ids.filter(id => id !== retreatId));
           toast.success('Retreat removed from wishlist');
@@ -294,7 +302,7 @@ export default function SearchPageClient() {
           toast.error('Failed to remove from wishlist');
         }
       } else {
-        const success = await addToWishlist(user.id, retreatId, 'retreat');
+        const success = await addToBucketlist(user.id, retreatId, 'retreat');
         if (success) {
           setWishlistedRetreatIds(ids => [...ids, retreatId]);
           toast.success('Retreat added to wishlist');
@@ -784,7 +792,7 @@ export default function SearchPageClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Experiences */}
               {filteredExperiences.map((exp, index) => {
-                const isWishlisted = wishlistedExperienceIds.includes(exp.id);
+                const isBucketlisted = wishlistedExperienceIds.includes(exp.id);
                 return (
                   <div
                     key={exp.id}
@@ -815,11 +823,11 @@ export default function SearchPageClient() {
                       {user && (
                         <button 
                           className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
-                          onClick={(e) => handleExperienceWishlist(exp.id, isWishlisted, e)}
-                          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                          onClick={(e) => handleExperienceWishlist(exp.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
                           disabled={false}
                         >
-                          {isWishlisted ? (
+                          {isBucketlisted ? (
                             <BookmarkSolid className="w-5 h-5 text-yellow-500" />
                           ) : (
                             <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
@@ -868,7 +876,7 @@ export default function SearchPageClient() {
               
               {/* Retreats */}
               {filteredRetreats.map((retreat, index) => {
-                const isWishlisted = wishlistedRetreatIds.includes(retreat.id);
+                const isBucketlisted = wishlistedRetreatIds.includes(retreat.id);
                 return (
                   <div
                     key={retreat.id}
@@ -899,11 +907,11 @@ export default function SearchPageClient() {
                       {user && (
                         <button 
                           className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
-                          onClick={(e) => handleRetreatWishlist(retreat.id, isWishlisted, e)}
-                          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                          onClick={(e) => handleRetreatWishlist(retreat.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
                           disabled={false}
                         >
-                          {isWishlisted ? (
+                          {isBucketlisted ? (
                             <BookmarkSolid className="w-5 h-5 text-yellow-500" />
                           ) : (
                             <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />

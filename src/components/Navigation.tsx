@@ -7,7 +7,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { getWishlist } from '@/lib/database';
+import { getBucketlist, getUnreadNotificationCount } from '@/lib/database';
 import { 
   HomeIcon, 
   MagnifyingGlassIcon, 
@@ -29,19 +29,22 @@ import {
   BuildingOfficeIcon,
   PhoneIcon,
   ChevronDownIcon,
-  SparklesIcon
+  SparklesIcon,
+  PlusIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 import { SupportModal } from '@/components/SupportModal';
+import CreateExperienceModal from '@/components/CreateExperienceModal';
 
 export function Navigation() {
   const { user, profile, signOut } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [bucketlistCount, setBucketlistCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [destinationsOpen, setDestinationsOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -61,27 +64,27 @@ export function Navigation() {
 { name: 'Kanatal', state: 'Uttarakhand', url: '/discover?location=Kanatal' },
   ];
 
-  // Fetch wishlist count when user is logged in
+  // Fetch bucketlist count when user is logged in
   useEffect(() => {
-    const fetchWishlistCount = async () => {
+    const fetchBucketlistCount = async () => {
       if (user?.id) {
         try {
-          const wishlist = await getWishlist(user.id);
-          const count = wishlist?.length || 0;
-          console.log('📊 Wishlist count updated:', count, 'items');
-          console.log('📋 Wishlist items:', wishlist);
+          const bucketlist = await getBucketlist(user.id);
+          const count = bucketlist?.length || 0;
+          console.log('📊 Bucketlist count updated:', count, 'items');
+          console.log('📋 Bucketlist items:', bucketlist);
           console.log('🔍 Item types breakdown:', {
-            properties: wishlist?.filter(item => item.item_type === 'property').length || 0,
-            experiences: wishlist?.filter(item => item.item_type === 'experience').length || 0,
-            retreats: wishlist?.filter(item => item.item_type === 'retreat').length || 0
+            properties: bucketlist?.filter(item => item.item_type === 'property').length || 0,
+            experiences: bucketlist?.filter(item => item.item_type === 'experience').length || 0,
+            retreats: bucketlist?.filter(item => item.item_type === 'trip').length || 0
           });
-          setWishlistCount(count);
+          setBucketlistCount(count);
         } catch (error) {
-          console.error('Error fetching wishlist count:', error);
-          setWishlistCount(0);
+          console.error('Error fetching bucketlist count:', error);
+          setBucketlistCount(0);
         }
       } else {
-        setWishlistCount(0);
+        setBucketlistCount(0);
       }
     };
 
@@ -90,31 +93,58 @@ export function Navigation() {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co') {
-      fetchWishlistCount();
+      fetchBucketlistCount();
     } else {
-      console.warn('Supabase environment variables not configured, skipping wishlist fetch');
-      setWishlistCount(0);
+      console.warn('Supabase environment variables not configured, skipping bucketlist fetch');
+      setBucketlistCount(0);
     }
   }, [user?.id]);
 
-  // Function to refresh wishlist count (can be called from other components)
-  const refreshWishlistCount = async () => {
+  // Fetch notification count when user is logged in
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      if (user?.id) {
+        try {
+          const count = await getUnreadNotificationCount(user.id);
+          setNotificationCount(count);
+        } catch (error) {
+          console.error('Error fetching notification count:', error);
+          setNotificationCount(0);
+        }
+      } else {
+        setNotificationCount(0);
+      }
+    };
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co') {
+      fetchNotificationCount();
+    } else {
+      console.warn('Supabase environment variables not configured, skipping notification fetch');
+      setNotificationCount(0);
+    }
+  }, [user?.id]);
+
+  // Function to refresh bucketlist count (can be called from other components)
+  const refreshBucketlistCount = async () => {
     if (user?.id) {
       try {
-        const wishlist = await getWishlist(user.id);
-        setWishlistCount(wishlist?.length || 0);
+        const bucketlist = await getBucketlist(user.id);
+        setBucketlistCount(bucketlist?.length || 0);
       } catch (error) {
-        console.error('Error refreshing wishlist count:', error);
-        setWishlistCount(0);
+        console.error('Error refreshing bucketlist count:', error);
+        setBucketlistCount(0);
       }
     }
   };
 
   // Expose refresh function globally so other components can call it
   useEffect(() => {
-    (window as any).refreshWishlistCount = refreshWishlistCount;
+    (window as any).refreshBucketlistCount = refreshBucketlistCount;
     return () => {
-      delete (window as any).refreshWishlistCount;
+      delete (window as any).refreshBucketlistCount;
     };
   }, [user?.id]);
 
@@ -138,15 +168,7 @@ export function Navigation() {
         return;
       }
       
-      // Handle menu dropdown
-      const menuButton = document.querySelector('[aria-label="Menu"]');
-      const menuPopup = document.querySelector('[data-menu-popup]');
       
-      if (menuOpen && 
-          menuButton && !menuButton.contains(target) &&
-          menuPopup && !menuPopup.contains(target)) {
-        setMenuOpen(false);
-      }
 
       // Handle about dropdown
       if (destinationsOpen) {
@@ -154,18 +176,17 @@ export function Navigation() {
       }
     }
     
-    if (menuOpen || destinationsOpen) {
+    if (destinationsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [menuOpen, destinationsOpen]);
+  }, [destinationsOpen]);
 
   const handleSignOut = async () => {
     await signOut();
-    setMenuOpen(false);
   };
 
   return (
@@ -182,12 +203,14 @@ export function Navigation() {
             {/* Top Navigation Bar */}
             <div className="flex justify-between items-center h-16 sm:h-20">
               {/* Enhanced Logo - Extreme Left Aligned */}
-              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200 -ml-4 sm:-ml-8">
-                <img 
-                  src="/eja_transparent svg.svg" 
-                  alt="EJA Logo" 
-                  className="w-48 h-20 sm:w-60 sm:h-24 object-contain"
-                />
+              <Link href="/" className="flex items-center group-hover:scale-105 active:scale-95 transition-all duration-200 ml-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-white shadow-lg">
+                  <img 
+                    src="/eja_svg.svg" 
+                    alt="EJA Logo" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </Link>
 
               {/* Enhanced Desktop Navigation with Dropdowns */}
@@ -213,8 +236,23 @@ export function Navigation() {
                   Discover
                 </Link>
 
+                {/* Create Button */}
+                <button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group hover:bg-gray-50 hover:scale-105"
+                >
+                  <PlusIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Create
+                </button>
 
-
+                {/* Profile Link */}
+                <Link 
+                  href="/profile"
+                  className="text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group hover:bg-gray-50 hover:scale-105"
+                >
+                  <UserIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Profile
+                </Link>
 
                 {/* About Dropdown */}
                 {/* Removed About dropdown as requested */}
@@ -231,123 +269,28 @@ export function Navigation() {
                         className="relative w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
                       >
                         <HeartIcon className="w-5 h-5 text-gray-700" />
-                        {wishlistCount > 0 && (
+                        {bucketlistCount > 0 && (
                           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
-                            {wishlistCount > 99 ? '99+' : wishlistCount}
+                            {bucketlistCount > 99 ? '99+' : bucketlistCount}
                           </span>
                         )}
                       </button>
                     </Link>
+                    
+                    {/* Notification Bell */}
+                    <button 
+                      className="relative w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
+                    >
+                      <BellIcon className="w-5 h-5 text-gray-700" />
+                      {notificationCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
+                          {notificationCount > 99 ? '99+' : notificationCount}
+                        </span>
+                      )}
+                    </button>
                   </>
                 )}
                 
-                {/* Enhanced User Menu Button */}
-                <div className="relative">
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
-                    aria-label="Menu"
-                  >
-                    {user ? (
-                                          <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-sm">
-                      <span className="text-white font-semibold text-sm">
-                        {displayName?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                    ) : (
-                      <UserIcon className="w-5 h-5 text-gray-700" />
-                    )}
-                  </button>
-                  
-                  {/* Enhanced Menu Popup */}
-                  {menuOpen && (
-                    <div 
-                      className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-scale-in"
-                      data-menu-popup
-                    >
-                      {user ? (
-                        <>
-                          <div className="px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-yellow-50 to-orange-50">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
-                                <span className="text-white font-semibold text-lg">
-                                  {displayName?.charAt(0)?.toUpperCase() || 'U'}
-                                </span>
-                              </div>
-                              <div>
-                                <div className="font-bold text-gray-900 text-lg">{displayName}</div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="py-3">
-                            <Link
-                              href="/guest/dashboard"
-                              onClick={() => setMenuOpen(false)}
-                              className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-yellow-50 transition-colors group"
-                            >
-                              <UserCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                              <span className="font-medium">Dashboard</span>
-                            </Link>
-                            
-                            <Link
-                              href="/guest/profile"
-                              onClick={() => setMenuOpen(false)}
-                              className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-yellow-50 transition-colors group"
-                            >
-                              <Cog6ToothIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                              <span className="font-medium">Profile Settings</span>
-                            </Link>
-                            
-                            <button
-                              onClick={() => {
-                                setMenuOpen(false);
-                                setSupportOpen(true);
-                              }}
-                              className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-yellow-50 transition-colors group"
-                            >
-                              <QuestionMarkCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                              <span className="font-medium">Support</span>
-                            </button>
-                            
-                            <div className="border-t border-gray-100 my-2" />
-                            
-                            <button
-                              onClick={handleSignOut}
-                              className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-red-50 transition-colors group"
-                            >
-                              <ArrowRightOnRectangleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                              <span className="font-medium">Sign out</span>
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="py-3">
-                          <button
-                            onClick={() => {
-                              setMenuOpen(false);
-                              router.push('/auth/signin');
-                            }}
-                            className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-yellow-50 transition-colors group"
-                          >
-                            <UserIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                            <span className="font-medium">Sign in / Sign up</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setMenuOpen(false);
-                              setSupportOpen(true);
-                            }}
-                            className="flex items-center gap-3 w-full px-6 py-3 text-left text-gray-700 hover:bg-yellow-50 transition-colors group"
-                          >
-                            <QuestionMarkCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                            <span className="font-medium">Support</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
 
 
@@ -366,104 +309,39 @@ export function Navigation() {
             <div className="flex justify-between items-center h-16 px-4">
               {/* Mobile Logo */}
               <Link href="/" className="flex items-center">
-                <img 
-                  src="/eja_transparent svg.svg" 
-                  alt="EJA Logo" 
-                  className="w-40 h-16 object-contain"
-                />
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-lg">
+                  <img 
+                    src="/eja_svg.svg" 
+                    alt="EJA Logo" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </Link>
 
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-gray-700 hover:text-yellow-500 p-2 transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                {isMobileMenuOpen ? (
-                  <XMarkIcon className="w-6 h-6" />
-                ) : (
-                  <Bars3Icon className="w-6 h-6" />
-                )}
-              </button>
+              {/* Mobile Notification Bell */}
+              {user && (
+                <button 
+                  className="relative w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
+                >
+                  <BellIcon className="w-5 h-5 text-gray-700" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
+                      {notificationCount > 99 ? '99+' : notificationCount}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
 
-            {/* Mobile Navigation Menu */}
-            {isMobileMenuOpen && (
-              <div className="border-t border-gray-100 bg-white animate-slide-down">
-                <div className="px-4 py-6 space-y-4">
-
-                  
-                  {/* Mobile User Actions */}
-                  <div className="border-t border-gray-100 pt-4">
-                    {user ? (
-                      <div className="space-y-2">
-                        <Link
-                          href="/guest/dashboard"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <UserCircleIcon className="w-5 h-5" />
-                          Dashboard
-                        </Link>
-                        <Link
-                          href="/guest/wishlist"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <HeartIcon className="w-5 h-5" />
-                          Wishlist ({wishlistCount})
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            setSupportOpen(true);
-                          }}
-                          className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <QuestionMarkCircleIcon className="w-5 h-5" />
-                          Support
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleSignOut();
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                          Sign out
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Link
-                          href="/auth/signin"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <UserIcon className="w-5 h-5" />
-                          Sign in / Sign up
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            setSupportOpen(true);
-                          }}
-                          className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <QuestionMarkCircleIcon className="w-5 h-5" />
-                          Support
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </nav>
         </>
       )}
       
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <CreateExperienceModal 
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+      />
     </>
   );
 } 

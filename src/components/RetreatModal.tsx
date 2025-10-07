@@ -24,10 +24,13 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
   ShieldCheckIcon,
-  UserIcon
+  UserIcon,
+  DocumentTextIcon,
+  HeartIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist, testWishlistTable } from '@/lib/database';
+import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist, testWishlistTable } from '@/lib/database';
 import Image from 'next/image';
 import Script from 'next/script';
 
@@ -82,6 +85,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'About' | 'Reviews'>('About');
   const [showMobileBooking, setShowMobileBooking] = useState(false);
+  const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'reviews' | 'checkin' | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
@@ -111,12 +115,155 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [roomImageIndex, setRoomImageIndex] = useState(0);
   const [roomImageIndices, setRoomImageIndices] = useState<{[key: string]: number}>({});
   const [showExperienceModal, setShowExperienceModal] = useState(false);
+  const [selectedExperiences, setSelectedExperiences] = useState<any[]>([]);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
 
+  // Remove experience function
+  const removeExperience = (index: number) => {
+    setSelectedExperiences(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Build images list
   const images = retreat ? buildCoverFirstImages(retreat.cover_image, retreat.gallery) : [];
+
+  // Fetch data when mobile booking drawer opens
+  useEffect(() => {
+    const fetchMobileData = async () => {
+      if (!retreat || mobileDrawerType !== 'checkin') return;
+      
+      console.log('🔍 Fetching mobile data for retreat:', retreat.id, 'budget:', bookingForm.budget);
+      setLoadingData(true);
+      try {
+        // Fetch properties based on budget (same as desktop)
+        const budgetRanges = {
+          'Budget': { min: 1500, max: 2500 },
+          'Comfort': { min: 2501, max: 5000 },
+          'Premium': { min: 5001, max: 7500 }
+        };
+        
+        const range = budgetRanges[bookingForm.budget as keyof typeof budgetRanges];
+        if (range) {
+          const { data: propertiesData, error: propertiesError } = await supabase
+            .from('properties')
+            .select(`
+              id,
+              title,
+              base_price,
+              cover_image,
+              gallery,
+              amenities,
+              address,
+              city,
+              state,
+              is_available
+            `)
+            .eq('is_available', true)
+            .gte('base_price', range.min)
+            .lte('base_price', range.max);
+          
+          if (propertiesError) {
+            console.error('Error fetching properties:', propertiesError);
+          } else {
+            // Convert properties to room-like format (same as desktop)
+            if (propertiesData && propertiesData.length > 0) {
+              const roomFormatProperties = propertiesData.map(property => ({
+                id: property.id,
+                name: property.title,
+                room_type: 'Property',
+                price_per_night: property.base_price,
+                amenities: property.amenities || [],
+                property_id: property.id,
+                properties: {
+                  id: property.id,
+                  title: property.title,
+                  cover_image: property.cover_image,
+                  gallery: property.gallery || []
+                }
+              }));
+              setRooms(roomFormatProperties);
+              console.log('🔍 Properties loaded:', roomFormatProperties.length, 'properties');
+            } else {
+              // Fallback: fetch all available properties (same as desktop)
+              const { data: fallbackProperties } = await supabase
+                .from('properties')
+                .select(`
+                  id,
+                  title,
+                  base_price,
+                  cover_image,
+                  gallery,
+                  amenities,
+                  address,
+                  city,
+                  state,
+                  is_available
+                `)
+                .eq('is_available', true)
+                .limit(10);
+              
+              if (fallbackProperties && fallbackProperties.length > 0) {
+                const roomFormatProperties = fallbackProperties.map(property => ({
+                  id: property.id,
+                  name: property.title,
+                  room_type: 'Property',
+                  price_per_night: property.base_price,
+                  amenities: property.amenities || [],
+                  property_id: property.id,
+                  properties: {
+                    id: property.id,
+                    title: property.title,
+                    cover_image: property.cover_image,
+                    gallery: property.gallery || []
+                  }
+                }));
+                setRooms(roomFormatProperties);
+              } else {
+                setRooms([]);
+              }
+            }
+          }
+        }
+
+        // Fetch experiences from retreat_experiences table (same as desktop)
+        const { data: experiencesData, error: experiencesError } = await supabase
+          .from('retreat_experiences')
+          .select('*')
+          .eq('experience_type', bookingForm.budget)
+          .eq('is_active', true);
+        
+        if (experiencesError) {
+          console.error('Error fetching experiences:', experiencesError);
+        }
+        
+        if (experiencesData && experiencesData.length > 0) {
+          setExperiences(experiencesData);
+          console.log('🔍 Experiences loaded:', experiencesData.length, 'experiences');
+        } else {
+          // Fallback: try to get all experiences for this retreat (same as desktop)
+          const { data: allExperiences } = await supabase
+            .from('retreat_experiences')
+            .select('*')
+            .eq('is_active', true)
+            .limit(10);
+          
+          if (allExperiences && allExperiences.length > 0) {
+            setExperiences(allExperiences);
+            console.log('🔍 Fallback experiences loaded:', allExperiences.length, 'experiences');
+          } else {
+            setExperiences([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching mobile data:', error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchMobileData();
+  }, [retreat, mobileDrawerType, bookingForm.budget]);
 
   // Fetch destinations, rooms, and experiences
   useEffect(() => {
@@ -348,7 +495,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     const checkWishlistStatus = async () => {
       if (user && retreat) {
         try {
-          const wishlisted = await checkIsWishlisted(user.id, retreat.id, 'retreat');
+          const wishlisted = await checkIsBucketlisted(user.id, retreat.id, 'retreat');
           setIsWishlistedState(wishlisted);
         } catch (err) {
           console.error('Error checking wishlist status:', err);
@@ -489,7 +636,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     try {
       if (isWishlistedState) {
         console.log('🗑️ Removing from wishlist...');
-        const success = await removeFromWishlist(user.id, retreat.id, 'retreat');
+        const success = await removeFromBucketlist(user.id, retreat.id, 'retreat');
         console.log('🗑️ Remove result:', success);
         if (success) {
           setIsWishlistedState(false);
@@ -499,7 +646,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
         }
       } else {
         console.log('➕ Adding to wishlist...');
-        const success = await addToWishlist(user.id, retreat.id, 'retreat');
+        const success = await addToBucketlist(user.id, retreat.id, 'retreat');
         console.log('➕ Add result:', success);
         if (success) {
           setIsWishlistedState(true);
@@ -792,11 +939,95 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
+      {/* Mobile Full Screen Gallery */}
+      <div className="md:hidden fixed inset-0 z-50 bg-black">
+        {/* Close Button and Counter - Floating */}
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
+          <button
+            onClick={onClose}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+          {images.length > 1 && (
+            <div className="bg-black/60 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
+              {currentImageIndex + 1} / {images.length}
+            </div>
+          )}
+        </div>
+
+        {/* Full Screen Image */}
+        <div className="relative w-full h-full">
+          {images.length > 0 ? (
+            <>
+              <Image
+                src={images[currentImageIndex]}
+                alt={retreat.title}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                priority
+              />
+              
+              {/* Navigation Arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+                  >
+                    <ChevronLeftIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+                  >
+                    <ChevronRightIcon className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+
+              {/* Floating Action Buttons - Over Image */}
+              <div className="absolute bottom-24 right-4 flex flex-col space-y-3">
+                {/* Details Button */}
+                <button
+                  onClick={() => setMobileDrawerType('about')}
+                  className="bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                >
+                  <DocumentTextIcon className="w-5 h-5" />
+                </button>
+
+                {/* Reviews Button */}
+                <button
+                  onClick={() => setMobileDrawerType('reviews')}
+                  className="bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                >
+                  <HeartIcon className="w-5 h-5" />
+                </button>
+
+                {/* Check-in Button */}
+                <button
+                  onClick={() => setMobileDrawerType('checkin')}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-full p-3 shadow-xl transition-all border-2 border-yellow-400"
+                >
+                  <CalendarDaysIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <div className="text-gray-500 text-center">
+                <div className="text-4xl mb-2">📸</div>
+                <div>No images available</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Desktop Modal */}
+      <div className="hidden md:block fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         {/* Modal */}
         <div 
           ref={modalRef}
@@ -1547,7 +1778,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
 
       {/* Room Selection Modal */}
       {showRoomModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -1718,7 +1949,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
 
       {/* Experience Selection Modal */}
       {showExperienceModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -1967,6 +2198,412 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                   {bookingLoading ? 'Processing...' : 'Confirm Booking'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Drawers */}
+      {mobileDrawerType && (
+        <div className="md:hidden fixed inset-0 z-[60]">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+            onClick={() => setMobileDrawerType(null)}
+          />
+          
+          {/* Drawer */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col">
+            {/* Handle */}
+            <div className="flex justify-center py-3">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="px-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {mobileDrawerType === 'about' && 'About'}
+                  {mobileDrawerType === 'reviews' && 'Reviews'}
+                  {mobileDrawerType === 'checkin' && 'Check-in'}
+                </h3>
+                <button
+                  onClick={() => setMobileDrawerType(null)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {mobileDrawerType === 'about' && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Description</h4>
+                    <p className="text-gray-700 leading-relaxed">{retreat.description}</p>
+                  </div>
+                  
+                  {retreat.unique_propositions && retreat.unique_propositions.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-3">What Makes This Special</h4>
+                      <ul className="space-y-2">
+                        {retreat.unique_propositions.map((proposition, index) => (
+                          <li key={index} className="flex items-center text-gray-700">
+                            <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                            <span>{proposition}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">What's Included</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center text-gray-700">
+                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span>Accommodation</span>
+                      </li>
+                      <li className="flex items-center text-gray-700">
+                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span>All meals</span>
+                      </li>
+                      <li className="flex items-center text-gray-700">
+                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span>Guided activities</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Important Information</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center text-gray-700">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
+                        <span>Bring comfortable clothing</span>
+                      </li>
+                      <li className="flex items-center text-gray-700">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
+                        <span>Weather-dependent activities</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {mobileDrawerType === 'reviews' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <StarSolid key={i} className="w-5 h-5 text-yellow-400" />
+                          ))}
+                        </div>
+                        <span className="ml-2 text-gray-600">({averageRating.toFixed(1)})</span>
+                      </div>
+                      <p className="text-gray-600 text-sm">{reviews.length} reviews</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {reviews.map((review, index) => (
+                      <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-sm font-medium text-gray-600">
+                                {review.guest_name?.charAt(0) || 'A'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{review.guest_name}</div>
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <StarSolid 
+                                    key={i} 
+                                    className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {new Date(review.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Review Form */}
+                  {user && !hasReviewed && (
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-3">Write a Review</h4>
+                      <form onSubmit={handleReviewSubmit} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setReviewRating(star)}
+                                className="text-2xl"
+                              >
+                                {star <= reviewRating ? '⭐' : '☆'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                          <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                            placeholder="Share your experience..."
+                          />
+                        </div>
+                        <Button type="submit" disabled={submitting} className="w-full">
+                          {submitting ? 'Submitting...' : 'Submit Review'}
+                        </Button>
+                      </form>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {mobileDrawerType === 'checkin' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-gray-900 mb-2">₹{retreat.price?.toLocaleString()}</div>
+                    <div className="text-gray-700 font-semibold">per person</div>
+                  </div>
+
+                  <form className="space-y-4">
+                    {/* Destination & Duration */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Destination</label>
+                        <select
+                          value={bookingForm.destination}
+                          onChange={(e) => setBookingForm(prev => ({ ...prev, destination: e.target.value }))}
+                          className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                        >
+                          <option value="">Select destination</option>
+                          <option value="Manali">Manali</option>
+                          <option value="Ladakh">Ladakh</option>
+                          <option value="Kanatal">Kanatal</option>
+                          <option value="Rishikesh">Rishikesh</option>
+                          <option value="Goa">Goa</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Duration</label>
+                        <select
+                          value={bookingForm.duration}
+                          onChange={(e) => setBookingForm(prev => ({ ...prev, duration: e.target.value }))}
+                          className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                        >
+                          <option value="">Select duration</option>
+                          <option value="1-day">1 Day</option>
+                          <option value="3-days">3 Days</option>
+                          <option value="5-days">5 Days</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Budget Category */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Budget Category</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['Budget', 'Comfort', 'Premium'].map((category) => (
+                          <button
+                            key={category}
+                            type="button"
+                            onClick={() => setBookingForm(prev => ({ ...prev, budget: category }))}
+                            className={`px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${
+                              bookingForm.budget === category
+                                ? 'border-yellow-500 bg-yellow-50 text-yellow-800'
+                                : 'border-gray-400 text-gray-900 hover:bg-gray-100 hover:border-gray-500'
+                            }`}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Property & Experience Selection */}
+                    {bookingForm.budget && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">Select Property</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowRoomModal(true)}
+                            className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-gray-900"
+                          >
+                            {selectedRoom ? selectedRoom.name || selectedRoom.room_type : 'Choose your property'}
+                          </button>
+                          {selectedRoom && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium text-gray-900">{selectedRoom.name || selectedRoom.room_type || 'Selected Property'}</div>
+                                  <div className="text-sm text-gray-600">{selectedRoom.type || selectedRoom.room_type || 'Property'}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-semibold text-gray-900">₹{(selectedRoom.price || 0).toLocaleString()}</div>
+                                  <div className="text-sm text-gray-600">per night</div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">Select Experiences</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowExperienceModal(true)}
+                            className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-gray-900"
+                          >
+                            {selectedExperiences.length > 0 
+                              ? `${selectedExperiences.length} experience${selectedExperiences.length > 1 ? 's' : ''} selected`
+                              : 'Pick experiences'
+                            }
+                          </button>
+                          {selectedExperiences.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {selectedExperiences.map((experience, index) => (
+                                <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <div className="font-medium text-gray-900">{experience.title || 'Experience'}</div>
+                                      <div className="text-sm text-gray-600">{experience.duration || 'Duration not specified'}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-semibold text-gray-900">₹{(experience.price || 0).toLocaleString()}</div>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeExperience(index)}
+                                        className="text-sm text-red-600 hover:text-red-800"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date & Guest Selection */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Select Date</label>
+                        <input
+                          type="date"
+                          value={bookingForm.date}
+                          onChange={(e) => setBookingForm(prev => ({ ...prev, date: e.target.value }))}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Number of Guests</label>
+                        <div className="flex items-center justify-center space-x-3 px-3 py-2 border-2 border-gray-400 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => setBookingForm(prev => ({ ...prev, guests: Math.max(1, prev.guests - 1) }))}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
+                          >
+                            <span className="text-lg font-bold text-gray-700">-</span>
+                          </button>
+                          <span className="text-lg font-semibold text-gray-900">{bookingForm.guests}</span>
+                          <button
+                            type="button"
+                            onClick={() => setBookingForm(prev => ({ ...prev, guests: prev.guests + 1 }))}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
+                          >
+                            <span className="text-lg font-bold text-gray-700">+</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Special Requests */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Special Requests (Optional)</label>
+                      <textarea
+                        value={bookingForm.specialRequests}
+                        onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                        placeholder="Any special requirements or requests..."
+                      />
+                    </div>
+
+                    {/* Price Summary */}
+                    <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-400">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-900 font-semibold">Base Price</span>
+                          <span className="text-lg font-bold text-gray-900">₹{(retreat.price * bookingForm.guests).toLocaleString()}</span>
+                        </div>
+                        {selectedRoom && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-900 font-semibold">Property</span>
+                            <span className="text-lg font-bold text-gray-900">₹{((selectedRoom.price || 0) * bookingForm.guests).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {selectedExperiences.length > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-900 font-semibold">Experiences</span>
+                            <span className="text-lg font-bold text-gray-900">₹{selectedExperiences.reduce((sum, exp) => sum + ((exp.price || 0) * bookingForm.guests), 0).toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="border-t border-gray-300 pt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold text-gray-900">Total</span>
+                            <span className="text-lg font-bold text-gray-900">
+                              ₹{(
+                                (retreat.price * bookingForm.guests) +
+                                (selectedRoom ? (selectedRoom.price || 0) * bookingForm.guests : 0) +
+                                selectedExperiences.reduce((sum, exp) => sum + ((exp.price || 0) * bookingForm.guests), 0)
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600">Includes all taxes and fees</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={() => {
+                        setMobileDrawerType(null);
+                        setShowMobileBooking(true);
+                      }}
+                      className="w-full"
+                      size="lg"
+                    >
+                      Confirm Booking
+                    </Button>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </div>

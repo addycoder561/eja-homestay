@@ -9,14 +9,14 @@ const CATEGORIES = [
     id: 'just-opened',
     title: 'just opened',
     subtitle: 'be the first to go!',
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80',
     dotColor: 'bg-green-400',
     href: '/discover?filter=just-opened'
   },
   {
     id: 'trending',
     title: 'trending',
-    subtitle: "today's poppin' places",
+    subtitle: "buzzing now",
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=400&q=80',
     dotColor: 'bg-orange-400',
     href: '/discover?filter=trending'
@@ -24,8 +24,8 @@ const CATEGORIES = [
   {
     id: 'lowkey',
     title: 'lowkey',
-    subtitle: '<25 google reviews',
-    image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=400&q=80',
+    subtitle: 'dare to try',
+    image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=400&q=80',
     dotColor: 'bg-purple-400',
     href: '/discover?filter=lowkey'
   },
@@ -48,7 +48,7 @@ export function CategoryCards() {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-6 max-w-4xl mx-auto">
+    <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto w-[90%] md:w-[70%] mt-8 p-6 bg-gray-50 rounded-2xl">
       {CATEGORIES.map((category, index) => (
         <div
           key={category.id}

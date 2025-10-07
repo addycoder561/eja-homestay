@@ -11,7 +11,7 @@ export function HeroSection() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 overflow-hidden">
+    <div className="relative h-[85vh] bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 overflow-hidden">
       {/* Enhanced Animated Background Elements */}
       <div className="absolute inset-0">
         <div 
@@ -35,7 +35,7 @@ export function HeroSection() {
       </div>
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-        <div className="flex flex-col justify-center min-h-[80vh]">
+        <div className="flex flex-col justify-center h-full">
           {/* Category Cards */}
           <div className={`transition-all duration-1000 ${
               isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'

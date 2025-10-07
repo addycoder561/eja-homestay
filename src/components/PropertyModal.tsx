@@ -29,7 +29,7 @@ import {
   HeartIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
+import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import Image from 'next/image';
 import Script from 'next/script';
 
@@ -152,7 +152,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
     if (!user || !property) return;
 
     try {
-      const isWishlisted = await checkIsWishlisted(user.id, property.id, 'property');
+      const isWishlisted = await checkIsBucketlisted(user.id, property.id, 'property');
       setIsWishlistedState(isWishlisted);
     } catch (error) {
       console.error('Error checking wishlist status:', error);
@@ -195,7 +195,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
     try {
       if (isWishlistedState) {
         console.log('🗑️ Removing from wishlist...');
-        const success = await removeFromWishlist(user.id, property.id, 'property');
+        const success = await removeFromBucketlist(user.id, property.id, 'property');
         console.log('🗑️ Remove result:', success);
         if (success) {
           setIsWishlistedState(false);
@@ -205,7 +205,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
         }
       } else {
         console.log('➕ Adding to wishlist...');
-        const success = await addToWishlist(user.id, property.id, 'property');
+        const success = await addToBucketlist(user.id, property.id, 'property');
         console.log('➕ Add result:', success);
         if (success) {
           setIsWishlistedState(true);

@@ -39,7 +39,7 @@ import {
   ChevronUpIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
+import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -258,7 +258,7 @@ export default function ExperienceDetailPage() {
     const checkWishlistStatus = async () => {
       if (user && experience) {
         try {
-          const wishlisted = await checkIsWishlisted(user.id, experience.id, 'experience');
+          const wishlisted = await checkIsBucketlisted(user.id, experience.id, 'experience');
           setIsWishlistedState(wishlisted);
         } catch (err) {
           console.error('Error checking wishlist status:', err);
@@ -319,7 +319,7 @@ export default function ExperienceDetailPage() {
 
     try {
       if (isWishlistedState) {
-        const success = await removeFromWishlist(user.id, experience.id, 'experience');
+        const success = await removeFromBucketlist(user.id, experience.id, 'experience');
         if (success) {
           setIsWishlistedState(false);
           toast.success('Removed from wishlist');
@@ -331,7 +331,7 @@ export default function ExperienceDetailPage() {
           toast.error('Failed to remove from wishlist');
         }
       } else {
-        const success = await addToWishlist(user.id, experience.id, 'experience');
+        const success = await addToBucketlist(user.id, experience.id, 'experience');
         if (success) {
           setIsWishlistedState(true);
           toast.success('Added to wishlist');

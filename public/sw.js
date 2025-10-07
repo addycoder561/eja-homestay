@@ -1,14 +1,17 @@
-const CACHE_NAME = 'eja-homestay-v1';
-const STATIC_CACHE = 'eja-homestay-static-v1';
-const DYNAMIC_CACHE = 'eja-homestay-dynamic-v1';
+const CACHE_NAME = 'eja-homestay-v2';
+const STATIC_CACHE = 'eja-homestay-static-v2';
+const DYNAMIC_CACHE = 'eja-homestay-dynamic-v2';
+const API_CACHE = 'eja-homestay-api-v2';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
   '/',
   '/offline',
   '/placeholder-experience.jpg',
-  '/next.svg',
-  '/vercel.svg',
+  '/eja_svg.svg',
+  '/eja_transparent svg.svg',
+  '/eja_transparent logo.png',
+  '/manifest.json',
 ];
 
 // Install event - cache static assets

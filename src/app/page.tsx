@@ -7,13 +7,17 @@ import { OptimizedImage } from '@/components/OptimizedImage';
 import { CategoryCard } from '@/components/CategoryCard';
 import Link from 'next/link';
 import { 
-  MapPinIcon
+  MapPinIcon,
+  BookmarkIcon as BookmarkOutline
 } from '@heroicons/react/24/outline';
+import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import { useEffect, useState } from 'react';
-import { getRetreats, getExperiences, getProperties } from '@/lib/database';
+import { getRetreats, getExperiences, getProperties, isBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 import { PropertyWithHost } from '@/lib/types';
 import ExperienceModal from '@/components/ExperienceModal';
 import RetreatModal from '@/components/RetreatModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 
@@ -58,6 +62,7 @@ const EXPERIENCE_CATEGORIES = [
 ];
 
 export default function Home() {
+  const { user } = useAuth();
   const [retreats, setRetreats] = useState<any[]>([]);
   const [experiences, setExperiences] = useState<any[]>([]);
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
@@ -66,6 +71,8 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
   const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
+  const [bucketlistedItems, setBucketlistedItems] = useState<Set<string>>(new Set());
+  const [moods, setMoods] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,6 +98,18 @@ export default function Home() {
         setRetreats(retreatsResult);
         setExperiences(experiencesResult);
         setProperties(propertiesResult);
+
+        // Fetch unique moods from experiences_unified table
+        const { data: moodData, error: moodError } = await supabase
+          .from('experiences_unified')
+          .select('mood')
+          .not('mood', 'is', null)
+          .neq('mood', '');
+
+        if (!moodError && moodData) {
+          const uniqueMoods = [...new Set(moodData.map(item => item.mood).filter(Boolean))];
+          setMoods(uniqueMoods.slice(0, 9)); // Limit to 9 moods
+        }
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -131,6 +150,38 @@ export default function Home() {
     } catch (error) {
       console.error('Error handling retreat click:', error);
     }
+  };
+
+  const handleBucketlistToggle = async (item: any, isExperience: boolean) => {
+    if (!user) {
+      // Redirect to sign in or show auth modal
+      return;
+    }
+
+    const itemId = item.id;
+    const itemType = isExperience ? 'experience' : 'trip';
+    const isCurrentlyBucketlisted = bucketlistedItems.has(itemId);
+
+    try {
+      if (isCurrentlyBucketlisted) {
+        await removeFromBucketlist(user.id, itemId, itemType);
+        setBucketlistedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(itemId);
+          return newSet;
+        });
+      } else {
+        await addToBucketlist(user.id, itemId, itemType);
+        setBucketlistedItems(prev => new Set(prev).add(itemId));
+      }
+    } catch (error) {
+      console.error('Error toggling bucketlist:', error);
+    }
+  };
+
+  const handleMoodClick = (mood: string) => {
+    // Navigate to discover page with mood filter to fetch only experiences with that specific mood
+    window.location.href = `/discover?mood=${encodeURIComponent(mood)}`;
   };
 
   const handleCloseRetreatModal = () => {
@@ -195,7 +246,7 @@ export default function Home() {
                 {
                   id: 'trending',
                   title: 'trending',
-                  subtitle: "today's poppin' places",
+                  subtitle: "buzzing now",
                   image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=400&q=80',
                   dotColor: 'bg-orange-400',
                   href: '/discover?filter=trending'
@@ -203,7 +254,7 @@ export default function Home() {
                 {
                   id: 'lowkey',
                   title: 'lowkey',
-                  subtitle: '<25 google reviews',
+                  subtitle: 'dare to try',
                   image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=400&q=80',
                   dotColor: 'bg-purple-400',
                   href: '/discover?filter=lowkey'
@@ -247,10 +298,10 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Travel Inspirations Section - Mobile Version */}
+          {/* Trending Section - Mobile Version */}
           <section className="px-4 py-4 bg-white">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">travel inspirations</h2>
+              <h2 className="text-lg font-bold text-gray-900">trending</h2>
             </div>
             
             <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
@@ -306,8 +357,26 @@ export default function Home() {
                       >
                         <div 
                           onClick={() => isExperience ? handleExperienceClick(item) : handleRetreatClick(item)}
-                          className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-1"
+                          className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-1 relative"
                         >
+                          {/* Saved Icon */}
+                          {user && (
+                            <button 
+                              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBucketlistToggle(item, isExperience);
+                              }}
+                              aria-label={bucketlistedItems.has(item.id) ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                            >
+                              {bucketlistedItems.has(item.id) ? (
+                                <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                              ) : (
+                                <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                              )}
+                            </button>
+                          )}
+                          
                           <div className="flex h-40">
                             {/* Image on the left */}
                             <div className="relative w-32 h-40">
@@ -449,125 +518,87 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                    </div>
+            </div>
                   );
                   cardIndex++;
                 }
                 
                 return mixedCards;
               })()}
-            </div>
-          </section>
-
-          {/* Explore Happiness Section - Mood Category Cards */}
-          <section className="px-4 pt-2 pb-4 bg-gray-50">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">explore happiness</h2>
-            </div>
-            
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-              {(() => {
-                // Get unique moods from experiences and retreats
-                const allItems = [...experiences, ...retreats];
-                const uniqueMoods = [...new Set(allItems.map(item => item.mood).filter(mood => mood && mood.trim() !== ''))];
-                
-                // Remove Soulful and Chill cards
-                const filteredMoods = uniqueMoods.filter(mood => mood !== 'Soulful' && mood !== 'Chill');
-                
-                // Define mood configurations with appropriate images and descriptions
-                const moodConfigs = {
-                  'Foodie': {
-                    description: 'Culinary adventures and food experiences',
-                    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
-                    icon: '🍽️',
-                    type: 'experience'
-                  },
-                  'Thrill': {
-                    description: 'Adventure and thrilling experiences',
-                    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-                    icon: '⚡',
-                    type: 'experience'
-                  },
-                  'Artistic': {
-                    description: 'Creative and artistic experiences',
-                    image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=800&q=80',
-                    icon: '🎨',
-                    type: 'experience'
-                  },
-                  'Soulful': {
-                    description: 'Meaningful and soulful experiences',
-                    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
-                    icon: '🧘',
-                    type: 'retreat'
-                  },
-                  'Chill': {
-                    description: 'Relaxed and chill experiences',
-                    image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=800&q=80',
-                    icon: '😌',
-                    type: 'retreat'
-                  },
-                  'Group': {
-                    description: 'Group retreats and team experiences',
-                    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
-                    icon: '👥',
-                    type: 'retreat'
-                  },
-                  'Couple': {
-                    description: 'Romantic retreats and couple experiences',
-                    image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
-                    icon: '💕',
-                    type: 'retreat'
-                  },
-                  'Family': {
-                    description: 'Family-friendly retreats and experiences',
-                    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
-                    icon: '👨‍👩‍👧‍👦',
-                    type: 'retreat'
-                  },
-                  'Try': {
-                    description: 'New experiences and exciting discoveries',
-                    image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=800&q=80',
-                    icon: '✨',
-                    type: 'retreat'
-                  }
-                };
-                
-                return filteredMoods.map((mood, index) => {
-                  const config = moodConfigs[mood as keyof typeof moodConfigs] || {
-                    description: `${mood} experiences`,
-                    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-                    icon: '🌟',
-                    type: 'experience'
-                  };
-                  
-                  return (
-                    <div key={mood} className="flex-shrink-0 w-48">
-                <CategoryCard
-                        name={mood}
-                        description={config.description}
-                        image={config.image}
-                        icon={config.icon}
-                        type={config.type}
-                  index={index}
-                />
-                    </div>
-                  );
-                });
-              })()}
           </div>
         </section>
 
+          {/* Mood Vibes Section - Mobile Version */}
+          <section className="px-4 py-6 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Mood Vibes</h2>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+              {moods.map((mood, index) => {
+                const getMoodImage = (moodName: string) => {
+                  const moodImages: { [key: string]: string } = {
+                    'Adventure': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=400&q=80',
+                    'Relaxation': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=400&q=80',
+                    'Cultural': 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=400&q=80',
+                    'Social': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80',
+                    'Learning': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80',
+                    'Wellness': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=400&q=80',
+                    'Creative': 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=400&q=80',
+                    'Nature': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=400&q=80',
+                    'Foodie': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Zm9vZHxlbnwwfHwwfHx8Mg%3D%3D&v=2',
+                    'Soulful': 'https://images.unsplash.com/photo-1609961195485-8278b1a9c919?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fG9yYW5nZSUyMGxlYXZlcyUyMHBhdGh8ZW58MHx8MHx8fDI%3D',
+                    'Thrill': 'https://images.unsplash.com/photo-1534146789009-76ed5060ec70?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8YmlrZXxlbnwwfHwwfHx8Mg%3D%3D',
+                    'Artistic': 'https://images.unsplash.com/photo-1525909002-1b05e0c869d8?auto=format&fit=crop&w=400&q=80',
+                    'Meaningful': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80',
+                    'Playful': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80',
+                    'Chill': 'https://images.unsplash.com/photo-1550475476-44c382c5f2a2?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8ZW5qb3l8ZW58MHx8MHx8fDI%3D',
+                    'Group': 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Z3JvdXB8ZW58MHx8MHx8fDI%3D',
+                    'Couple': 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=400&q=80',
+                    'Family': 'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?auto=format&fit=crop&w=400&q=80',
+                    'Try': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=400&q=80'
+                  };
+                  return moodImages[moodName] || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80';
+                };
+
+                return (
+                  <div
+                    key={mood}
+                    onClick={() => handleMoodClick(mood)}
+                    className="group flex-shrink-0 w-32 h-40 rounded-2xl overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="relative w-full h-full">
+                      <img
+                        src={getMoodImage(mood)}
+                        alt={mood}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <h3 className="text-white font-bold text-sm capitalize text-center">
+                          {mood}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
         </main>
+
 
         {/* Desktop Layout - Keep existing for desktop */}
         <main className="hidden md:block">
           <HeroSection />
 
-        {/* Travel Inspirations Section */}
+        {/* Trending Section */}
         <section className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12 animate-fade-in">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Travel Inspirations</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Trending</h2>
             </div>
             
             <div className="relative">
@@ -639,8 +670,25 @@ export default function Home() {
                         >
                           <div 
                             onClick={() => isExperience ? handleExperienceClick(item) : handleRetreatClick(item)}
-                            className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-1"
+                            className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-1 relative"
                           >
+                            {/* Saved Icon */}
+                            {user && (
+                              <button 
+                                className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBucketlistToggle(item, isExperience);
+                                }}
+                                aria-label={bucketlistedItems.has(item.id) ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                              >
+                                {bucketlistedItems.has(item.id) ? (
+                                  <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                                ) : (
+                                  <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                                )}
+                              </button>
+                            )}
                             <div className="flex flex-col md:flex-row h-48">
                               {/* Image on the left */}
                               <div className="relative w-full md:w-1/3 h-48 md:h-full">
@@ -795,108 +843,70 @@ export default function Home() {
           </div>
         </section>
 
-          {/* Explore Happiness Section */}
-          <section className="py-20 bg-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12 animate-fade-in">
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">Explore Happiness</h2>
-              </div>
-              
-              {/* Horizontal Scroll Layout */}
-              <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
-                {(() => {
-                  // Get unique moods from experiences and retreats
-                  const allItems = [...experiences, ...retreats];
-                  const uniqueMoods = [...new Set(allItems.map(item => item.mood).filter(mood => mood && mood.trim() !== ''))];
-                  
-                  // Remove Soulful and Chill cards
-                  const filteredMoods = uniqueMoods.filter(mood => mood !== 'Soulful' && mood !== 'Chill');
-                  
-                  // Define mood configurations with appropriate images and descriptions
-                  const moodConfigs = {
-                    'Foodie': {
-                      description: 'Culinary adventures and food experiences',
-                      image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
-                      icon: '🍽️',
-                      type: 'experience'
-                    },
-                    'Thrill': {
-                      description: 'Adventure and thrilling experiences',
-                      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-                      icon: '⚡',
-                      type: 'experience'
-                    },
-                    'Artistic': {
-                      description: 'Creative and artistic experiences',
-                      image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=800&q=80',
-                      icon: '🎨',
-                      type: 'experience'
-                    },
-                    'Soulful': {
-                      description: 'Meaningful and soulful experiences',
-                      image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
-                      icon: '🧘',
-                      type: 'retreat'
-                    },
-                    'Chill': {
-                      description: 'Relaxed and chill experiences',
-                      image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=800&q=80',
-                      icon: '😌',
-                      type: 'retreat'
-                    },
-                    'Group': {
-                      description: 'Group activities and social experiences',
-                      image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
-                      icon: '👥',
-                      type: 'retreat'
-                    },
-                    'Couple': {
-                      description: 'Romantic couple experiences',
-                      image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
-                      icon: '💕',
-                      type: 'retreat'
-                    },
-                    'Family': {
-                      description: 'Family-friendly experiences',
-                      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=800&q=80',
-                      icon: '👨‍👩‍👧‍👦',
-                      type: 'retreat'
-                    },
-                    'Try': {
-                      description: 'New experiences to try',
-                      image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=800&q=80',
-                      icon: '✨',
-                      type: 'retreat'
-                    }
-                  };
-
-                  // Create mood-based categories
-                  return filteredMoods.map((mood, index) => {
-                    const config = moodConfigs[mood as keyof typeof moodConfigs] || {
-                      description: `${mood} experiences`,
-                      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-                      icon: '🌟',
-                      type: 'experience'
-                    };
-
-                    return (
-                      <div key={mood} className="flex-shrink-0 w-64">
-                        <CategoryCard
-                          name={mood}
-                          description={config.description}
-                          image={config.image}
-                          icon={config.icon}
-                          type={config.type}
-                          index={index}
-                        />
-                      </div>
-                    );
-                  });
-                })()}
-            </div>
-          </div>
-        </section>
       </main>
+
+      {/* Mood Cards Section - Desktop Version */}
+      <section className="py-20 bg-gray-100 hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Mood Vibes</h2>
+          </div>
+          
+          <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+            {moods.map((mood, index) => {
+              // Get appropriate cover image based on mood
+              const getMoodImage = (moodName: string) => {
+                const moodImages: { [key: string]: string } = {
+                  'Adventure': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=400&q=80',
+                  'Relaxation': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=400&q=80',
+                  'Cultural': 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=400&q=80',
+                  'Social': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80',
+                  'Learning': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80',
+                  'Wellness': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=400&q=80',
+                  'Creative': 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=400&q=80',
+                  'Nature': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=400&q=80',
+                  'Foodie': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Zm9vZHxlbnwwfHwwfHx8Mg%3D%3D&v=2',
+                  'Soulful': 'https://images.unsplash.com/photo-1609961195485-8278b1a9c919?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fG9yYW5nZSUyMGxlYXZlcyUyMHBhdGh8ZW58MHx8MHx8fDI%3D',
+                  'Thrill': 'https://images.unsplash.com/photo-1534146789009-76ed5060ec70?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8YmlrZXxlbnwwfHwwfHx8Mg%3D%3D',
+                  'Artistic': 'https://images.unsplash.com/photo-1525909002-1b05e0c869d8?auto=format&fit=crop&w=400&q=80',
+                  'Meaningful': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80',
+                  'Playful': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80',
+                  'Chill': 'https://images.unsplash.com/photo-1550475476-44c382c5f2a2?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8ZW5qb3l8ZW58MHx8MHx8fDI%3D',
+                  'Group': 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Z3JvdXB8ZW58MHx8MHx8fDI%3D',
+                  'Couple': 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=400&q=80',
+                  'Family': 'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?auto=format&fit=crop&w=400&q=80',
+                  'Try': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=400&q=80'
+                };
+                return moodImages[moodName] || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80';
+              };
+
+              return (
+                <div
+                  key={mood}
+                  onClick={() => handleMoodClick(mood)}
+                  className="group flex-shrink-0 w-48 h-60 rounded-2xl overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <div className="relative w-full h-full">
+                    <img
+                      src={getMoodImage(mood)}
+                      alt={mood}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-white font-bold text-lg capitalize text-center">
+                        {mood}
+                      </h3>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       <Footer />
       
       {/* Experience Modal */}

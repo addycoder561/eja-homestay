@@ -712,36 +712,36 @@ export async function testWishlistTable() {
   }
 }
 
-// Wishlist functions
-export async function getWishlist(userId: string) {
-  console.log('🔍 getWishlist called with userId:', userId);
+// Bucketlist functions
+export async function getBucketlist(userId: string) {
+  console.log('🔍 getBucketlist called with userId:', userId);
   
   const { data, error } = await supabase
-    .from('wishlist')
+    .from('bucketlist')
     .select('*')
     .eq('user_id', userId);
     
   if (error) {
-    console.error('❌ Error fetching wishlist:', error);
+    console.error('❌ Error fetching bucketlist:', error);
     return [];
   }
   
-  console.log('✅ getWishlist result:', data);
+  console.log('✅ getBucketlist result:', data);
   return data || [];
 }
 
-export async function isWishlisted(userId: string, itemId: string, itemType: string) {
-  console.log('🔍 isWishlisted called:', { userId, itemId, itemType });
+export async function isBucketlisted(userId: string, itemId: string, itemType: string) {
+  console.log('🔍 isBucketlisted called:', { userId, itemId, itemType });
   
   const { data, error } = await supabase
-    .from('wishlist')
+    .from('bucketlist')
     .select('id')
     .eq('user_id', userId)
     .eq('item_id', itemId)
     .eq('item_type', itemType);
     
   if (error) {
-    console.error('❌ Error checking wishlist status:', error);
+    console.error('❌ Error checking bucketlist status:', error);
     console.error('❌ Error details:', {
       message: error.message,
       details: error.details,
@@ -751,16 +751,16 @@ export async function isWishlisted(userId: string, itemId: string, itemType: str
     return false;
   }
   
-  console.log('✅ isWishlisted result:', !!data && data.length > 0, 'Data:', data);
+  console.log('✅ isBucketlisted result:', !!data && data.length > 0, 'Data:', data);
   return !!data && data.length > 0;
 }
 
-export async function addToWishlist(userId: string, itemId: string, itemType: string) {
-  console.log('🔖 addToWishlist called:', { userId, itemId, itemType });
+export async function addToBucketlist(userId: string, itemId: string, itemType: string) {
+  console.log('🔖 addToBucketlist called:', { userId, itemId, itemType });
   
   // Validate inputs
   if (!userId || !itemId || !itemType) {
-    console.error('❌ Invalid inputs for addToWishlist:', { userId, itemId, itemType });
+    console.error('❌ Invalid inputs for addToBucketlist:', { userId, itemId, itemType });
     return false;
   }
   
@@ -771,22 +771,22 @@ export async function addToWishlist(userId: string, itemId: string, itemType: st
     return false;
   }
   
-  // Check if item is already in wishlist
-  const isAlreadyWishlisted = await isWishlisted(userId, itemId, itemType);
-  if (isAlreadyWishlisted) {
-    console.log('⚠️ Item already in wishlist, skipping duplicate insert');
-    return true; // Return true since the item is already wishlisted
+  // Check if item is already in bucketlist
+  const isAlreadyBucketlisted = await isBucketlisted(userId, itemId, itemType);
+  if (isAlreadyBucketlisted) {
+    console.log('⚠️ Item already in bucketlist, skipping duplicate insert');
+    return true; // Return true since the item is already bucketlisted
   }
   
-  console.log('🔄 Attempting to insert into wishlist table...');
+  console.log('🔄 Attempting to insert into bucketlist table...');
   try {
     const { data, error } = await supabase
-      .from('wishlist')
+      .from('bucketlist')
       .insert({ user_id: userId, item_id: itemId, item_type: itemType })
       .select();
       
     if (error) {
-      console.error('❌ Error adding to wishlist:', error);
+      console.error('❌ Error adding to bucketlist:', error);
       console.error('❌ Error details:', {
         message: error.message,
         details: error.details,
@@ -799,24 +799,24 @@ export async function addToWishlist(userId: string, itemId: string, itemType: st
     console.log('✅ Item added to wishlist successfully:', data);
     return true;
   } catch (err) {
-    console.error('❌ Exception in addToWishlist:', err);
+    console.error('❌ Exception in addToBucketlist:', err);
     return false;
   }
 }
 
-export async function removeFromWishlist(userId: string, itemId: string, itemType: string) {
-  console.log('🗑️ removeFromWishlist called:', { userId, itemId, itemType });
+export async function removeFromBucketlist(userId: string, itemId: string, itemType: string) {
+  console.log('🗑️ removeFromBucketlist called:', { userId, itemId, itemType });
   
   try {
     const { error } = await supabase
-      .from('wishlist')
+      .from('bucketlist')
       .delete()
       .eq('user_id', userId)
       .eq('item_id', itemId)
       .eq('item_type', itemType);
       
     if (error) {
-      console.error('❌ Error removing from wishlist:', error);
+      console.error('❌ Error removing from bucketlist:', error);
       console.error('❌ Error details:', {
         message: error.message,
         details: error.details,
@@ -829,7 +829,7 @@ export async function removeFromWishlist(userId: string, itemId: string, itemTyp
     console.log('✅ Item removed from wishlist successfully');
     return true;
   } catch (err) {
-    console.error('❌ Exception in removeFromWishlist:', err);
+    console.error('❌ Exception in removeFromBucketlist:', err);
     return false;
   }
 } 
@@ -1356,5 +1356,171 @@ export async function getRetreatCategories(): Promise<string[]> {
   } catch (error) {
     console.error('Unexpected error fetching retreat categories:', error);
     return [];
+  }
+}
+
+// Notification functions
+export async function getNotifications(userId: string) {
+  console.log('🔔 getNotifications called for user:', userId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('❌ Error fetching notifications:', error);
+      return [];
+    }
+    
+    console.log('✅ Notifications fetched:', data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error('❌ getNotifications error:', error);
+    return [];
+  }
+}
+
+export async function getUnreadNotificationCount(userId: string) {
+  console.log('🔔 getUnreadNotificationCount called for user:', userId);
+  
+  try {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+      
+    if (error) {
+      console.error('❌ Error fetching unread notification count:', error);
+      return 0;
+    }
+    
+    console.log('✅ Unread notifications count:', count || 0);
+    return count || 0;
+  } catch (error) {
+    console.error('❌ getUnreadNotificationCount error:', error);
+    return 0;
+  }
+}
+
+export async function markNotificationAsRead(notificationId: string) {
+  console.log('🔔 markNotificationAsRead called for notification:', notificationId);
+  
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+      
+    if (error) {
+      console.error('❌ Error marking notification as read:', error);
+      throw error;
+    }
+    
+    console.log('✅ Notification marked as read');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ markNotificationAsRead error:', error);
+    throw error;
+  }
+}
+
+export async function markAllNotificationsAsRead(userId: string) {
+  console.log('🔔 markAllNotificationsAsRead called for user:', userId);
+  
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+      
+    if (error) {
+      console.error('❌ Error marking all notifications as read:', error);
+      throw error;
+    }
+    
+    console.log('✅ All notifications marked as read');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ markAllNotificationsAsRead error:', error);
+    throw error;
+  }
+}
+
+export async function createNotification(userId: string, title: string, message: string, type: string = 'info', actionUrl?: string) {
+  console.log('🔔 createNotification called:', { userId, title, message, type, actionUrl });
+  
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title,
+        message,
+        type,
+        action_url: actionUrl
+      })
+      .select();
+      
+    if (error) {
+      console.error('❌ Error creating notification:', error);
+      throw error;
+    }
+    
+    console.log('✅ Notification created:', data);
+    return data?.[0];
+  } catch (error) {
+    console.error('❌ createNotification error:', error);
+    throw error;
+  }
+}
+
+export async function createWelcomeNotifications(userId: string) {
+  console.log('🔔 createWelcomeNotifications called for user:', userId);
+  
+  try {
+    const welcomeNotifications = [
+      {
+        user_id: userId,
+        title: 'Welcome to EJA!',
+        message: 'Welcome to EJA Homestay! Start exploring amazing experiences and create your own.',
+        type: 'success',
+        action_url: '/discover'
+      },
+      {
+        user_id: userId,
+        title: 'Discover Experiences',
+        message: 'Check out the latest adventure experiences near you. Find your perfect match!',
+        type: 'info',
+        action_url: '/discover?mood=Adventure'
+      },
+      {
+        user_id: userId,
+        title: 'Create Your First Experience',
+        message: 'Ready to share your passion? Create and host your own unique experience.',
+        type: 'info',
+        action_url: '/'
+      }
+    ];
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert(welcomeNotifications)
+      .select();
+      
+    if (error) {
+      console.error('❌ Error creating welcome notifications:', error);
+      throw error;
+    }
+    
+    console.log('✅ Welcome notifications created:', data?.length || 0);
+    return data;
+  } catch (error) {
+    console.error('❌ createWelcomeNotifications error:', error);
+    throw error;
   }
 } 

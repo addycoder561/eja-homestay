@@ -38,7 +38,7 @@ import {
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { isWishlisted as checkIsWishlisted, addToWishlist, removeFromWishlist } from '@/lib/database';
+import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Retreat } from '@/lib/types';
@@ -201,7 +201,7 @@ export default function RetreatDetailPage() {
   const checkWishlistStatus = async () => {
     if (!user || !retreat) return;
     try {
-      const wishlisted = await checkIsWishlisted(user.id, retreat.id, 'trip');
+      const wishlisted = await checkIsBucketlisted(user.id, retreat.id, 'trip');
       setIsWishlistedState(wishlisted);
     } catch (err) {
       console.error('Error checking wishlist status:', err);
@@ -252,7 +252,7 @@ export default function RetreatDetailPage() {
 
     try {
       if (isWishlistedState) {
-        const success = await removeFromWishlist(user.id, retreat.id, 'trip');
+        const success = await removeFromBucketlist(user.id, retreat.id, 'trip');
         if (success) {
           setIsWishlistedState(false);
           toast.success('Removed from wishlist');
@@ -264,7 +264,7 @@ export default function RetreatDetailPage() {
           toast.error('Failed to remove from wishlist');
         }
       } else {
-        const success = await addToWishlist(user.id, retreat.id, 'trip');
+        const success = await addToBucketlist(user.id, retreat.id, 'trip');
         if (success) {
           setIsWishlistedState(true);
           toast.success('Added to wishlist');

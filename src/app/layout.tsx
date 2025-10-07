@@ -29,6 +29,10 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+  // Performance optimizations
+  other: {
+    'X-UA-Compatible': 'IE=edge',
+  },
   metadataBase: new URL('https://eja-homestay.vercel.app'),
   alternates: {
     canonical: '/',

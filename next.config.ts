@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'date-fns'],
   },
+  
+  // Server external packages
+  serverExternalPackages: ['@supabase/supabase-js'],
 
   // Turbopack configuration
   turbopack: {

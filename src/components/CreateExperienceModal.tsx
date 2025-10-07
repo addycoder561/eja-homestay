@@ -1,359 +1,577 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { XMarkIcon, PhotoIcon, XCircleIcon } from '@heroicons/react/24/outline';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { useState, useRef, useEffect } from 'react';
+import { XMarkIcon, PlusIcon, PhotoIcon, MapPinIcon, CalendarIcon, ClockIcon, UserGroupIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import { supabase } from '@/lib/supabase';
+import toast from 'react-hot-toast';
+import ConfettiAnimation from '@/components/ConfettiAnimation';
 
 interface CreateExperienceModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const EXPERIENCE_TYPES = [
-  { id: 'online', label: 'Online' },
-  { id: 'hyper-local', label: 'Hyper-local' },
-  { id: 'far-away', label: 'Retreats' }
-];
+interface FormData {
+  title: string;
+  description: string;
+  mood: string;
+  location: string;
+  date: string;
+  time: string;
+  coverImage: File | null;
+  carouselImages: File[];
+  isPaid: boolean;
+  price: string;
+  capacity: string;
+  coHosts: string;
+  duration: string;
+}
 
-const CATEGORIES = [
-  'Adventure', 'Culinary', 'Cultural', 'Wellness', 'Art & Craft',
-  'Photography', 'Music', 'Nature', 'Sports', 'Technology'
-];
 
-const DURATION_OPTIONS = [
-  { id: 'custom', label: 'Custom' },
-  { id: 'half-day', label: 'Half-day' },
-  { id: '1-day', label: '1 day' },
-  { id: 'multi-days', label: 'Multi-days' }
-];
-
-const MOOD_OPTIONS = [
-  'Adventurous', 'Relaxing', 'Educational', 'Social', 'Creative',
-  'Romantic', 'Family-friendly', 'Challenging', 'Inspirational', 'Fun'
-];
-
-export function CreateExperienceModal({ isOpen, onClose }: CreateExperienceModalProps) {
-  const [formData, setFormData] = useState({
+export default function CreateExperienceModal({ isOpen, onClose }: CreateExperienceModalProps) {
+  const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
-    type: '',
-    category: '',
-    duration: '',
     mood: '',
-    hasPrice: false,
-    price: 0,
     location: '',
-    maxGuests: 10
+    date: '',
+    time: '',
+    coverImage: null,
+    carouselImages: [],
+    isPaid: false,
+    price: '',
+    capacity: '',
+    coHosts: '',
+    duration: ''
   });
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [isDraft, setIsDraft] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [moodOptions, setMoodOptions] = useState<string[]>([]);
+  const [showMoodDrawer, setShowMoodDrawer] = useState(false);
+  
+  const coverImageRef = useRef<HTMLInputElement>(null);
+  const carouselImagesRef = useRef<HTMLInputElement>(null);
+  const moodDropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setSelectedImages(prev => [...prev, ...files].slice(0, 5)); // Max 5 images
+  // Fetch mood options from database
+  useEffect(() => {
+    const fetchMoodOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('experiences_unified')
+          .select('mood')
+          .not('mood', 'is', null)
+          .neq('mood', '');
+
+        if (error) throw error;
+
+        // Extract unique moods
+        const uniqueMoods = [...new Set(data.map(item => item.mood).filter(Boolean))];
+        setMoodOptions(uniqueMoods);
+      } catch (error) {
+        console.error('Error fetching mood options:', error);
+        // Fallback to default moods if database fetch fails
+        setMoodOptions(['Adventure', 'Relaxation', 'Cultural', 'Social', 'Learning', 'Wellness', 'Creative', 'Nature', 'Food', 'Music']);
+      }
+    };
+
+    if (isOpen) {
+      fetchMoodOptions();
+    }
+  }, [isOpen]);
+
+  // Close mood dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moodDropdownRef.current && !moodDropdownRef.current.contains(event.target as Node)) {
+        setShowMoodDrawer(false);
+      }
+    };
+
+    if (showMoodDrawer) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMoodDrawer]);
+
+  const handleInputChange = (field: keyof FormData, value: string | boolean | null) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const handleFileUpload = (files: FileList | null, type: 'cover' | 'carousel') => {
+    if (!files) return;
     
+    if (type === 'cover') {
+      setFormData(prev => ({ ...prev, coverImage: files[0] }));
+    } else {
+      const newImages = Array.from(files);
+      setFormData(prev => ({ 
+        ...prev, 
+        carouselImages: [...prev.carouselImages, ...newImages].slice(0, 5) // Max 5 images
+      }));
+    }
+  };
+
+  const removeCarouselImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      carouselImages: prev.carouselImages.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = async (publish: boolean = true) => {
+    if (!formData.title || !formData.description || !formData.mood || !formData.location) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setIsDraft(!publish);
+
     try {
-      // Here you would implement the actual experience creation logic
-      console.log('Creating experience:', formData);
-      console.log('Images:', selectedImages);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Reset form and close modal
+      // Upload cover image
+      let coverImageUrl = '';
+      if (formData.coverImage) {
+        const coverFileExt = formData.coverImage.name.split('.').pop();
+        const coverFileName = `${Date.now()}-cover.${coverFileExt}`;
+        const { data: coverData, error: coverError } = await supabase.storage
+          .from('experience-images')
+          .upload(coverFileName, formData.coverImage);
+        
+        if (coverError) throw coverError;
+        coverImageUrl = coverData.path;
+      }
+
+      // Upload carousel images
+      const carouselUrls: string[] = [];
+      for (let i = 0; i < formData.carouselImages.length; i++) {
+        const file = formData.carouselImages[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-carousel-${i}.${fileExt}`;
+        const { data, error } = await supabase.storage
+          .from('experience-images')
+          .upload(fileName, file);
+        
+        if (error) throw error;
+        carouselUrls.push(data.path);
+      }
+
+      // Create experience record
+      const experienceData = {
+        title: formData.title,
+        description: formData.description,
+        mood: formData.mood,
+        location: formData.location,
+        date: formData.date,
+        time: formData.time,
+        cover_image: coverImageUrl,
+        carousel_images: carouselUrls,
+        is_paid: formData.isPaid,
+        price: formData.isPaid ? parseFloat(formData.price) : null,
+        capacity: formData.capacity ? parseInt(formData.capacity) : null,
+        co_hosts: formData.coHosts,
+        duration: formData.duration,
+        status: publish ? 'published' : 'draft',
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('experiences_unified')
+        .insert(experienceData);
+
+      if (error) throw error;
+
+      // Success animation
+      if (publish) {
+        setShowConfetti(true);
+        toast.success('🎉 Shared with the world!');
+      } else {
+        toast.success('Draft saved successfully!');
+      }
+
+      // Reset form
       setFormData({
         title: '',
         description: '',
-        type: '',
-        category: '',
-        duration: '',
         mood: '',
-        hasPrice: false,
-        price: 0,
         location: '',
-        maxGuests: 10
+        date: '',
+        time: '',
+        coverImage: null,
+        carouselImages: [],
+        isPaid: false,
+        price: '',
+        capacity: '',
+        coHosts: '',
+        duration: ''
       });
-      setSelectedImages([]);
+
       onClose();
     } catch (error) {
       console.error('Error creating experience:', error);
+      toast.error('Failed to create experience. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSaveDraft = () => {
-    // Implement draft saving logic
-    console.log('Saving draft:', formData);
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-40 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+    <>
+      <ConfettiAnimation 
+        isActive={showConfetti} 
+        onComplete={() => setShowConfetti(false)} 
+      />
+      <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
+      <div className="bg-white rounded-t-3xl md:rounded-2xl w-full h-full md:max-w-2xl md:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Create Experience</h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSaveDraft}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-            >
-              Save Draft
-            </button>
+        <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-xl font-semibold text-gray-900">Create Experience</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <XMarkIcon className="w-5 h-5 text-gray-600" />
+            <XMarkIcon className="w-5 h-5 text-gray-700" />
             </button>
-          </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          {/* Photo/Upload Section */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Photos
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {/* Upload Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center hover:border-gray-400 transition-colors"
-              >
-                <PhotoIcon className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-600">Add Photo</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-
-              {/* Uploaded Images */}
-              {selectedImages.map((image, index) => (
-                <div key={index} className="relative aspect-square">
-                  <img
-                    src={URL.createObjectURL(image)}
-                    alt={`Upload ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                  >
-                    <XCircleIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
+        <div className="p-4 space-y-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* Title */}
-          <Input
-            label="Title"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            placeholder="Give your experience a catchy title"
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Title *
+            </label>
+              <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              placeholder="What's your experience about?"
+            />
+          </div>
 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+              Description *
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe what makes your experience special"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              onChange={(e) => handleInputChange('description', e.target.value)}
               rows={4}
-              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              placeholder="Tell people what they can expect..."
             />
           </div>
 
-          {/* Type */}
-          <div>
+          {/* Mood & Location - Side by Side */}
+          <div className="grid grid-cols-2 gap-4">
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type
+                Mood *
             </label>
-            <div className="grid grid-cols-3 gap-3">
-              {EXPERIENCE_TYPES.map((type) => (
                 <button
-                  key={type.id}
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, type: type.id }))}
-                  className={`p-3 text-sm font-medium rounded-lg border transition-colors ${
-                    formData.type === type.id
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  {type.label}
+                onClick={() => setShowMoodDrawer(true)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-white text-gray-900"
+              >
+                {formData.mood || <span className="text-gray-500">Select a mood</span>}
+                </button>
+                
+                {/* Desktop Dropdown */}
+                {showMoodDrawer && (
+                  <div ref={moodDropdownRef} className="hidden md:block absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="p-2">
+                      {moodOptions.map(mood => (
+                        <button
+                          key={mood}
+                          onClick={() => {
+                            handleInputChange('mood', mood);
+                            setShowMoodDrawer(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                            formData.mood === mood
+                              ? 'bg-yellow-500 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {mood}
                 </button>
               ))}
+                    </div>
+                  </div>
+                )}
             </div>
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowCategoryDrawer(true)}
-              className="w-full p-3 text-left border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
-            >
-              {formData.category || 'Select Category'}
-            </button>
-          </div>
-
-          {/* Duration */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Duration
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {DURATION_OPTIONS.map((duration) => (
-                <button
-                  key={duration.id}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, duration: duration.id }))}
-                  className={`p-3 text-sm font-medium rounded-lg border transition-colors ${
-                    formData.duration === duration.id
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  {duration.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mood */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mood
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {MOOD_OPTIONS.map((mood) => (
-                <button
-                  key={mood}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, mood }))}
-                  className={`p-2 text-sm font-medium rounded-lg border transition-colors ${
-                    formData.mood === mood
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  {mood}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Location */}
-          <Input
-            label="Location"
-            value={formData.location}
-            onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-            placeholder="Where will this experience take place?"
-            required
-          />
-
-          {/* Max Guests */}
-          <Input
-            label="Maximum Guests"
-            type="number"
-            value={formData.maxGuests}
-            onChange={(e) => setFormData(prev => ({ ...prev, maxGuests: parseInt(e.target.value) }))}
-            min="1"
-            max="50"
-          />
-
-          {/* Price Toggle */}
-          <div>
-            <label className="flex items-center gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <MapPinIcon className="w-4 h-4 inline mr-1" />
+                Location *
+              </label>
               <input
-                type="checkbox"
-                checked={formData.hasPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, hasPrice: e.target.checked }))}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                type="text"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                placeholder="Where will this take place?"
               />
-              <span className="text-sm font-medium text-gray-700">This experience has a price</span>
+            </div>
+          </div>
+
+          {/* Date & Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <CalendarIcon className="w-4 h-4 inline mr-1" />
+                Date *
+              </label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900"
+                />
+            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+                <ClockIcon className="w-4 h-4 inline mr-1" />
+                Time *
             </label>
-            
-            {formData.hasPrice && (
-              <div className="mt-3">
-                <Input
-                  label="Price (₹)"
-                  type="number"
+                <input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => handleInputChange('time', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900"
+                />
+            </div>
+          </div>
+
+          {/* Cover Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <PhotoIcon className="w-4 h-4 inline mr-1" />
+              Cover Image *
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {formData.coverImage ? (
+                <div className="space-y-2">
+                  <img 
+                    src={URL.createObjectURL(formData.coverImage)} 
+                    alt="Cover preview" 
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => handleInputChange('coverImage', null)}
+                    className="text-sm text-red-600 hover:text-red-800"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <PhotoIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">Click to upload cover image</p>
+                  <input
+                    ref={coverImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e.target.files, 'cover')}
+                    className="hidden"
+                  />
+                <button
+                    onClick={() => coverImageRef.current?.click()}
+                    className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                  >
+                    Choose Image
+                </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Carousel Images */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <PhotoIcon className="w-4 h-4 inline mr-1" />
+              Additional Images (max 5)
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {formData.carouselImages.map((image, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={URL.createObjectURL(image)} 
+                    alt={`Carousel ${index + 1}`} 
+                    className="w-full h-20 object-cover rounded-lg"
+                  />
+                <button
+                    onClick={() => removeCarouselImage(index)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                  >
+                    ×
+                </button>
+                </div>
+              ))}
+              {formData.carouselImages.length < 5 && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 flex items-center justify-center">
+                  <input
+                    ref={carouselImagesRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleFileUpload(e.target.files, 'carousel')}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => carouselImagesRef.current?.click()}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <PlusIcon className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pricing & Co-hosts - Side by Side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <CurrencyDollarIcon className="w-4 h-4 inline mr-1" />
+                Pricing
+              </label>
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center text-gray-900">
+                  <input
+                    type="radio"
+                    checked={!formData.isPaid}
+                    onChange={() => handleInputChange('isPaid', false)}
+                    className="mr-2"
+                  />
+                  Free
+                </label>
+                <label className="flex items-center text-gray-900">
+                  <input
+                    type="radio"
+                    checked={formData.isPaid}
+                    onChange={() => handleInputChange('isPaid', true)}
+                    className="mr-2"
+                  />
+                  Paid
+                </label>
+              </div>
+              {formData.isPaid && (
+                <input
+            type="number"
                   value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: parseInt(e.target.value) }))}
-                  min="0"
-                  placeholder="Enter price per person"
+                  onChange={(e) => handleInputChange('price', e.target.value)}
+                  placeholder="Price in USD"
+                  className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                />
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Co-hosts
+              </label>
+              <input
+                type="text"
+                value={formData.coHosts}
+                onChange={(e) => handleInputChange('coHosts', e.target.value)}
+                placeholder="Mention any co-hosts or collaborators"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Additional Info */}
+          <div className="grid grid-cols-2 gap-4">
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <UserGroupIcon className="w-4 h-4 inline mr-1" />
+                Capacity
+              </label>
+              <input
+                type="number"
+                value={formData.capacity}
+                onChange={(e) => handleInputChange('capacity', e.target.value)}
+                placeholder="Max participants"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <ClockIcon className="w-4 h-4 inline mr-1" />
+                Duration
+            </label>
+              <input
+                type="text"
+                value={formData.duration}
+                onChange={(e) => handleInputChange('duration', e.target.value)}
+                placeholder="e.g., 2 hours"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 />
               </div>
-            )}
           </div>
 
-          {/* Submit Button */}
-          <div className="pt-4 border-t border-gray-200">
-            <Button
-              type="submit"
-              loading={isSubmitting}
-              disabled={!formData.title || !formData.description || !formData.type || !formData.category || !formData.duration || !formData.mood || !formData.location}
-              className="w-full"
-              size="lg"
-            >
-              Create Experience
-            </Button>
           </div>
-        </form>
 
-        {/* Category Drawer */}
-        {showCategoryDrawer && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
-            <div className="bg-white rounded-t-2xl w-full max-w-md max-h-[50vh] overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Select Category</h3>
+        {/* Footer Actions */}
+        <div className="p-4 border-t bg-gray-50 flex space-x-3">
+          <button
+            onClick={() => handleSubmit(false)}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isSubmitting ? 'Saving...' : 'Save Draft'}
+          </button>
+          <button
+            onClick={() => handleSubmit(true)}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+          >
+            {isSubmitting ? 'Publishing...' : 'Publish'}
+          </button>
+        </div>
+          </div>
+
+      {/* Mood Selection Drawer - Mobile Only */}
+      {showMoodDrawer && (
+        <div className="md:hidden fixed inset-0 bg-black/50 flex items-end justify-center z-[60]">
+          <div className="bg-white rounded-t-3xl w-full max-h-[70vh] flex flex-col">
+            <div className="p-4 border-b flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Select Mood</h3>
+                <button
+                  onClick={() => setShowMoodDrawer(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5 text-gray-700" />
+                </button>
               </div>
-              <div className="p-4 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-2">
-                  {CATEGORIES.map((category) => (
+              </div>
+            <div className="p-4 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-5 gap-3">
+                {moodOptions.map((mood, index) => (
                     <button
-                      key={category}
+                    key={mood}
                       onClick={() => {
-                        setFormData(prev => ({ ...prev, category }));
-                        setShowCategoryDrawer(false);
-                      }}
-                      className="p-3 text-sm font-medium rounded-lg border border-gray-300 hover:border-gray-400 transition-colors text-left"
-                    >
-                      {category}
+                      handleInputChange('mood', mood);
+                      setShowMoodDrawer(false);
+                    }}
+                    className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
+                      formData.mood === mood
+                        ? 'bg-yellow-500 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {mood}
                     </button>
                   ))}
                 </div>
@@ -362,6 +580,6 @@ export function CreateExperienceModal({ isOpen, onClose }: CreateExperienceModal
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
