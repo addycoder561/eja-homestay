@@ -88,16 +88,8 @@ export function Navigation() {
       }
     };
 
-    // Only fetch if we have proper Supabase configuration
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co') {
-      fetchBucketlistCount();
-    } else {
-      console.warn('Supabase environment variables not configured, skipping bucketlist fetch');
-      setBucketlistCount(0);
-    }
+    // Always try to fetch - let the database function handle errors
+    fetchBucketlistCount();
   }, [user?.id]);
 
   // Fetch notification count when user is logged in
@@ -116,15 +108,8 @@ export function Navigation() {
       }
     };
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co') {
-      fetchNotificationCount();
-    } else {
-      console.warn('Supabase environment variables not configured, skipping notification fetch');
-      setNotificationCount(0);
-    }
+    // Always try to fetch - let the database function handle errors
+    fetchNotificationCount();
   }, [user?.id]);
 
   // Function to refresh bucketlist count (can be called from other components)

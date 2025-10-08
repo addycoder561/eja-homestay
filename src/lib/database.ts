@@ -717,7 +717,7 @@ export async function getBucketlist(userId: string) {
   console.log('🔍 getBucketlist called with userId:', userId);
   
   const { data, error } = await supabase
-    .from('bucketlist')
+    .from('wishlist')
     .select('*')
     .eq('user_id', userId);
     
@@ -734,7 +734,7 @@ export async function isBucketlisted(userId: string, itemId: string, itemType: s
   console.log('🔍 isBucketlisted called:', { userId, itemId, itemType });
   
   const { data, error } = await supabase
-    .from('bucketlist')
+    .from('wishlist')
     .select('id')
     .eq('user_id', userId)
     .eq('item_id', itemId)
@@ -778,10 +778,10 @@ export async function addToBucketlist(userId: string, itemId: string, itemType: 
     return true; // Return true since the item is already bucketlisted
   }
   
-  console.log('🔄 Attempting to insert into bucketlist table...');
+  console.log('🔄 Attempting to insert into wishlist table...');
   try {
     const { data, error } = await supabase
-      .from('bucketlist')
+      .from('wishlist')
       .insert({ user_id: userId, item_id: itemId, item_type: itemType })
       .select();
       
@@ -809,7 +809,7 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
   
   try {
     const { error } = await supabase
-      .from('bucketlist')
+      .from('wishlist')
       .delete()
       .eq('user_id', userId)
       .eq('item_id', itemId)

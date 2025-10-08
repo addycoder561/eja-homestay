@@ -74,51 +74,51 @@ export default function ProfilePage() {
       if (!user) return;
 
       try {
-        // Fetch user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError && profileError.code !== 'PGRST116') {
-          throw profileError;
-        }
-
-        if (profileData) {
-          setProfileData(profileData);
+        // Use the profile from AuthContext if available, otherwise fetch from API
+        if (profile) {
+          setProfileData({
+            id: profile.id,
+            full_name: profile.full_name || '',
+            bio: profile.bio || '',
+            avatar_url: profile.avatar_url || '',
+            mood_tag: profile.mood_tag || '',
+            created_at: profile.created_at || new Date().toISOString()
+          });
           setEditForm({
-            full_name: profileData.full_name || '',
-            bio: profileData.bio || '',
-            mood_tag: profileData.mood_tag || ''
+            full_name: profile.full_name || '',
+            bio: profile.bio || '',
+            mood_tag: profile.mood_tag || ''
           });
         }
 
-        // Fetch created experiences
+        // Fetch created experiences using the database function
         const { data: experiencesData, error: experiencesError } = await supabase
           .from('experiences_unified')
           .select('id, title, cover_image, mood, location, created_at')
           .eq('created_by', user.id)
           .order('created_at', { ascending: false });
 
-        if (experiencesError) throw experiencesError;
+        if (experiencesError) {
+          console.error('Error fetching experiences:', experiencesError);
+          setExperiences([]);
+        } else {
+          // Add mock metrics for now (you can implement real metrics later)
+          const experiencesWithMetrics = (experiencesData || []).map(exp => ({
+            ...exp,
+            likes_count: Math.floor(Math.random() * 100),
+            views_count: Math.floor(Math.random() * 500)
+          }));
 
-        // Add mock metrics for now (you can implement real metrics later)
-        const experiencesWithMetrics = (experiencesData || []).map(exp => ({
-          ...exp,
-          likes_count: Math.floor(Math.random() * 100),
-          views_count: Math.floor(Math.random() * 500)
-        }));
+          setExperiences(experiencesWithMetrics);
 
-        setExperiences(experiencesWithMetrics);
-
-        // Calculate metrics
-        const totalLikes = experiencesWithMetrics.reduce((sum, exp) => sum + exp.likes_count, 0);
-        setMetrics({
-          check_ins: experiencesData?.length || 0,
-          followers: Math.floor(Math.random() * 1000), // Mock data
-          smiles: totalLikes
-        });
+          // Calculate metrics
+          const totalLikes = experiencesWithMetrics.reduce((sum, exp) => sum + exp.likes_count, 0);
+          setMetrics({
+            check_ins: experiencesData?.length || 0,
+            followers: Math.floor(Math.random() * 1000), // Mock data
+            smiles: totalLikes
+          });
+        }
 
       } catch (error) {
         console.error('Error fetching profile data:', error);
@@ -128,7 +128,7 @@ export default function ProfilePage() {
     };
 
     fetchProfileData();
-  }, [user]);
+  }, [user, profile]);
 
   // Close menu when clicking outside
   useEffect(() => {

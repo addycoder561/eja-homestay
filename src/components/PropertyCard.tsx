@@ -32,6 +32,9 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
     if (user) {
       isBucketlisted(user.id, property.id, 'property').then((b) => {
         if (!ignore) setWishlisted(b);
+      }).catch((error) => {
+        console.error('Error checking bucketlist status:', error);
+        if (!ignore) setWishlisted(false);
       });
     } else {
       setWishlisted(false);

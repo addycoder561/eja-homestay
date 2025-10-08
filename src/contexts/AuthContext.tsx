@@ -34,15 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Check if Supabase is properly configured
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
-      console.warn('Supabase environment variables not configured, skipping auth initialization');
-      setLoading(false);
-      return;
-    }
+    // Always try to initialize auth - let Supabase handle configuration errors
 
     const init = async () => {
       try {

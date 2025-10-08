@@ -44,12 +44,8 @@ export function MobileBottomNavigation() {
       }
     };
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co') {
-      fetchWishlistCount();
-    }
+    // Always try to fetch - let the database function handle errors
+    fetchWishlistCount();
   }, [user?.id]);
 
   // Hide on auth pages and admin pages
