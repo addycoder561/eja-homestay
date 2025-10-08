@@ -283,120 +283,144 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Identity Section */}
-        <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            {/* Profile Picture */}
-            <div className="relative">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                {profileData?.avatar_url ? (
-                  <Image
-                    src={profileData.avatar_url}
-                    alt="Profile picture"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <UserIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
+        {/* Glassmorphism Profile Card */}
+        <div className="relative mb-8">
+          {/* Background Image */}
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-200 via-purple-200 to-blue-300 rounded-3xl overflow-hidden">
+            <div className="absolute inset-0 bg-black/20"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-400/30 via-purple-400/30 to-blue-400/30"></div>
+          </div>
+          
+          {/* Glassmorphism Card */}
+          <div className="relative backdrop-blur-md bg-white/20 border border-white/30 rounded-3xl p-8 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              {/* Profile Picture */}
+              <div className="relative mb-6">
+                <div className="w-32 h-32 rounded-full bg-white/30 backdrop-blur-sm border-4 border-white/50 flex items-center justify-center overflow-hidden shadow-xl">
+                  {profileData?.avatar_url ? (
+                    <Image
+                      src={profileData.avatar_url}
+                      alt="Profile picture"
+                      width={128}
+                      height={128}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="w-16 h-16 text-white/80" />
+                  )}
+                </div>
+                {isEditing && (
+                  <button className="absolute bottom-2 right-2 w-10 h-10 bg-yellow-500/90 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-yellow-600/90 transition-colors shadow-lg border-2 border-white/50">
+                    <CameraIcon className="w-5 h-5" />
+                  </button>
                 )}
               </div>
-              {isEditing && (
-                <button className="absolute bottom-0 right-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors">
-                  <CameraIcon className="w-4 h-4" />
-                </button>
-              )}
-            </div>
 
-            {/* Profile Info */}
-            <div className="flex-1">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Display Name
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.full_name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      placeholder="Your display name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bio
-                    </label>
-                    <textarea
-                      value={editForm.bio}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      placeholder="Tell us about yourself..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mood Tag
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.mood_tag}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, mood_tag: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      placeholder="Your vibe (e.g., Adventure, Creative, Chill)"
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleSaveProfile}
-                      className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    {profileData?.full_name || 'Your Name'}
-                  </h2>
-                  {profileData?.bio && (
-                    <p className="text-gray-600 mb-3">{profileData.bio}</p>
-                  )}
-                  {profileData?.mood_tag && (
-                    <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full mb-4">
-                      {profileData.mood_tag}
-                    </span>
-                  )}
-                  
-                  {/* Metrics integrated into profile section */}
-                  <div className="flex gap-6 mt-4">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">{metrics.check_ins}</div>
-                      <div className="text-xs text-gray-600">Check-ins</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">{metrics.followers}</div>
-                      <div className="text-xs text-gray-600">Followers</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">{metrics.smiles}</div>
-                      <div className="text-xs text-gray-600">Smiles</div>
-                    </div>
-                  </div>
-                </div>
+              {/* Name */}
+              <h2 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">
+                {profileData?.full_name || 'Your Name'}
+              </h2>
+              
+              {/* Bio */}
+              {profileData?.bio && (
+                <p className="text-white/90 mb-4 text-lg drop-shadow-md max-w-md">
+                  {profileData.bio}
+                </p>
               )}
+              
+              {/* Mood Tag */}
+              {profileData?.mood_tag && (
+                <span className="inline-block px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm font-medium rounded-full mb-6 border border-white/30">
+                  {profileData.mood_tag}
+                </span>
+              )}
+
+              {/* Metrics */}
+              <div className="grid grid-cols-3 gap-8 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white drop-shadow-lg">{metrics.check_ins}</div>
+                  <div className="text-sm text-white/80 font-medium">CHECK-INS</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white drop-shadow-lg">{metrics.followers}</div>
+                  <div className="text-sm text-white/80 font-medium">FOLLOWERS</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white drop-shadow-lg">{metrics.smiles}</div>
+                  <div className="text-sm text-white/80 font-medium">SMILES</div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4">
+                <button className="px-8 py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-full border border-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg">
+                  Follow
+                </button>
+                <button className="px-8 py-3 bg-transparent text-white font-semibold rounded-full border-2 border-white/50 hover:bg-white/10 transition-all duration-200 shadow-lg">
+                  View
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Edit Form Overlay */}
+        {isEditing && (
+          <div className="bg-white rounded-2xl shadow-lg border p-6 mb-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Your display name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bio
+                </label>
+                <textarea
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Tell us about yourself..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mood Tag
+                </label>
+                <input
+                  type="text"
+                  value={editForm.mood_tag}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, mood_tag: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Your vibe (e.g., Adventure, Creative, Chill)"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveProfile}
+                  className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
 
         {/* Instagram Style Tabs */}
