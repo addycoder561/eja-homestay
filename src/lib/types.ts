@@ -24,9 +24,15 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   is_host: boolean;
-  role?: 'host' | 'guest' | 'admin';
+  role?: 'guest' | 'admin';
   host_bio?: string | null;
   host_usps?: string[];
+  bio?: string | null;
+  mood_tag?: string | null;
+  birthday_day?: string | null;
+  birthday_month?: string | null;
+  birthday_year?: string | null;
+  gender?: string | null;
   created_at: string;
   updated_at: string;
 }

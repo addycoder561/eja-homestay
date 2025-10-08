@@ -21,7 +21,13 @@ export default function ProfilePage() {
     firstName: '',
     lastName: '',
     email: '',
-    phone: ''
+    phone: '',
+    birthday: {
+      day: '',
+      month: '',
+      year: ''
+    },
+    gender: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -44,7 +50,13 @@ export default function ProfilePage() {
         firstName: nameParts[0] || '',
         lastName: nameParts.slice(1).join(' ') || '',
         email: profile.email || user.email || '',
-        phone: profile.phone || ''
+        phone: profile.phone || '',
+        birthday: {
+          day: profile.birthday_day || '',
+          month: profile.birthday_month || '',
+          year: profile.birthday_year || ''
+        },
+        gender: profile.gender || ''
       });
     }
   }, [user, profile, router]);
@@ -108,6 +120,10 @@ export default function ProfilePage() {
           full_name: fullName,
           email: formData.email,
           phone: formData.phone || null,
+          birthday_day: formData.birthday.day || null,
+          birthday_month: formData.birthday.month || null,
+          birthday_year: formData.birthday.year || null,
+          gender: formData.gender || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', user!.id);
@@ -234,6 +250,101 @@ export default function ProfilePage() {
                   error={errors.phone}
                   placeholder="+91 98765 43210"
                 />
+
+                {/* Birthday */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Birthday</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.birthday.day}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        birthday: { ...prev.birthday, day: e.target.value } 
+                      }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="">Day</option>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={formData.birthday.month}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        birthday: { ...prev.birthday, month: e.target.value } 
+                      }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="">Month</option>
+                      <option value="01">January</option>
+                      <option value="02">February</option>
+                      <option value="03">March</option>
+                      <option value="04">April</option>
+                      <option value="05">May</option>
+                      <option value="06">June</option>
+                      <option value="07">July</option>
+                      <option value="08">August</option>
+                      <option value="09">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+                    <select
+                      value={formData.birthday.year}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        birthday: { ...prev.birthday, year: e.target.value } 
+                      }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    >
+                      <option value="">Year</option>
+                      {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="female"
+                        checked={formData.gender === 'female'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        className="mr-2"
+                      />
+                      <span className="text-gray-900 font-medium">Female</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="male"
+                        checked={formData.gender === 'male'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        className="mr-2"
+                      />
+                      <span className="text-gray-900 font-medium">Male</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="custom"
+                        checked={formData.gender === 'custom'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        className="mr-2"
+                      />
+                      <span className="text-gray-900 font-medium">Custom</span>
+                    </label>
+                  </div>
+                </div>
                 
                 <Button
                   type="submit"

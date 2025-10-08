@@ -1265,7 +1265,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     try {
-      if (user && profile && (profile.role === 'host' || profile.role === 'guest')) {
+      if (user && profile && profile.role === 'guest') {
         // router.replace('/'); // router.replace is removed from imports
       }
     } catch (err) {
@@ -1280,7 +1280,7 @@ export default function AdminDashboardPage() {
   if (!user || !profile) {
     return <div className="min-h-screen flex items-center justify-center text-lg">Loading... (user: {String(!!user)}, profile: {String(!!profile)})</div>;
   }
-  if (profile.role === 'host' || profile.role === 'guest') {
+  if (profile.role === 'guest') {
     return <div className="min-h-screen flex items-center justify-center text-2xl font-bold text-red-600">Access Denied</div>;
   }
 

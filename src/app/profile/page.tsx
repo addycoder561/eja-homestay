@@ -210,81 +210,74 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       
-      {/* Profile Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
-              >
-                <PencilIcon className="w-4 h-4" />
-                {isEditing ? 'Cancel' : 'Edit'}
-              </button>
-              
-              {/* Three Dashes Menu */}
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <Bars3Icon className="w-6 h-6 text-gray-700" />
-                </button>
-                
-                {/* Dropdown Menu */}
-                {isMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                    <div className="py-2">
-                      <Link
-                        href="/guest/dashboard"
-                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <Cog6ToothIcon className="w-5 h-5" />
-                        Dashboard
-                      </Link>
-                      <Link
-                        href="/guest/profile"
-                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <UserIcon className="w-5 h-5" />
-                        Profile Settings
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setSupportOpen(true);
-                          setIsMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
-                      >
-                        <QuestionMarkCircleIcon className="w-5 h-5" />
-                        Support
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleSignOut();
-                          setIsMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
-                      >
-                        <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Identity Section */}
-        <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6 relative">
+          {/* Edit & Menu Buttons - Top Right */}
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <PencilIcon className="w-4 h-4" />
+              Edit
+            </button>
+            
+            {/* Three Dashes Menu */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <Bars3Icon className="w-5 h-5 text-gray-700" />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {isMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                  <div className="py-2">
+                    <Link
+                      href="/guest/dashboard"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Cog6ToothIcon className="w-5 h-5" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/guest/profile"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <UserIcon className="w-5 h-5" />
+                      Profile Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setSupportOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
+                    >
+                      <QuestionMarkCircleIcon className="w-5 h-5" />
+                      Support
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                    >
+                      <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {/* Profile Picture */}
             <div className="relative">
@@ -320,33 +313,35 @@ export default function ProfilePage() {
                       type="text"
                       value={editForm.full_name}
                       onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900 placeholder-gray-500"
                       placeholder="Your display name"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bio
-                    </label>
-                    <textarea
-                      value={editForm.bio}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      placeholder="Tell us about yourself..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mood Tag
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.mood_tag}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, mood_tag: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      placeholder="Your vibe (e.g., Adventure, Creative, Chill)"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bio
+                      </label>
+                      <textarea
+                        value={editForm.bio}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                        placeholder="Tell us about yourself..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mood Tag
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.mood_tag}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, mood_tag: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                        placeholder="Your vibe (e.g., Adventure, Creative, Chill)"
+                      />
+                    </div>
                   </div>
                   <div className="flex gap-3">
                     <button

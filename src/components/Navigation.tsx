@@ -52,7 +52,6 @@ export function Navigation() {
   const isAuthPage = pathname?.startsWith('/auth/');
 
   const displayName = profile?.full_name?.split(' ')[0] || profile?.full_name || 'User';
-  const isHost = profile?.role === 'host' || profile?.is_host;
   const isAdmin = user?.email === 'admin@eja.com';
 
   // Popular destinations for dropdown

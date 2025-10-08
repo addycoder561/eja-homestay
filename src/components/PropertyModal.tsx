@@ -25,7 +25,7 @@ import {
   ShieldCheckIcon,
   HomeIcon,
   WifiIcon,
-  CarIcon,
+  TruckIcon,
   HeartIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';

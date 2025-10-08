@@ -11,7 +11,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, role: 'guest' | 'host') => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, role: 'guest') => Promise<{ error: Error | null }>;
   signInWithGoogle: (redirectTo?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, role: 'guest' | 'host') => {
+  const signUp = async (email: string, password: string, fullName: string, role: 'guest') => {
     const { error } = await supabase.auth.signUp({
       email,
       password,

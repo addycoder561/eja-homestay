@@ -5,6 +5,7 @@ import { HeroSection } from '@/components/HeroSection';
 import { Footer } from '@/components/Footer';
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { CategoryCard } from '@/components/CategoryCard';
+import AuthGuard from '@/components/AuthGuard';
 import Link from 'next/link';
 import { 
   MapPinIcon,
@@ -206,30 +207,31 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-        <style jsx global>{`
-          .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
-          .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-          }
-          .animate-fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-          }
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-        <Navigation />
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50">
+          <style jsx global>{`
+            .scrollbar-hide {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            .line-clamp-2 {
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+              overflow: hidden;
+            }
+            .animate-fade-in {
+              animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          <Navigation />
         <main className="md:hidden">
           {/* Mobile Hero Banner - 4 Grid Categories */}
           <section className="px-4 py-6 bg-white">
@@ -926,6 +928,7 @@ export default function Home() {
         onClose={handleCloseRetreatModal}
       />
       )}
-    </div>
+      </div>
+    </AuthGuard>
   );
 }
