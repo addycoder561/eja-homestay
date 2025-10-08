@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { SupportModal } from '@/components/SupportModal';
-import { ProfileSkeleton, ExperienceGridSkeleton } from '@/components/ui/LoadingSkeleton';
 import { 
   UserIcon, 
   HeartIcon, 
@@ -69,7 +68,7 @@ export default function ProfilePage() {
   const [supportOpen, setSupportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch profile data with optimized loading
+  // Fetch profile data
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!user) return;
@@ -92,48 +91,34 @@ export default function ProfilePage() {
           });
         }
 
-        // Set initial metrics immediately for better UX
+        // Fetch created experiences using the database function
+        const { data: experiencesData, error: experiencesError } = await supabase
+          .from('experiences_unified')
+          .select('id, title, cover_image, mood, location, created_at')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false });
+
+        if (experiencesError) {
+          console.error('Error fetching experiences:', experiencesError);
+          setExperiences([]);
+        } else {
+        // Add mock metrics for now (you can implement real metrics later)
+        const experiencesWithMetrics = (experiencesData || []).map(exp => ({
+          ...exp,
+          likes_count: Math.floor(Math.random() * 100),
+          views_count: Math.floor(Math.random() * 500)
+        }));
+
+        setExperiences(experiencesWithMetrics);
+
+        // Calculate metrics
+        const totalLikes = experiencesWithMetrics.reduce((sum, exp) => sum + exp.likes_count, 0);
         setMetrics({
-          check_ins: 0,
-          followers: 0,
-          smiles: 0
+          check_ins: experiencesData?.length || 0,
+          followers: Math.floor(Math.random() * 1000), // Mock data
+          smiles: totalLikes
         });
-
-        // Fetch experiences in background (non-blocking)
-        const fetchExperiences = async () => {
-          try {
-            const { data: experiencesData, error: experiencesError } = await supabase
-              .from('experiences_unified')
-              .select('id, title, cover_image, mood, location, created_at')
-              .eq('created_by', user.id)
-              .order('created_at', { ascending: false })
-              .limit(20); // Limit results for performance
-
-            if (!experiencesError && experiencesData) {
-              // Add mock metrics for now (you can implement real metrics later)
-              const experiencesWithMetrics = experiencesData.map(exp => ({
-                ...exp,
-                likes_count: Math.floor(Math.random() * 100),
-                views_count: Math.floor(Math.random() * 500)
-              }));
-
-              setExperiences(experiencesWithMetrics);
-
-              // Calculate metrics
-              const totalLikes = experiencesWithMetrics.reduce((sum, exp) => sum + exp.likes_count, 0);
-              setMetrics({
-                check_ins: experiencesData.length,
-                followers: Math.floor(Math.random() * 1000), // Mock data
-                smiles: totalLikes
-              });
-            }
-          } catch (error) {
-            console.error('Error fetching experiences:', error);
-          }
-        };
-
-        // Start background fetch
-        fetchExperiences();
+        }
 
       } catch (error) {
         console.error('Error fetching profile data:', error);
@@ -202,18 +187,8 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <ProfileSkeleton />
-          <div className="mt-8">
-            <div className="mb-6">
-              <div className="h-8 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
-            </div>
-            <ExperienceGridSkeleton />
-          </div>
-        </div>
-        <Footer />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
