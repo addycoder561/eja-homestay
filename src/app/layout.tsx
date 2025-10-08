@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "react-hot-toast";
 import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
-import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import PerformanceMonitorComponent from "@/components/PerformanceMonitor";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 const geistSans = Geist({
@@ -89,7 +89,7 @@ export default function RootLayout({
           {children}
           <MobileBottomNavigation />
           <Toaster position="top-right" />
-          <PerformanceMonitor />
+          <PerformanceMonitorComponent />
           <ServiceWorkerRegistration />
         </AuthProvider>
       </body>
