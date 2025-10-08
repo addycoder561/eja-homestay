@@ -1,97 +1,74 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { PerformanceMonitor } from '@/lib/performance';
 
-export function PerformanceMonitor() {
+export default function PerformanceMonitorComponent() {
+  const [metrics, setMetrics] = useState<any>({});
+  const [isVisible, setIsVisible] = useState(false);
+
   useEffect(() => {
-    // Only run in production
-    if (process.env.NODE_ENV !== 'production') return;
+    // Only show in development
+    if (process.env.NODE_ENV !== 'development') return;
 
-    // Track Core Web Vitals
-    const trackWebVitals = () => {
-      // LCP (Largest Contentful Paint)
-      new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          const lcp = entry as PerformanceEntry;
-          console.log('LCP:', lcp.startTime);
-          // Send to analytics service here
-        }
-      }).observe({ entryTypes: ['largest-contentful-paint'] });
+    const interval = setInterval(() => {
+      const newMetrics = PerformanceMonitor.getMetrics();
+      setMetrics(newMetrics);
+    }, 5000);
 
-      // FID (First Input Delay)
-      new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          const fid = entry as PerformanceEventTiming;
-          console.log('FID:', fid.processingStart - fid.startTime);
-          // Send to analytics service here
-        }
-      }).observe({ entryTypes: ['first-input'] });
-
-      // CLS (Cumulative Layout Shift)
-      new PerformanceObserver((entryList) => {
-        let clsValue = 0;
-        for (const entry of entryList.getEntries()) {
-          const cls = entry as any;
-          if (!cls.hadRecentInput) {
-            clsValue += cls.value;
-          }
-        }
-        console.log('CLS:', clsValue);
-        // Send to analytics service here
-      }).observe({ entryTypes: ['layout-shift'] });
-
-      // FCP (First Contentful Paint)
-      new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          const fcp = entry as PerformanceEntry;
-          console.log('FCP:', fcp.startTime);
-          // Send to analytics service here
-        }
-      }).observe({ entryTypes: ['first-contentful-paint'] });
-    };
-
-    // Track page load performance
-    const trackPageLoad = () => {
-      if (typeof window !== 'undefined' && 'performance' in window) {
-        window.addEventListener('load', () => {
-          setTimeout(() => {
-            const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-            if (navigation) {
-              const metrics = {
-                dns: navigation.domainLookupEnd - navigation.domainLookupStart,
-                tcp: navigation.connectEnd - navigation.connectStart,
-                ttfb: navigation.responseStart - navigation.requestStart,
-                domContentLoaded: navigation.domContentLoadedEventEnd - navigation.fetchStart,
-                loadComplete: navigation.loadEventEnd - navigation.fetchStart,
-              };
-              console.log('Page Load Metrics:', metrics);
-              // Send to analytics service here
-            }
-          }, 0);
-        });
-      }
-    };
-
-    // Track resource loading
-    const trackResources = () => {
-      new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          const resource = entry as PerformanceResourceTiming;
-          if (resource.initiatorType === 'img' || resource.initiatorType === 'script') {
-            console.log(`${resource.initiatorType} load time:`, resource.duration);
-            // Send to analytics service here
-          }
-        }
-      }).observe({ entryTypes: ['resource'] });
-    };
-
-    // Initialize tracking
-    if (typeof window !== 'undefined') {
-      trackWebVitals();
-      trackPageLoad();
-      trackResources();
-    }
+    return () => clearInterval(interval);
   }, []);
 
-  return null; // This component doesn't render anything
+  if (process.env.NODE_ENV !== 'development' || !isVisible) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 bg-black bg-opacity-80 text-white p-4 rounded-lg text-xs max-w-sm z-50">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-bold">Performance Metrics</h3>
+        <button 
+          onClick={() => setIsVisible(false)}
+          className="text-gray-400 hover:text-white"
+        >
+          ×
+        </button>
+      </div>
+      
+      {Object.entries(metrics).map(([key, value]: [string, any]) => (
+        <div key={key} className="mb-2">
+          <div className="font-semibold text-yellow-400">{key}</div>
+          <div className="text-gray-300">
+            Avg: {value.avg.toFixed(2)}ms | 
+            Min: {value.min.toFixed(2)}ms | 
+            Max: {value.max.toFixed(2)}ms | 
+            Count: {value.count}
+          </div>
+        </div>
+      ))}
+      
+      <button 
+        onClick={() => PerformanceMonitor.clearMetrics()}
+        className="mt-2 px-2 py-1 bg-red-600 rounded text-xs"
+      >
+        Clear Metrics
+      </button>
+    </div>
+  );
+}
+
+// Toggle button for development
+export function PerformanceToggle() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  if (process.env.NODE_ENV !== 'development') return null;
+
+  return (
+    <button
+      onClick={() => setIsVisible(!isVisible)}
+      className="fixed bottom-4 left-4 bg-yellow-500 text-black px-3 py-2 rounded-lg text-xs font-bold z-50"
+    >
+      {isVisible ? 'Hide' : 'Show'} Perf
+    </button>
+  );
 }

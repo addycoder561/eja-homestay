@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { BucketlistSkeleton } from "@/components/ui/LoadingSkeleton";
 import { 
   HeartIcon, 
   TrashIcon, 
@@ -137,6 +138,9 @@ export default function MyBucketlistPage() {
       setError(null);
       
       try {
+        // Show loading state immediately
+        setItems([]);
+        
         const wishlistRecords = await getBucketlist(user.id);
         console.log('Bucketlist records:', wishlistRecords);
         
@@ -471,11 +475,7 @@ export default function MyBucketlistPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, index) => (
-              <BucketlistCardSkeleton key={index} index={index} />
-            ))}
-          </div>
+          <BucketlistSkeleton />
         ) : filteredItems.length === 0 ? (
           <EmptyBucketlistState activeFilter={activeFilter} />
         ) : (

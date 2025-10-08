@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { CacheManager, PerformanceMonitor } from './performance';
 import { 
   Property, 
   PropertyWithHost, 
@@ -971,16 +972,41 @@ export async function createMultiRoomBooking(
 
 // Experience functions
 export async function getExperiences(): Promise<Experience[]> {
-  const { data, error } = await supabase
-    .from('experiences_unified')
-    .select('*')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
-  if (error) {
+  const endTimer = PerformanceMonitor.startTimer('getExperiences');
+  
+  try {
+    // Check cache first
+    const cacheKey = 'experiences_all';
+    const cached = CacheManager.get(cacheKey);
+    if (cached) {
+      endTimer();
+      return cached;
+    }
+
+    const { data, error } = await supabase
+      .from('experiences_unified')
+      .select('id, title, description, cover_image, mood, location, created_at, created_by, is_active')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(50); // Limit for performance
+      
+    if (error) {
+      console.error('Error fetching experiences:', error);
+      return [];
+    }
+    
+    const result = data || [];
+    
+    // Cache for 5 minutes
+    CacheManager.set(cacheKey, result, 5 * 60 * 1000);
+    
+    endTimer();
+    return result;
+  } catch (error) {
     console.error('Error fetching experiences:', error);
+    endTimer();
     return [];
   }
-  return data || [];
 }
 
 export async function getExperience(id: string): Promise<Experience | null> {
@@ -1043,17 +1069,29 @@ export async function getTrips(): Promise<Trip[]> {
 
 // New: Retreat functions (now using unified table)
 export async function getRetreats(): Promise<any[]> {
+  const endTimer = PerformanceMonitor.startTimer('getRetreats');
+  
   try {
+    // Check cache first
+    const cacheKey = 'retreats_all';
+    const cached = CacheManager.get(cacheKey);
+    if (cached) {
+      endTimer();
+      return cached;
+    }
+
     // Fetch from unified table, filtering for Retreats
     const { data, error } = await supabase
       .from('experiences_unified')
-      .select('*')
+      .select('id, title, description, cover_image, mood, location, created_at, created_by, is_active')
       .eq('is_active', true)
       .eq('location', 'Retreats')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(20); // Limit for performance
 
     if (error) {
       console.error('Error fetching retreats from unified table:', error);
+      endTimer();
       return [];
     }
 
@@ -1062,9 +1100,14 @@ export async function getRetreats(): Promise<any[]> {
       image: row.cover_image,
     }));
 
+    // Cache for 5 minutes
+    CacheManager.set(cacheKey, retreats, 5 * 60 * 1000);
+    
+    endTimer();
     return retreats;
   } catch (error) {
     console.error('Unexpected error in getRetreats:', error);
+    endTimer();
     return [];
   }
 }

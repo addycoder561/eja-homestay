@@ -80,37 +80,50 @@ export default function Home() {
       try {
         setLoading(true);
         
-        // Fetch data with simple error handling
-        const [retreatsData, experiencesData, propertiesData] = await Promise.allSettled([
+        // Fetch critical data first (experiences and retreats for homepage)
+        const [retreatsData, experiencesData] = await Promise.allSettled([
           getRetreats(),
-          getExperiences(),
-          getProperties()
+          getExperiences()
         ]);
 
         const retreatsResult = retreatsData.status === 'fulfilled' ? (retreatsData.value || []) : [];
         const experiencesResult = experiencesData.status === 'fulfilled' ? (experiencesData.value || []) : [];
-        const propertiesResult = propertiesData.status === 'fulfilled' ? (propertiesData.value || []) : [];
-        
-        // Debug: Log the data structure
-        console.log('Retreats data:', retreatsResult);
-        console.log('Experiences data:', experiencesResult);
-        console.log('Properties data:', propertiesResult);
         
         setRetreats(retreatsResult);
         setExperiences(experiencesResult);
-        setProperties(propertiesResult);
 
-        // Fetch unique moods from experiences_unified table
-        const { data: moodData, error: moodError } = await supabase
-          .from('experiences_unified')
-          .select('mood')
-          .not('mood', 'is', null)
-          .neq('mood', '');
+        // Fetch properties in background (non-blocking)
+        const fetchProperties = async () => {
+          try {
+            const propertiesData = await getProperties();
+            setProperties(propertiesData || []);
+          } catch (error) {
+            console.error('Error fetching properties:', error);
+          }
+        };
 
-        if (!moodError && moodData) {
-          const uniqueMoods = [...new Set(moodData.map(item => item.mood).filter(Boolean))];
-          setMoods(uniqueMoods.slice(0, 9)); // Limit to 9 moods
-        }
+        // Fetch moods in background (non-blocking)
+        const fetchMoods = async () => {
+          try {
+            const { data: moodData, error: moodError } = await supabase
+              .from('experiences_unified')
+              .select('mood')
+              .not('mood', 'is', null)
+              .neq('mood', '')
+              .limit(50); // Limit for performance
+
+            if (!moodError && moodData) {
+              const uniqueMoods = [...new Set(moodData.map(item => item.mood).filter(Boolean))];
+              setMoods(uniqueMoods.slice(0, 9)); // Limit to 9 moods
+            }
+          } catch (error) {
+            console.error('Error fetching moods:', error);
+          }
+        };
+
+        // Start background fetches
+        fetchProperties();
+        fetchMoods();
 
       } catch (error) {
         console.error('Error fetching data:', error);

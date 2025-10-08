@@ -1,109 +1,118 @@
 import React from 'react';
 
-interface LoadingSkeletonProps {
-  type?: 'card' | 'list' | 'text' | 'image' | 'button';
+interface SkeletonProps {
   className?: string;
-  lines?: number;
-  height?: string;
-  width?: string;
-  style?: React.CSSProperties;
+  width?: string | number;
+  height?: string | number;
+  rounded?: boolean;
+  animate?: boolean;
 }
 
-export function LoadingSkeleton({ 
-  type = 'card', 
+export function Skeleton({ 
   className = '', 
-  lines = 3, 
-  height = 'h-4', 
-  width = 'w-full',
-  style
-}: LoadingSkeletonProps) {
-  const baseClasses = 'animate-pulse bg-gradient-to-r from-gray-200 to-gray-300 rounded';
+  width, 
+  height, 
+  rounded = false,
+  animate = true 
+}: SkeletonProps) {
+  const style: React.CSSProperties = {};
   
-  switch (type) {
-    case 'card':
-      return (
-        <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${className}`} style={style}>
-          <div className="h-56 bg-gradient-to-br from-gray-200 to-gray-300"></div>
-          <div className="p-6 space-y-4">
-            <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded"></div>
-            <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-3/4"></div>
-            <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/2"></div>
-            <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded"></div>
+  if (width) style.width = typeof width === 'number' ? `${width}px` : width;
+  if (height) style.height = typeof height === 'number' ? `${height}px` : height;
+
+  return (
+    <div
+      className={`
+        bg-gray-200 
+        ${rounded ? 'rounded-full' : 'rounded-lg'}
+        ${animate ? 'animate-pulse' : ''}
+        ${className}
+      `}
+      style={style}
+    />
+  );
+}
+
+export function ProfileSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+        {/* Profile Picture Skeleton */}
+        <Skeleton width={128} height={128} rounded />
+        
+        {/* Profile Info Skeleton */}
+        <div className="flex-1 space-y-3">
+          <Skeleton width={200} height={32} />
+          <Skeleton width={300} height={20} />
+          <Skeleton width={100} height={24} />
+          
+          {/* Metrics Skeleton */}
+          <div className="flex gap-6 mt-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="text-center">
+                <Skeleton width={40} height={24} className="mx-auto mb-1" />
+                <Skeleton width={60} height={16} className="mx-auto" />
+              </div>
+            ))}
           </div>
         </div>
-      );
-    
-    case 'list':
-      return (
-        <div className={`space-y-4 ${className}`} style={style}>
-          {Array.from({ length: lines }).map((_, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"></div>
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-3/4"></div>
-                <div className="h-3 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/2"></div>
-              </div>
+      </div>
+    </div>
+  );
+}
+
+export function BucketlistSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Filter tabs skeleton */}
+      <div className="flex gap-2 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} width={80} height={32} />
+        ))}
+      </div>
+      
+      {/* Grid skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <Skeleton width="100%" height={200} />
+            <div className="p-4 space-y-2">
+              <Skeleton width="80%" height={20} />
+              <Skeleton width="60%" height={16} />
+              <Skeleton width="40%" height={16} />
             </div>
-          ))}
-        </div>
-      );
-    
-    case 'text':
-      return (
-        <div className={`space-y-2 ${className}`} style={style}>
-          {Array.from({ length: lines }).map((_, index) => (
-            <div 
-              key={index} 
-              className={`${baseClasses} ${height} ${index === lines - 1 ? 'w-2/3' : width}`}
-            ></div>
-          ))}
-        </div>
-      );
-    
-    case 'image':
-      return (
-        <div className={`${baseClasses} ${height} ${width} ${className}`} style={style}></div>
-      );
-    
-    case 'button':
-      return (
-        <div className={`${baseClasses} h-10 w-24 rounded-lg ${className}`} style={style}></div>
-      );
-    
-    default:
-      return (
-        <div className={`${baseClasses} ${height} ${width} ${className}`} style={style}></div>
-      );
-  }
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export function SearchResultSkeleton() {
+export function ExperienceGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {Array.from({ length: 12 }).map((_, index) => (
-        <LoadingSkeleton 
-          key={index} 
-          type="card" 
-          className="animate-pulse"
-          style={{ animationDelay: `${index * 0.1}s` }}
-        />
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="group cursor-pointer">
+          <Skeleton width="100%" height={200} className="rounded-lg" />
+          <div className="mt-2 space-y-1">
+            <Skeleton width="90%" height={16} />
+            <Skeleton width="60%" height={12} />
+          </div>
+        </div>
       ))}
     </div>
   );
 }
 
-export function FilterSkeleton() {
+export function CardSkeleton() {
   return (
-    <div className="flex items-center gap-3 overflow-x-auto pb-4">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div 
-          key={index}
-          className="flex-shrink-0 h-12 w-32 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full animate-pulse"
-          style={{ animationDelay: `${index * 0.05}s` }}
-        ></div>
-      ))}
+    <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="space-y-4">
+        <Skeleton width="60%" height={24} />
+        <Skeleton width="100%" height={16} />
+        <Skeleton width="80%" height={16} />
+        <Skeleton width="40%" height={16} />
+      </div>
     </div>
   );
 }
-
-
