@@ -286,15 +286,15 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
-      {/* Backdrop */}
+      {/* Backdrop with enhanced animations */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
         onClick={onClose}
       >
-        {/* Modal Container */}
+        {/* Modal Container with smooth animations */}
         <div 
           ref={modalRef}
-          className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl"
+          className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Top/Left Side - Image Carousel */}

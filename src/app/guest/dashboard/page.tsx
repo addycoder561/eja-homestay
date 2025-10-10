@@ -3,10 +3,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { PersonalizedDashboard } from '@/components/PersonalizedDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/Card';
-import toast from 'react-hot-toast';
+import { showToast } from '@/lib/toast-config';
 import jsPDF from 'jspdf';
 import { updateBookingStatus } from '@/lib/database';
 import { useRouter } from 'next/navigation';
@@ -131,7 +132,7 @@ export default function GuestDashboard() {
         .eq('guest_id', profile!.id)
         .order('created_at', { ascending: false });
       if (error) {
-        toast.error('Failed to fetch bookings');
+        showToast.error('Failed to fetch bookings');
         setBookings([]);
       } else {
         setBookings(data || []);
@@ -307,7 +308,7 @@ export default function GuestDashboard() {
     doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 170);
     
     doc.save(`receipt_${booking.id}.pdf`);
-    toast.success('Receipt downloaded successfully!');
+    showToast.success('Receipt downloaded successfully!');
   };
 
   const canCancel = (booking: any) => {
@@ -320,7 +321,7 @@ export default function GuestDashboard() {
   const handleCancel = async (bookingId: string) => {
     if (confirm('Are you sure you want to cancel this booking?')) {
       await updateBookingStatus(bookingId, 'cancelled');
-      toast.success('Booking cancelled successfully.');
+      showToast.success('Booking cancelled successfully.');
       // Refresh bookings
       const { data, error } = await supabase
         .from('bookings')
@@ -377,6 +378,8 @@ export default function GuestDashboard() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Personalized Dashboard */}
+          <PersonalizedDashboard />
           
           {/* Search and Filters */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
