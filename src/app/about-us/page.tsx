@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { 
@@ -13,73 +14,12 @@ import {
   LightBulbIcon,
   ClockIcon,
   CurrencyRupeeIcon,
-  PhoneIcon,
-  ArrowRightIcon,
-  CameraIcon,
-  BookOpenIcon,
-  UserIcon
+  PhoneIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import Image from 'next/image';
-
-const blogPosts = [
-  {
-    id: 1,
-    title: '10 Hidden Homestays in the Himalayas You Need to Visit',
-    excerpt: 'Discover secluded mountain retreats that offer authentic local experiences and breathtaking views of the world\'s highest peaks.',
-    author: 'Travel Team',
-    date: 'Dec 20, 2024',
-    readTime: '8 min read',
-    category: 'Destinations'
-  },
-  {
-    id: 2,
-    title: 'The Ultimate Guide to Experiencing Local Culture Through Homestays',
-    excerpt: 'Learn how to immerse yourself in local traditions, cuisine, and customs while staying with welcoming host families.',
-    author: 'Cultural Expert',
-    date: 'Dec 18, 2024',
-    readTime: '12 min read',
-    category: 'Culture'
-  },
-  {
-    id: 3,
-    title: 'Sustainable Travel: How Homestays Are Leading the Eco-Tourism Movement',
-    excerpt: 'Explore how community-based homestays are promoting sustainable tourism and preserving local environments.',
-    author: 'Eco Traveler',
-    date: 'Dec 15, 2024',
-    readTime: '6 min read',
-    category: 'Sustainability'
-  },
-  {
-    id: 4,
-    title: 'From Host to Friend: Building Meaningful Connections on the Road',
-    excerpt: 'Heartwarming stories of travelers who found lifelong friendships through their homestay experiences.',
-    author: 'Community Stories',
-    date: 'Dec 12, 2024',
-    readTime: '5 min read',
-    category: 'Stories'
-  },
-  {
-    id: 5,
-    title: 'The Art of Slow Travel: Why Homestays Beat Hotels Every Time',
-    excerpt: 'Discover the benefits of slow travel and how homestays provide deeper, more meaningful travel experiences.',
-    author: 'Slow Travel Expert',
-    date: 'Dec 10, 2024',
-    readTime: '7 min read',
-    category: 'Travel Tips'
-  },
-  {
-    id: 6,
-    title: 'Cooking with Locals: Homestay Culinary Adventures Across India',
-    excerpt: 'Join us on a culinary journey through India\'s diverse regional cuisines, learned directly from local home chefs.',
-    author: 'Food Explorer',
-    date: 'Dec 8, 2024',
-    readTime: '9 min read',
-    category: 'Food & Culture'
-  }
-];
 
 export default function AboutUsPage() {
+  const [activeTab, setActiveTab] = useState<'about' | 'jobs'>('about');
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <style jsx global>{`
@@ -130,7 +70,36 @@ export default function AboutUsPage() {
         {/* Content */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           
-          {/* Our Story */}
+          {/* Toggle Tabs */}
+          <div className="flex justify-center mb-12">
+            <div className="bg-gray-100 rounded-full p-1 flex">
+              <button
+                onClick={() => setActiveTab('about')}
+                className={`px-8 py-3 rounded-full font-semibold transition-all duration-300 ${
+                  activeTab === 'about'
+                    ? 'bg-white text-blue-600 shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                About Us
+              </button>
+              <button
+                onClick={() => setActiveTab('jobs')}
+                className={`px-8 py-3 rounded-full font-semibold transition-all duration-300 ${
+                  activeTab === 'jobs'
+                    ? 'bg-white text-blue-600 shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Jobs
+              </button>
+            </div>
+          </div>
+
+          {/* About Us Content */}
+          {activeTab === 'about' && (
+            <>
+              {/* Our Story */}
           <section className="mb-16">
             <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
               <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -566,250 +535,174 @@ export default function AboutUsPage() {
             </div>
           </section>
 
-          {/* Latest Travel Stories */}
-          <section className="mb-16">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Latest Travel Stories</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Discover authentic experiences, local culture, and inspiring stories from our community
-              </p>
-            </div>
-            
-            <div className="relative">
-              <div 
-                className="flex gap-6 overflow-x-auto pb-12 pt-8 px-8 -mx-8 scrollbar-hide"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none'
-                }}
-              >
-                {blogPosts.map((post, index) => (
-                  <div
-                    key={post.id}
-                    className="group animate-fade-in flex-shrink-0 w-80"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <Link 
-                      href={`/blog/${post.id}`} 
-                      className="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden hover:-translate-y-2 hover:scale-105"
-                    >
-                      <div className="relative h-48 w-full overflow-hidden">
-                        <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                          <CameraIcon className="w-16 h-16 text-blue-600" />
-                        </div>
-                        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-900">
-                          {post.category}
-                        </div>
-                        <div className="absolute top-3 right-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                          <BookOpenIcon className="w-3 h-3" />
-                          Blog
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        <div className="flex items-center gap-2 mb-3 text-sm text-gray-500">
-                          <UserIcon className="w-4 h-4" />
-                          <span>{post.author}</span>
-                          <span>•</span>
-                          <span>{post.date}</span>
-                        </div>
-                        
-                        <h3 className="font-bold text-lg text-gray-900 mb-3 group-hover:text-yellow-500 transition-colors line-clamp-2">
-                          {post.title}
-                        </h3>
-                        
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                          {post.excerpt}
-                        </p>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center text-sm text-gray-500">
-                            <ClockIcon className="w-4 h-4 mr-1" />
-                            <span>{post.readTime}</span>
+
+
+              {/* Contact */}
+              <section className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
+                <div className="text-center">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Get in Touch</h2>
+                  <p className="text-gray-700 mb-8 max-w-2xl mx-auto">
+                    Have questions about EJA? Want to become a host? We'd love to hear from you!
+                  </p>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">General Inquiries</h4>
+                      <p className="text-blue-600">hello@ejahomestay.com</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Become a Host</h4>
+                      <p className="text-blue-600">hosts@ejahomestay.com</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Support</h4>
+                      <p className="text-blue-600">support@ejahomestay.com</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* Jobs Content */}
+          {activeTab === 'jobs' && (
+            <>
+              {/* Join Our Team */}
+              <section className="mb-16">
+                <div className="text-center mb-12">
+                  <h2 className="text-4xl font-bold text-gray-900 mb-4">Join Our Team</h2>
+                  <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Help us create meaningful connections between travelers and local hosts, 
+                    making every journey an authentic and memorable experience.
+                  </p>
+                </div>
+
+                {/* Why Work With Us */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mb-12">
+                  <div className="text-center mb-8">
+                    <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Work With Us</h3>
+                    <p className="text-lg text-gray-600">We take care of our team so you can focus on doing your best work</p>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <HeartIcon className="w-12 h-12 text-blue-600 mb-4" />
+                      <h4 className="text-xl font-semibold text-gray-900 mb-3">Health & Wellness</h4>
+                      <p className="text-gray-600">Comprehensive health insurance, mental health support, and wellness programs</p>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <UserGroupIcon className="w-12 h-12 text-blue-600 mb-4" />
+                      <h4 className="text-xl font-semibold text-gray-900 mb-3">Flexible Work</h4>
+                      <p className="text-gray-600">Remote work options, flexible hours, and work-life balance initiatives</p>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <GlobeAltIcon className="w-12 h-12 text-blue-600 mb-4" />
+                      <h4 className="text-xl font-semibold text-gray-900 mb-3">Travel Perks</h4>
+                      <p className="text-gray-600">Discounted stays at our partner homestays and travel allowances</p>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <StarIcon className="w-12 h-12 text-blue-600 mb-4" />
+                      <h4 className="text-xl font-semibold text-gray-900 mb-3">Learning & Growth</h4>
+                      <p className="text-gray-600">Professional development budget, training programs, and career advancement</p>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <UserGroupIcon className="w-12 h-12 text-blue-600 mb-4" />
+                      <h4 className="text-xl font-semibold text-gray-900 mb-3">Team Culture</h4>
+                      <p className="text-gray-600">Collaborative environment, team events, and inclusive workplace culture</p>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      <LightBulbIcon className="w-12 h-12 text-blue-600 mb-4" />
+                      <h4 className="text-xl font-semibold text-gray-900 mb-3">Innovation</h4>
+                      <p className="text-gray-600">Work on cutting-edge technology and shape the future of travel</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Open Positions */}
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="text-center mb-8">
+                    <h3 className="text-3xl font-bold text-gray-900 mb-4">Open Positions</h3>
+                    <p className="text-lg text-gray-600">Join our growing team and help shape the future of travel</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                        <div>
+                          <h4 className="text-xl font-semibold text-gray-900 mb-2">Frontend Developer</h4>
+                          <p className="text-gray-600 mb-2">Build beautiful, responsive user interfaces for our homestay platform using React, Next.js, and modern web technologies.</p>
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <span>Engineering</span>
+                            <span>Remote / Delhi</span>
+                            <span>Full-time</span>
+                            <span>2-4 years</span>
+                            <span>₹8-15 LPA</span>
                           </div>
-                          
-                          <button className="text-yellow-500 hover:text-yellow-600 font-medium text-sm flex items-center gap-1">
-                            Read More
-                            <ArrowRightIcon className="w-4 h-4" />
-                          </button>
                         </div>
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* View All Blogs CTA */}
-            <div className="text-center mt-12">
-              <Link href="/blog">
-                <button className="bg-white hover:bg-gray-50 text-yellow-500 font-bold px-8 py-4 rounded-xl border-2 border-yellow-500 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto">
-                  <BookOpenIcon className="w-5 h-5" />
-                  View All Stories
-                  <ArrowRightIcon className="w-5 h-5" />
-                </button>
-              </Link>
-            </div>
-          </section>
-
-          {/* Careers Section */}
-          <section className="mb-16">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Join Our Team</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Help us create meaningful connections between travelers and local hosts, 
-                making every journey an authentic and memorable experience.
-              </p>
-            </div>
-
-            {/* Why Work With Us */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mb-12">
-              <div className="text-center mb-8">
-                <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Work With Us</h3>
-                <p className="text-lg text-gray-600">We take care of our team so you can focus on doing your best work</p>
-              </div>
-              
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <HeartIcon className="w-12 h-12 text-blue-600 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Health & Wellness</h4>
-                  <p className="text-gray-600">Comprehensive health insurance, mental health support, and wellness programs</p>
-                </div>
-                
-                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <UserGroupIcon className="w-12 h-12 text-blue-600 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Flexible Work</h4>
-                  <p className="text-gray-600">Remote work options, flexible hours, and work-life balance initiatives</p>
-                </div>
-                
-                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <GlobeAltIcon className="w-12 h-12 text-blue-600 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Travel Perks</h4>
-                  <p className="text-gray-600">Discounted stays at our partner homestays and travel allowances</p>
-                </div>
-                
-                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <StarIcon className="w-12 h-12 text-blue-600 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Learning & Growth</h4>
-                  <p className="text-gray-600">Professional development budget, training programs, and career advancement</p>
-                </div>
-                
-                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <UserGroupIcon className="w-12 h-12 text-blue-600 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Team Culture</h4>
-                  <p className="text-gray-600">Collaborative environment, team events, and inclusive workplace culture</p>
-                </div>
-                
-                <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <LightBulbIcon className="w-12 h-12 text-blue-600 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">Innovation</h4>
-                  <p className="text-gray-600">Work on cutting-edge technology and shape the future of travel</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Open Positions */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="text-center mb-8">
-                <h3 className="text-3xl font-bold text-gray-900 mb-4">Open Positions</h3>
-                <p className="text-lg text-gray-600">Join our growing team and help shape the future of travel</p>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                    <div>
-                      <h4 className="text-xl font-semibold text-gray-900 mb-2">Frontend Developer</h4>
-                      <p className="text-gray-600 mb-2">Build beautiful, responsive user interfaces for our homestay platform using React, Next.js, and modern web technologies.</p>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                        <span>Engineering</span>
-                        <span>Remote / Delhi</span>
-                        <span>Full-time</span>
-                        <span>2-4 years</span>
-                        <span>₹8-15 LPA</span>
+                        <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                          Apply Now
+                        </button>
                       </div>
                     </div>
-                    <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                      Apply Now
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                    <div>
-                      <h4 className="text-xl font-semibold text-gray-900 mb-2">Backend Developer</h4>
-                      <p className="text-gray-600 mb-2">Develop robust backend services and APIs to power our homestay booking platform using Node.js and PostgreSQL.</p>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                        <span>Engineering</span>
-                        <span>Remote / Bangalore</span>
-                        <span>Full-time</span>
-                        <span>3-5 years</span>
-                        <span>₹12-20 LPA</span>
+                    
+                    <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                        <div>
+                          <h4 className="text-xl font-semibold text-gray-900 mb-2">Backend Developer</h4>
+                          <p className="text-gray-600 mb-2">Develop robust backend services and APIs to power our homestay booking platform using Node.js and PostgreSQL.</p>
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <span>Engineering</span>
+                            <span>Remote / Bangalore</span>
+                            <span>Full-time</span>
+                            <span>3-5 years</span>
+                            <span>₹12-20 LPA</span>
+                          </div>
+                        </div>
+                        <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                          Apply Now
+                        </button>
                       </div>
                     </div>
-                    <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                      Apply Now
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                    <div>
-                      <h4 className="text-xl font-semibold text-gray-900 mb-2">Product Manager</h4>
-                      <p className="text-gray-600 mb-2">Lead product strategy and development for our homestay platform, focusing on user experience and business growth.</p>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                        <span>Product</span>
-                        <span>Delhi / Mumbai</span>
-                        <span>Full-time</span>
-                        <span>4-6 years</span>
-                        <span>₹15-25 LPA</span>
+                    
+                    <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                        <div>
+                          <h4 className="text-xl font-semibold text-gray-900 mb-2">Product Manager</h4>
+                          <p className="text-gray-600 mb-2">Lead product strategy and development for our homestay platform, focusing on user experience and business growth.</p>
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <span>Product</span>
+                            <span>Delhi / Mumbai</span>
+                            <span>Full-time</span>
+                            <span>4-6 years</span>
+                            <span>₹15-25 LPA</span>
+                          </div>
+                        </div>
+                        <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                          Apply Now
+                        </button>
                       </div>
                     </div>
-                    <button className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                      Apply Now
-                    </button>
+                  </div>
+                  
+                  <div className="text-center mt-8">
+                    <p className="text-gray-600 mb-4">Don't see the right role? We're always looking for talented individuals!</p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                        Send Resume
+                      </button>
+                      <button className="border border-blue-600 text-blue-600 px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors">
+                        Contact HR
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="text-center mt-8">
-                <p className="text-gray-600 mb-4">Don't see the right role? We're always looking for talented individuals!</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                    Send Resume
-                  </button>
-                  <button className="border border-blue-600 text-blue-600 px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors">
-                    Contact HR
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Contact */}
-          <section className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Get in Touch</h2>
-              <p className="text-gray-700 mb-8 max-w-2xl mx-auto">
-                Have questions about EJA? Want to become a host? We'd love to hear from you!
-              </p>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">General Inquiries</h4>
-                  <p className="text-blue-600">hello@ejahomestay.com</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Become a Host</h4>
-                  <p className="text-blue-600">hosts@ejahomestay.com</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Support</h4>
-                  <p className="text-blue-600">support@ejahomestay.com</p>
-                </div>
-              </div>
-            </div>
-          </section>
+              </section>
+            </>
+          )}
         </div>
       </main>
 
