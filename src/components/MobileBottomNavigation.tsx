@@ -27,6 +27,12 @@ export function MobileBottomNavigation() {
   const pathname = usePathname();
   const [wishlistCount, setWishlistCount] = useState(0);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering on client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Fetch wishlist count when user is logged in
   useEffect(() => {
@@ -57,6 +63,11 @@ export function MobileBottomNavigation() {
     return null;
   }
 
+  // Prevent hydration mismatch by not rendering on server
+  if (!isMounted) {
+    return null;
+  }
+
   const navigationItems = [
     {
       name: 'Home',
@@ -81,85 +92,88 @@ export function MobileBottomNavigation() {
 
   return (
     <>
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 lg:hidden">
-      <div className="flex items-center justify-around px-2 py-2">
+    {/* Elevated Navigation Strip */}
+    <div className="fixed bottom-4 left-4 right-4 z-50 lg:hidden">
+      <nav className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 px-2 py-2">
+        <div className="flex items-center justify-around">
           {/* Home */}
           <Link
             href="/"
-            className={`flex flex-col items-center justify-center w-full py-2 px-1 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
               pathname === '/'
-                ? 'text-yellow-500 bg-yellow-50'
-                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50'
+                ? 'text-yellow-500 bg-yellow-50/80'
+                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
             }`}
           >
             <div className="relative">
               {pathname === '/' ? <HomeIconSolid className="w-6 h-6" /> : <HomeIcon className="w-6 h-6" />}
             </div>
-            <span className="text-xs font-medium mt-1">Home</span>
+            <span className="text-xs font-semibold mt-1">Home</span>
           </Link>
 
           {/* Discover */}
           <Link
             href="/discover"
-            className={`flex flex-col items-center justify-center w-full py-2 px-1 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
               pathname?.startsWith('/discover')
-                ? 'text-yellow-500 bg-yellow-50'
-                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50'
+                ? 'text-yellow-500 bg-yellow-50/80'
+                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
             }`}
           >
             <div className="relative">
               {pathname?.startsWith('/discover') ? <MagnifyingGlassIconSolid className="w-6 h-6" /> : <MagnifyingGlassIcon className="w-6 h-6" />}
             </div>
-            <span className="text-xs font-medium mt-1">Discover</span>
+            <span className="text-xs font-semibold mt-1">Discover</span>
           </Link>
 
           {/* Create Button - Central Floating */}
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="flex flex-col items-center justify-center w-16 h-16 -mt-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full shadow-lg transition-all duration-200 hover:scale-105"
+            className="flex items-center justify-center w-14 h-14 -mt-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
           >
-            <PlusIcon className="w-8 h-8" />
+            <PlusIcon className="w-7 h-7" />
           </button>
 
           {/* Wishlist */}
-            <Link
+          <Link
             href="/guest/wishlist"
-              className={`flex flex-col items-center justify-center w-full py-2 px-1 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
               pathname?.startsWith('/guest/wishlist')
-                  ? 'text-yellow-500 bg-yellow-50'
-                  : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50'
-              }`}
-            >
-              <div className="relative">
+                ? 'text-yellow-500 bg-yellow-50/80'
+                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
+            }`}
+          >
+            <div className="relative">
               {pathname?.startsWith('/guest/wishlist') ? <HeartIconSolid className="w-6 h-6" /> : <HeartIcon className="w-6 h-6" />}
               {wishlistCount > 0 && (
-                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
                   {wishlistCount > 99 ? '99+' : wishlistCount}
-                  </span>
-                )}
-              </div>
-            <span className="text-xs font-medium mt-1">Bucketlist</span>
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-semibold mt-1">Bucketlist</span>
           </Link>
 
           {/* Profile */}
           <Link
             href="/profile"
-            className={`flex flex-col items-center justify-center w-full py-2 px-1 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
               pathname?.startsWith('/profile')
-                ? 'text-yellow-500 bg-yellow-50'
-                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50'
+                ? 'text-yellow-500 bg-yellow-50/80'
+                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
             }`}
           >
             <div className="relative">
               {pathname?.startsWith('/profile') ? <UserIconSolid className="w-6 h-6" /> : <UserIcon className="w-6 h-6" />}
             </div>
-            <span className="text-xs font-medium mt-1">Profile</span>
-            </Link>
-      </div>
+            <span className="text-xs font-semibold mt-1">Profile</span>
+          </Link>
+        </div>
+      </nav>
       
       {/* Safe area for devices with home indicator */}
-      <div className="h-safe-area-inset-bottom bg-white" />
-    </nav>
+      <div className="h-2" />
+    </div>
 
       {/* Create Experience Modal */}
       <CreateExperienceModal 

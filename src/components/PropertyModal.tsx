@@ -152,7 +152,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
     if (!user || !property) return;
 
     try {
-      const isWishlisted = await checkIsBucketlisted(user.id, property.id, 'property');
+      const isWishlisted = await checkIsBucketlisted(user.id, property.id, 'stays');
       setIsWishlistedState(isWishlisted);
     } catch (error) {
       console.error('Error checking wishlist status:', error);
@@ -195,7 +195,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
     try {
       if (isWishlistedState) {
         console.log('🗑️ Removing from wishlist...');
-        const success = await removeFromBucketlist(user.id, property.id, 'property');
+        const success = await removeFromBucketlist(user.id, property.id, 'stays');
         console.log('🗑️ Remove result:', success);
         if (success) {
           setIsWishlistedState(false);
@@ -205,7 +205,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
         }
       } else {
         console.log('➕ Adding to wishlist...');
-        const success = await addToBucketlist(user.id, property.id, 'property');
+        const success = await addToBucketlist(user.id, property.id, 'stays');
         console.log('➕ Add result:', success);
         if (success) {
           setIsWishlistedState(true);
@@ -300,7 +300,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
           {/* Top/Left Side - Image Carousel */}
           <div className="w-full md:w-1/2 h-64 md:h-auto relative bg-black">
             <Image
-              src={images[currentImageIndex] || '/placeholder-property.jpg'}
+              src={images[currentImageIndex] || ''}
               alt={property.title}
               fill
               className="object-cover"

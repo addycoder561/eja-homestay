@@ -689,25 +689,25 @@ export async function getUserCollaborations(userId: string): Promise<any[]> {
 } 
 
 
-// Test function to check if wishlist table exists
-export async function testWishlistTable() {
-  console.log('🧪 Testing wishlist table access...');
+// Test function to check if bucketlist table exists
+export async function testBucketlistTable() {
+  console.log('🧪 Testing bucketlist table access...');
   
   try {
     const { data, error } = await supabase
-      .from('wishlist')
+      .from('bucketlist')
       .select('count')
       .limit(1);
       
     if (error) {
-      console.error('❌ Wishlist table test failed:', error);
+      console.error('❌ Bucketlist table test failed:', error);
       return false;
     }
     
-    console.log('✅ Wishlist table is accessible');
+    console.log('✅ Bucketlist table is accessible');
     return true;
   } catch (err) {
-    console.error('❌ Wishlist table test error:', err);
+    console.error('❌ Bucketlist table test error:', err);
     return false;
   }
 }
@@ -717,13 +717,24 @@ export async function getBucketlist(userId: string) {
   console.log('🔍 getBucketlist called with userId:', userId);
   
   const { data, error } = await supabase
-    .from('wishlist')
+    .from('bucketlist')
     .select('*')
     .eq('user_id', userId);
     
   if (error) {
     console.error('❌ Error fetching bucketlist:', error);
     return [];
+  }
+  
+  // Debug: Show what item_type values are actually in the database
+  if (data && data.length > 0) {
+    console.log('🔍 Database records breakdown by item_type:');
+    const typeBreakdown = data.reduce((acc: any, record: any) => {
+      acc[record.item_type] = (acc[record.item_type] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('📊 Item types in database:', typeBreakdown);
+    console.log('📋 All records:', data.map(r => ({ id: r.item_id, type: r.item_type })));
   }
   
   console.log('✅ getBucketlist result:', data);
@@ -734,7 +745,7 @@ export async function isBucketlisted(userId: string, itemId: string, itemType: s
   console.log('🔍 isBucketlisted called:', { userId, itemId, itemType });
   
   const { data, error } = await supabase
-    .from('wishlist')
+    .from('bucketlist')
     .select('id')
     .eq('user_id', userId)
     .eq('item_id', itemId)
@@ -778,10 +789,10 @@ export async function addToBucketlist(userId: string, itemId: string, itemType: 
     return true; // Return true since the item is already bucketlisted
   }
   
-  console.log('🔄 Attempting to insert into wishlist table...');
+  console.log('🔄 Attempting to insert into bucketlist table...');
   try {
     const { data, error } = await supabase
-      .from('wishlist')
+      .from('bucketlist')
       .insert({ user_id: userId, item_id: itemId, item_type: itemType })
       .select();
       
@@ -796,7 +807,7 @@ export async function addToBucketlist(userId: string, itemId: string, itemType: 
       return false;
     }
     
-    console.log('✅ Item added to wishlist successfully:', data);
+    console.log('✅ Item added to bucketlist successfully:', data);
     return true;
   } catch (err) {
     console.error('❌ Exception in addToBucketlist:', err);
@@ -808,12 +819,53 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
   console.log('🗑️ removeFromBucketlist called:', { userId, itemId, itemType });
   
   try {
-    const { error } = await supabase
-      .from('wishlist')
+    // First, let's check what records exist for this user and item (any type)
+    const { data: allUserRecords, error: allRecordsError } = await supabase
+      .from('bucketlist')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('item_id', itemId);
+      
+    console.log('🔍 All records for this user+item (any type):', allUserRecords);
+    
+    // Then check for the specific type we're trying to delete
+    const { data: existingRecords, error: fetchError } = await supabase
+      .from('bucketlist')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .eq('item_type', itemType);
+      
+    console.log('🔍 Records with specific type before deletion:', existingRecords);
+    
+    if (fetchError) {
+      console.error('❌ Error fetching existing records:', fetchError);
+    }
+    
+    // Try to delete with the specific type first
+    let { error } = await supabase
+      .from('bucketlist')
       .delete()
       .eq('user_id', userId)
       .eq('item_id', itemId)
       .eq('item_type', itemType);
+      
+    // If no records were found with the specific type, try deleting all records for this user+item
+    if (!error && allUserRecords && allUserRecords.length > 0 && existingRecords && existingRecords.length === 0) {
+      console.log('🔄 No records found with specific type, trying to delete all records for this user+item');
+      const { error: deleteAllError } = await supabase
+        .from('bucketlist')
+        .delete()
+        .eq('user_id', userId)
+        .eq('item_id', itemId);
+        
+      if (deleteAllError) {
+        console.log('❌ Error deleting all records:', deleteAllError);
+        error = deleteAllError;
+      } else {
+        console.log('✅ Successfully deleted all records for this user+item');
+      }
+    }
       
     if (error) {
       console.error('❌ Error removing from bucketlist:', error);
@@ -826,7 +878,18 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
       return false;
     }
     
-    console.log('✅ Item removed from wishlist successfully');
+    console.log('✅ Item removed from bucketlist successfully');
+    
+    // Verify the deletion worked
+    const { data: remainingRecords, error: verifyError } = await supabase
+      .from('bucketlist')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .eq('item_type', itemType);
+      
+    console.log('🔍 Remaining records after deletion:', remainingRecords);
+    
     return true;
   } catch (err) {
     console.error('❌ Exception in removeFromBucketlist:', err);
@@ -972,9 +1035,8 @@ export async function createMultiRoomBooking(
 // Experience functions
 export async function getExperiences(): Promise<Experience[]> {
   const { data, error } = await supabase
-    .from('experiences_unified')
+    .from('experiences_with_host')
     .select('*')
-    .eq('is_active', true)
     .order('created_at', { ascending: false });
   if (error) {
     console.error('Error fetching experiences:', error);
@@ -985,7 +1047,7 @@ export async function getExperiences(): Promise<Experience[]> {
 
 export async function getExperience(id: string): Promise<Experience | null> {
   const { data, error } = await supabase
-    .from('experiences_unified')
+    .from('experiences_with_host')
     .select('*')
     .eq('id', id)
     .single();
@@ -1186,9 +1248,8 @@ export async function checkExperiencesContent(): Promise<void> {
   console.log('🔍 DEBUG - Checking experiences database content...');
   
   const { data, error } = await supabase
-    .from('experiences')
+    .from('experiences_with_host')
     .select('*')
-    .eq('is_active', true)
     .limit(10);
   
   if (error) {

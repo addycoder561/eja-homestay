@@ -193,10 +193,11 @@ export interface SearchFilters {
 
 export interface Experience {
   id: string;
-  host_id: string | null;
+  host_id: string;
   title: string;
   description: string | null;
   location: string; // 'Hyper-local', 'Online', 'Retreats'
+  categories: string[];
   mood: string | null; // Consolidated categories/mood
   price: number;
   duration_hours: number | null; // NULL for retreats, filled for experiences
@@ -205,12 +206,10 @@ export interface Experience {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  // Host-related fields
+  // Host/Organization-related fields
   host_name?: string;
-  host_type?: string;
-  host_tenure?: string;
-  host_description?: string;
-  host_image?: string;
+  host_avatar?: string;
+  host_bio?: string;
   host_usps?: string[];
   // Unique propositions
   unique_propositions?: string[];
@@ -236,7 +235,7 @@ export interface Trip {
 
 export interface Retreat {
   id: string;
-  host_id: string | null;
+  host_id: string;
   title: string;
   description: string | null;
   location: string;
@@ -247,12 +246,10 @@ export interface Retreat {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  // Host-related columns
+  // Host/Organization-related columns
   host_name?: string | null;
-  host_type?: string | null;
-  host_tenure?: string | null;
-  host_description?: string | null;
-  host_image?: string | null;
+  host_avatar?: string | null;
+  host_bio?: string | null;
   host_usps?: string[];
   // Retreat features
   unique_propositions?: string[];

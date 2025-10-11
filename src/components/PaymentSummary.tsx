@@ -55,7 +55,7 @@ export function PaymentSummary({ property, bookingData, rooms, totalPrice, night
       <div className="bg-gray-50 rounded-lg p-4">
         <div className="flex items-start gap-4">
           <img
-            src={property.cover_image || (property.gallery && Array.isArray(property.gallery) && property.gallery.length > 0 ? property.gallery[0] : null) || '/placeholder-property.jpg'}
+            src={property.cover_image || (property.gallery && Array.isArray(property.gallery) && property.gallery.length > 0 ? property.gallery[0] : null) || ''}
             alt={property.title}
             className="w-20 h-20 object-cover rounded-lg"
           />

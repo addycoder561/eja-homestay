@@ -125,7 +125,7 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
           location: 'Manali, Himachal Pradesh',
           price: 2500,
           rating: 4.8,
-          image: '/placeholder-property.jpg',
+          image: '',
           reason: 'Based on your love for mountains'
         },
         {
@@ -134,7 +134,7 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
           location: 'Calangute, Goa',
           price: 3200,
           rating: 4.6,
-          image: '/placeholder-property.jpg',
+          image: '',
           reason: 'Perfect for your next beach vacation'
         }
       ]);

@@ -148,11 +148,31 @@ export default function ExperiencesPage() {
                     </div>
                   )}
                   
-                  {/* Verified Badge */}
-                  <div className="absolute top-4 right-4 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                    <ShieldCheckIcon className="w-3 h-3" />
-                    Verified
-                  </div>
+                  {/* Upcoming Label - Top Right (except for Karaoke Nights) */}
+                  {experience.title !== 'Karaoke Nights' && (
+                    <div className="absolute top-4 right-4 z-10">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-yellow-500/95 backdrop-blur-sm shadow-lg text-white border-yellow-400">
+                        <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                        Upcoming
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Verified Badge - Bottom Right (when Upcoming label is shown) */}
+                  {experience.title !== 'Karaoke Nights' && (
+                    <div className="absolute bottom-4 right-4 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <ShieldCheckIcon className="w-3 h-3" />
+                      Verified
+                    </div>
+                  )}
+                  
+                  {/* Verified Badge - Top Right (only for Karaoke Nights) */}
+                  {experience.title === 'Karaoke Nights' && (
+                    <div className="absolute top-4 right-4 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <ShieldCheckIcon className="w-3 h-3" />
+                      Verified
+                    </div>
+                  )}
                 </div>
 
                 {/* Content Section */}

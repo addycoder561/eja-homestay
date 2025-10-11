@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { buildCoverFirstImages } from "@/lib/media";
+import { followUser, unfollowUser, isFollowing, addReaction, removeReaction } from "@/lib/social-api";
 import { 
   MapPinIcon, 
   ClockIcon, 
@@ -129,6 +130,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   const [activeTab, setActiveTab] = useState<'About' | 'Reviews'>('About');
   const [showMobileBooking, setShowMobileBooking] = useState(false);
   const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'reviews' | 'checkin' | null>(null);
+  const [aboutDrawerTab, setAboutDrawerTab] = useState<'about' | 'reviews'>('about');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: '',
@@ -137,12 +139,27 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   });
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [isFollowingHost, setIsFollowingHost] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
 
   // Build images list
   const images: string[] = experience ? buildCoverFirstImages(experience.cover_image, experience.images || []) : [];
+
+  // Determine if an experience is "online"
+  const isOnlineExperience = (exp: any) => {
+    const loc = (exp?.location || '').toLowerCase();
+    return loc === 'online' || loc.includes('virtual') || loc.includes('remote');
+  };
+
+  // Check if this is Karaoke Nights (exception case)
+  const isKaraokeNights = experience?.title?.toLowerCase().includes('karaoke');
+
+  // Determine if we should show "Join Waitlist" instead of "Check-in"
+  const shouldShowWaitlist = experience && !isKaraokeNights && (isOnlineExperience(experience) || experience.location !== 'Retreats');
 
   // Fetch reviews when experience changes
   useEffect(() => {
@@ -172,23 +189,34 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     fetchReviews();
   }, [experience]);
 
-  // Check bucketlist status
+  // Check bucketlist status and follow status
   useEffect(() => {
-    const checkBucketlistStatus = async () => {
+    const checkStatuses = async () => {
       if (user && experience) {
         try {
-          const bucketlisted = await checkIsBucketlisted(user.id, experience.id, 'experience');
+          // Check bucketlist status
+          const bucketlisted = await checkIsBucketlisted(user.id, experience.id, 'experiences');
           setIsBucketlistedState(bucketlisted);
+          
+          // Check follow status
+          if (experience.host_id) {
+            const followResult = await isFollowing(user.id, experience.host_id);
+            if (followResult.success) {
+              setIsFollowingHost(followResult.isFollowing);
+            }
+          }
         } catch (err) {
-          console.error('Error checking bucketlist status:', err);
+          console.error('Error checking statuses:', err);
           setIsBucketlistedState(false);
+          setIsFollowingHost(false);
         }
       } else {
         setIsBucketlistedState(false);
+        setIsFollowingHost(false);
       }
     };
-    
-    checkBucketlistStatus();
+
+    checkStatuses();
   }, [user, experience]);
 
   // Check if user can review
@@ -310,11 +338,16 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
         }
       } else {
         console.log('➕ Adding to bucketlist...');
-        const success = await addToBucketlist(user.id, experience.id, 'experience');
+        const success = await addToBucketlist(user.id, experience.id, 'experiences');
         console.log('➕ Add result:', success);
         if (success) {
           setIsBucketlistedState(true);
           toast.success('Added to saved');
+          
+          // Trigger bucketlist refresh if the page is open
+          if (typeof window !== 'undefined' && (window as any).refreshBucketlistCount) {
+            (window as any).refreshBucketlistCount();
+          }
         } else {
           toast.error('Failed to add to saved');
         }
@@ -335,6 +368,62 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success('Link copied to clipboard!');
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (!user || !experience) {
+      toast.error('Please sign in to join the waitlist');
+      return;
+    }
+
+    try {
+      // Here you would implement the waitlist registration logic
+      // For now, we'll show a success message
+      toast.success(`You've joined the waitlist for ${experience.title}! We'll notify you when it's available.`);
+      
+      // You can add database logic here to store the waitlist registration
+      console.log('📝 Joined waitlist:', {
+        userId: user.id,
+        experienceId: experience.id,
+        experienceTitle: experience.title
+      });
+    } catch (error) {
+      console.error('Error joining waitlist:', error);
+      toast.error('Failed to join waitlist. Please try again.');
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!user || !experience) {
+      toast.error('Please sign in to follow hosts');
+      return;
+    }
+
+    setFollowLoading(true);
+    try {
+      if (isFollowingHost) {
+        const result = await unfollowUser(user.id, experience.host_id || 'eja-host-id');
+        if (result.success) {
+          setIsFollowingHost(false);
+          toast.success('Unfollowed successfully');
+        } else {
+          toast.error(result.error || 'Failed to unfollow');
+        }
+      } else {
+        const result = await followUser(user.id, experience.host_id || 'eja-host-id');
+        if (result.success) {
+          setIsFollowingHost(true);
+          toast.success('Following successfully');
+        } else {
+          toast.error(result.error || 'Failed to follow');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      toast.error('Failed to follow/unfollow. Please try again.');
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -568,76 +657,90 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
-      {/* Mobile Full Screen Gallery */}
-      <div className="md:hidden fixed inset-0 z-50 bg-black">
-        {/* Close Button and Counter - Floating */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
-          <button
-            onClick={onClose}
-            className="bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-          {images.length > 1 && (
-            <div className="bg-black/60 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-              {currentImageIndex + 1} / {images.length}
+        {/* Mobile Full Screen Gallery */}
+        <div className="md:hidden fixed inset-0 z-50 bg-black">
+          {/* Enhanced Header with Gradient Overlay */}
+          <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/70 via-black/20 to-transparent">
+            <div className="flex items-center justify-between p-4 pt-12">
+              <button
+                onClick={onClose}
+                className="bg-white/20 hover:bg-white/30 text-white rounded-full p-3 shadow-xl transition-all duration-300 backdrop-blur-md border border-white/20 hover:scale-105"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+              {images.length > 1 && (
+                <div className="bg-white/20 text-white px-4 py-2 rounded-full text-sm backdrop-blur-md border border-white/20 font-medium shadow-lg">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Full Screen Image */}
-        <div className="relative w-full h-full">
-          {images.length > 0 ? (
-            <>
-              <Image
-                src={images[currentImageIndex]}
-                alt={experience.title}
-                fill
-                className="object-cover"
-                sizes="100vw"
-                priority
-              />
+          {/* Enhanced Image Container with Better Aspect Ratio */}
+          <div className="relative w-full h-full overflow-hidden">
+            {images.length > 0 ? (
+              <>
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <Image
+                    src={images[currentImageIndex]}
+                    alt={experience.title}
+                    width={800}
+                    height={600}
+                    className="object-contain w-full h-full"
+                    sizes="100vw"
+                    priority
+                  />
+                </div>
               
               {/* Navigation Arrows */}
               {images.length > 1 && (
                 <>
                   <button
                     onClick={prevImage}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white rounded-full p-3 shadow-xl transition-all duration-300 backdrop-blur-md border border-white/20 hover:scale-110 active:scale-95"
                   >
-                    <ChevronLeftIcon className="w-5 h-5" />
+                    <ChevronLeftIcon className="w-6 h-6" />
                   </button>
                   <button
                     onClick={nextImage}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-3 shadow-lg transition-all backdrop-blur-sm"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white rounded-full p-3 shadow-xl transition-all duration-300 backdrop-blur-md border border-white/20 hover:scale-110 active:scale-95"
                   >
-                    <ChevronRightIcon className="w-5 h-5" />
+                    <ChevronRightIcon className="w-6 h-6" />
                   </button>
                 </>
               )}
 
-              {/* Floating Action Buttons - Over Image */}
-              <div className="absolute bottom-24 right-4 flex flex-col space-y-3">
+              {/* Enhanced Floating Action Buttons */}
+              <div className="absolute bottom-32 right-4 flex flex-col space-y-3">
                 {/* Details Button */}
                 <button
                   onClick={() => setMobileDrawerType('about')}
-                  className="bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                  className="group bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-2xl transition-all duration-300 backdrop-blur-md border border-white/30 hover:scale-110 active:scale-95 hover:shadow-white/20"
                 >
                   <DocumentTextIcon className="w-5 h-5" />
                 </button>
 
-                {/* Reviews Button */}
+                {/* Share Button */}
                 <button
-                  onClick={() => setMobileDrawerType('reviews')}
-                  className="bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                  onClick={handleShare}
+                  className="group bg-white/95 hover:bg-white text-gray-800 rounded-full p-3 shadow-2xl transition-all duration-300 backdrop-blur-md border border-white/30 hover:scale-110 active:scale-95 hover:shadow-white/20"
+                  aria-label="Share experience"
                 >
-                  <HeartIcon className="w-5 h-5" />
+                  <ShareIcon className="w-5 h-5" />
                 </button>
 
-                {/* Check-in Button */}
+                {/* Check-in/Join Waitlist Button */}
                 <button
-                  onClick={() => setMobileDrawerType('checkin')}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-full p-3 shadow-xl transition-all border-2 border-yellow-400"
+                  onClick={() => {
+                    // For Karaoke Nights or retreats, show booking form
+                    if (experience.title === 'Karaoke Nights' || experience.location === 'Retreats') {
+                      setMobileDrawerType('checkin');
+                    } else {
+                      // For other experiences, join waitlist directly
+                      handleJoinWaitlist();
+                    }
+                  }}
+                  className="group bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-full p-3 shadow-2xl transition-all duration-300 border-2 border-yellow-400 hover:scale-110 active:scale-95 hover:shadow-yellow-500/25"
                 >
                   <CalendarDaysIcon className="w-5 h-5" />
                 </button>
@@ -717,6 +820,39 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                     {currentImageIndex + 1} / {images.length}
                   </div>
                 )}
+                
+                {/* Host Information - Top Left */}
+                <div className="absolute top-4 left-4 z-10">
+                  <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm rounded-full px-2 py-1.5 shadow-lg">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      {experience.host_avatar ? (
+                        <Image
+                          src={experience.host_avatar}
+                          alt={experience.host_name || 'Host'}
+                          width={24}
+                          height={24}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                          <span className="text-gray-600 text-xs font-medium">
+                            {experience.host_name?.charAt(0) || 'E'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-gray-900">
+                      {experience.host_name || 'EJA'}
+                    </span>
+                    <button 
+                      onClick={handleFollowToggle}
+                      disabled={followLoading}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {followLoading ? '...' : (isFollowingHost ? 'Following' : 'Follow')}
+                    </button>
+                  </div>
+                </div>
               </>
             ) : (
               <div className="w-full h-full bg-gray-900 flex items-center justify-center">
@@ -1196,7 +1332,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
               )}
             </div>
 
-            {/* Sticky Footer - Check-in Button */}
+            {/* Sticky Footer - Check-in/Join Waitlist Button */}
             {!showBookingForm && (
               <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6">
                 <div className="flex items-center justify-between">
@@ -1206,17 +1342,23 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                   </div>
                   <Button 
                     onClick={() => {
-                      if (window.innerWidth < 768) {
-                        setShowMobileBooking(true);
+                      // Check if it's Karaoke Nights or a retreat - show booking form
+                      if (experience.title === 'Karaoke Nights' || experience.location === 'Retreats') {
+                        if (window.innerWidth < 768) {
+                          setShowMobileBooking(true);
+                        } else {
+                          setShowBookingForm(true);
+                        }
                       } else {
-                        setShowBookingForm(true);
+                        // For other experiences, join waitlist
+                        handleJoinWaitlist();
                       }
                     }}
                     variant="primary"
                     size="lg"
                     className="px-8"
                   >
-                    Check-in
+                    {experience.title === 'Karaoke Nights' || experience.location === 'Retreats' ? 'Check-in' : 'Join Waitlist'}
                   </Button>
                 </div>
               </div>
@@ -1350,11 +1492,36 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
             {/* Header */}
             <div className="px-6 pb-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {mobileDrawerType === 'about' && 'About'}
-                  {mobileDrawerType === 'reviews' && 'Reviews'}
-                  {mobileDrawerType === 'checkin' && 'Check-in'}
-                </h3>
+                {mobileDrawerType === 'about' && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      <Image
+                        src={experience.host_avatar || '/placeholder-avatar.jpg'}
+                        alt={experience.host_name || 'EJA'}
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 truncate">
+                        {experience.host_name || 'EJA'}
+                      </span>
+                      <button 
+                        onClick={handleFollowToggle}
+                        disabled={followLoading}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors flex-shrink-0 disabled:opacity-50"
+                      >
+                        {followLoading ? '...' : (isFollowingHost ? 'Following' : 'Follow')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {mobileDrawerType === 'checkin' && (
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {experience.title === 'Karaoke Nights' || experience.location === 'Retreats' ? 'Check-in' : 'Join Waitlist'}
+                  </h3>
+                )}
                 <button
                   onClick={() => setMobileDrawerType(null)}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -1368,130 +1535,161 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
             <div className="flex-1 overflow-y-auto p-6">
               {mobileDrawerType === 'about' && (
                 <div className="space-y-6">
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Description</h4>
-                    <p className="text-gray-700 leading-relaxed">{experience.description}</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">What's Included</h4>
-                    <ul className="space-y-2">
-                      <li className="flex items-center text-gray-700">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span>Professional guide</span>
-                      </li>
-                      <li className="flex items-center text-gray-700">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span>All necessary equipment</span>
-                      </li>
-                      <li className="flex items-center text-gray-700">
-                        <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span>Safety briefing</span>
-                      </li>
-                    </ul>
+                  {/* Toggle Buttons */}
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setAboutDrawerTab('about')}
+                      className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                        aboutDrawerTab === 'about'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      About
+                    </button>
+                    <button
+                      onClick={() => setAboutDrawerTab('reviews')}
+                      className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                        aboutDrawerTab === 'reviews'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Reviews
+                    </button>
                   </div>
 
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Important Information</h4>
-                    <ul className="space-y-2">
-                      <li className="flex items-center text-gray-700">
-                        <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
-                        <span>Bring comfortable walking shoes</span>
-                      </li>
-                      <li className="flex items-center text-gray-700">
-                        <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
-                        <span>Weather-dependent activity</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {mobileDrawerType === 'reviews' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center mb-2">
-                        <div className="flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <StarSolid key={i} className="w-5 h-5 text-yellow-400" />
-                          ))}
-                        </div>
-                        <span className="ml-2 text-gray-600">({averageRating.toFixed(1)})</span>
+                  {/* About Tab Content */}
+                  {aboutDrawerTab === 'about' && (
+                    <>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-3">Description</h4>
+                        <p className="text-gray-700 leading-relaxed">{experience.description}</p>
                       </div>
-                      <p className="text-gray-600 text-sm">{reviews.length} reviews</p>
-                    </div>
-                  </div>
+                      
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-3">What's Included</h4>
+                        <ul className="space-y-2">
+                          <li className="flex items-center text-gray-700">
+                            <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                            <span>Professional guide</span>
+                          </li>
+                          <li className="flex items-center text-gray-700">
+                            <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                            <span>All necessary equipment</span>
+                          </li>
+                          <li className="flex items-center text-gray-700">
+                            <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                            <span>Safety briefing</span>
+                          </li>
+                        </ul>
+                      </div>
 
-                  <div className="space-y-4">
-                    {reviews.map((review, index) => (
-                      <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
-                              <span className="text-sm font-medium text-gray-600">
-                                {review.guest_name?.charAt(0) || 'A'}
-                              </span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-3">Important Information</h4>
+                        <ul className="space-y-2">
+                          <li className="flex items-center text-gray-700">
+                            <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
+                            <span>Bring comfortable walking shoes</span>
+                          </li>
+                          <li className="flex items-center text-gray-700">
+                            <ExclamationTriangleIcon className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0" />
+                            <span>Weather-dependent activity</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Reviews Tab Content */}
+                  {aboutDrawerTab === 'reviews' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center mb-2">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <StarSolid key={i} className="w-5 h-5 text-yellow-400" />
+                              ))}
                             </div>
-                            <div>
-                              <div className="font-medium text-gray-900">{review.guest_name}</div>
+                            <span className="ml-2 text-gray-600">({averageRating.toFixed(1)})</span>
+                          </div>
+                          <p className="text-gray-600 text-sm">{reviews.length} reviews</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {reviews.map((review, index) => (
+                          <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
+                            <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center">
-                                {[...Array(5)].map((_, i) => (
-                                  <StarSolid 
-                                    key={i} 
-                                    className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
-                                  />
+                                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                                  <span className="text-sm font-medium text-gray-600">
+                                    {review.guest_name?.charAt(0) || 'A'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{review.guest_name}</div>
+                                  <div className="flex items-center">
+                                    {[...Array(5)].map((_, i) => (
+                                      <StarSolid 
+                                        key={i} 
+                                        className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(review.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <p className="text-gray-700">{review.comment}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add Review Form */}
+                      {user && !hasReviewed && (
+                        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-3">Write a Review</h4>
+                          <form onSubmit={handleReviewSubmit} className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                              <div className="flex space-x-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setReviewRating(star)}
+                                    className="text-2xl"
+                                  >
+                                    {star <= reviewRating ? '⭐' : '☆'}
+                                  </button>
                                 ))}
                               </div>
                             </div>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {new Date(review.created_at).toLocaleDateString()}
-                          </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                              <textarea
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                                placeholder="Share your experience..."
+                              />
+                            </div>
+                            <Button type="submit" disabled={submitting} className="w-full">
+                              {submitting ? 'Submitting...' : 'Submit Review'}
+                            </Button>
+                          </form>
                         </div>
-                        <p className="text-gray-700">{review.comment}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add Review Form */}
-                  {user && !hasReviewed && (
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-3">Write a Review</h4>
-                      <form onSubmit={handleReviewSubmit} className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-                          <div className="flex space-x-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() => setReviewRating(star)}
-                                className="text-2xl"
-                              >
-                                {star <= reviewRating ? '⭐' : '☆'}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
-                          <textarea
-                            value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                            placeholder="Share your experience..."
-                          />
-                        </div>
-                        <Button type="submit" disabled={submitting} className="w-full">
-                          {submitting ? 'Submitting...' : 'Submit Review'}
-                        </Button>
-                      </form>
+                      )}
                     </div>
                   )}
                 </div>
               )}
+
 
               {mobileDrawerType === 'checkin' && (
                 <div className="space-y-6">
@@ -1500,71 +1698,96 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                     <div className="text-gray-700 font-semibold">per person</div>
                   </div>
 
-                  <form className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  {/* Check if it's Karaoke Nights or a retreat - show booking form */}
+                  {experience.title === 'Karaoke Nights' || experience.location === 'Retreats' ? (
+                    <form className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">Select Date</label>
+                          <input
+                            type="date"
+                            value={bookingForm.date}
+                            onChange={(e) => setBookingForm(prev => ({ ...prev, date: e.target.value }))}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-900 mb-2">Number of Guests</label>
+                          <div className="flex items-center justify-center space-x-3 px-3 py-2 border-2 border-gray-400 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => setBookingForm(prev => ({ ...prev, guests: Math.max(1, prev.guests - 1) }))}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
+                            >
+                              <span className="text-lg font-bold text-gray-700">-</span>
+                            </button>
+                            <span className="text-lg font-semibold text-gray-900">{bookingForm.guests}</span>
+                            <button
+                              type="button"
+                              onClick={() => setBookingForm(prev => ({ ...prev, guests: prev.guests + 1 }))}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
+                            >
+                              <span className="text-lg font-bold text-gray-700">+</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                       <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">Select Date</label>
-                        <input
-                          type="date"
-                          value={bookingForm.date}
-                          onChange={(e) => setBookingForm(prev => ({ ...prev, date: e.target.value }))}
-                          min={new Date().toISOString().split('T')[0]}
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Special Requests (Optional)</label>
+                        <textarea
+                          value={bookingForm.specialRequests}
+                          onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                          rows={3}
                           className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                          placeholder="Any special requirements or requests..."
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">Number of Guests</label>
-                        <div className="flex items-center justify-center space-x-3 px-3 py-2 border-2 border-gray-400 rounded-lg">
-                          <button
-                            type="button"
-                            onClick={() => setBookingForm(prev => ({ ...prev, guests: Math.max(1, prev.guests - 1) }))}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
-                          >
-                            <span className="text-lg font-bold text-gray-700">-</span>
-                          </button>
-                          <span className="text-lg font-semibold text-gray-900">{bookingForm.guests}</span>
-                          <button
-                            type="button"
-                            onClick={() => setBookingForm(prev => ({ ...prev, guests: prev.guests + 1 }))}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-all duration-200"
-                          >
-                            <span className="text-lg font-bold text-gray-700">+</span>
-                          </button>
+                      <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-400">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-900 font-semibold">Total</span>
+                          <span className="text-xl font-bold text-gray-900">₹{(experience.price * bookingForm.guests).toLocaleString()}</span>
                         </div>
+                        <div className="text-sm text-gray-700 font-medium">Includes all taxes and fees</div>
+                      </div>
+
+                      <Button 
+                        onClick={() => {
+                          setMobileDrawerType(null);
+                          setShowMobileBooking(true);
+                        }}
+                        className="w-full"
+                        size="lg"
+                      >
+                        Confirm Booking
+                      </Button>
+                    </form>
+                  ) : (
+                    /* For other experiences, show waitlist message */
+                    <div className="text-center space-y-4">
+                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+                        <div className="text-yellow-600 text-4xl mb-3">⏳</div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Join Waitlist</h3>
+                        <p className="text-gray-600 text-sm mb-4">
+                          This experience isn't open for booking yet. Join our waitlist to be notified when it becomes available!
+                        </p>
+                        <Button 
+                          onClick={() => {
+                            handleJoinWaitlist();
+                            setMobileDrawerType(null);
+                          }}
+                          className="w-full"
+                          size="lg"
+                          variant="primary"
+                        >
+                          Join Waitlist
+                        </Button>
                       </div>
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">Special Requests (Optional)</label>
-                      <textarea
-                        value={bookingForm.specialRequests}
-                        onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
-                        rows={3}
-                        className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
-                        placeholder="Any special requirements or requests..."
-                      />
-                    </div>
-
-                    <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-400">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-900 font-semibold">Total</span>
-                        <span className="text-xl font-bold text-gray-900">₹{(experience.price * bookingForm.guests).toLocaleString()}</span>
-                      </div>
-                      <div className="text-sm text-gray-700 font-medium">Includes all taxes and fees</div>
-                    </div>
-
-                    <Button 
-                      onClick={() => {
-                        setMobileDrawerType(null);
-                        setShowMobileBooking(true);
-                      }}
-                      className="w-full"
-                      size="lg"
-                    >
-                      Confirm Booking
-                    </Button>
-                  </form>
+                  )}
                 </div>
               )}
             </div>

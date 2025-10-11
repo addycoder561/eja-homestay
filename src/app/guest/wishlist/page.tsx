@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import Image from 'next/image';
+import { buildCoverFirstImages } from '@/lib/media';
 
 interface BucketlistItem {
   id: string;
@@ -148,15 +149,11 @@ export default function MyBucketlistPage() {
         }
       
         const propertyIds = wishlistRecords
-          .filter(b => b.item_type === 'property')
+          .filter(b => b.item_type === 'stays' || b.item_type === 'property')
           .map(b => b.item_id);
         
         const experienceIds = wishlistRecords
-          .filter(b => b.item_type === 'experience')
-          .map(b => b.item_id);
-        
-        const retreatIds = wishlistRecords
-          .filter(b => b.item_type === 'trip') // Retreats are stored as 'trip' in database
+          .filter(b => b.item_type === 'experiences')
           .map(b => b.item_id);
 
         const allItems: BucketlistItem[] = [];
@@ -164,15 +161,16 @@ export default function MyBucketlistPage() {
         console.log('🔍 Processing bucketlist items:', {
           propertyIds,
           experienceIds,
-          retreatIds,
           totalRecords: wishlistRecords.length
         });
         
+        console.log('🔍 Raw bucketlist records:', wishlistRecords);
+        console.log('🔍 Experience IDs found:', experienceIds);
+        
         console.log('📊 Total bucketlist records:', wishlistRecords);
         console.log('🔍 Bucketlist records breakdown:', {
-          properties: wishlistRecords.filter(b => b.item_type === 'property').length,
-          experiences: wishlistRecords.filter(b => b.item_type === 'experience').length,
-          retreats: wishlistRecords.filter(b => b.item_type === 'trip').length
+          stays: wishlistRecords.filter(b => b.item_type === 'stays').length,
+          experiences: wishlistRecords.filter(b => b.item_type === 'experiences').length
         });
 
         // Fetch properties
@@ -183,7 +181,18 @@ export default function MyBucketlistPage() {
             .in('id', propertyIds);
           
           if (!propError && properties) {
+            console.log('🏠 Properties fetched:', properties);
             properties.forEach(prop => {
+              console.log('🏠 Property image data:', { 
+                id: prop.id, 
+                title: prop.title, 
+                cover_image: prop.cover_image,
+                gallery: prop.gallery,
+                base_price: prop.base_price,
+                rating: prop.google_average_rating
+              });
+              const propertyImages = buildCoverFirstImages(prop.cover_image, prop.gallery);
+              console.log('🏠 Processed property images:', propertyImages);
               allItems.push({
                 id: prop.id,
                 _type: 'property',
@@ -191,33 +200,46 @@ export default function MyBucketlistPage() {
                 description: prop.description,
                 city: prop.city,
                 country: prop.country,
-                images: prop.images,
-                price_per_night: prop.price_per_night,
-                rating: prop.rating,
-                review_count: prop.review_count
+                images: propertyImages,
+                image: propertyImages[0],
+                price_per_night: prop.base_price,
+                rating: prop.google_average_rating,
+                review_count: prop.google_reviews_count
               });
             });
           }
         }
 
-        // Fetch experiences from unified table and separate by location
+        // Fetch experiences from experiences_with_host view and separate by location
         if (experienceIds.length > 0) {
           const { data: experiences, error: expError } = await supabase
-            .from('experiences_unified')
+            .from('experiences_with_host')
             .select('*')
             .in('id', experienceIds)
-            .neq('location', 'Retreats'); // Exclude retreats from experiences
+            // Include all experiences (hyper-local, online, retreats)
+          
+          if (expError) {
+            console.error('❌ Error fetching experiences:', expError);
+          }
           
           if (!expError && experiences) {
+            console.log('🔍 Experiences fetched from database:', experiences);
             experiences.forEach(exp => {
-              // Determine if it's online or hyper-local based on location
-              const isOnline = exp.location?.toLowerCase() === 'online' || 
-                              exp.location?.toLowerCase().includes('virtual') || 
-                              exp.location?.toLowerCase().includes('remote');
+              // Determine the type based on location
+              let itemType = 'hyper-local'; // Default
+              
+              if (exp.location?.toLowerCase() === 'online' || 
+                  exp.location?.toLowerCase().includes('virtual') || 
+                  exp.location?.toLowerCase().includes('remote')) {
+                itemType = 'online';
+              } else if (exp.location?.toLowerCase() === 'retreats' || 
+                         exp.location?.toLowerCase().includes('retreat')) {
+                itemType = 'retreat';
+              }
               
               allItems.push({
                 id: exp.id,
-                _type: isOnline ? 'online' : 'hyper-local',
+                _type: itemType as 'hyper-local' | 'online' | 'retreat',
                 title: exp.title,
                 description: exp.description,
                 location: exp.location,
@@ -230,36 +252,7 @@ export default function MyBucketlistPage() {
           }
         }
 
-        // Fetch retreats from unified table
-        if (retreatIds.length > 0) {
-          console.log('🔍 Fetching retreats with IDs:', retreatIds);
-          
-          const { data: retreats, error: retreatError } = await supabase
-            .from('experiences_unified')
-            .select('*')
-            .in('id', retreatIds)
-            .eq('location', 'Retreats'); // Only fetch retreats
-          
-          if (!retreatError && retreats) {
-            console.log('✅ Found retreats:', retreats);
-            retreats.forEach(ret => {
-              allItems.push({
-                id: ret.id,
-                _type: 'retreat',
-                title: ret.title,
-                description: ret.description,
-                location: ret.location,
-                image: ret.cover_image,
-                price: ret.price,
-                rating: ret.rating,
-                review_count: ret.review_count
-              });
-            });
-          } else {
-            console.error('❌ Error fetching retreats:', retreatError);
-            console.log('🔍 Retreat IDs that failed to fetch:', retreatIds);
-          }
-        }
+        // All experiences (hyper-local, online, retreats) are now handled above
 
         console.log('✅ All items processed:', allItems);
         console.log('📋 Final items breakdown:', {
@@ -281,6 +274,23 @@ export default function MyBucketlistPage() {
     fetchBucketlist();
   }, [user]); // Remove dataLoaded from dependencies to prevent infinite loop
 
+  // Add refresh mechanism for modal forms
+  useEffect(() => {
+    const refreshBucketlist = () => {
+      console.log('🔄 Refreshing bucketlist from modal...');
+      setDataLoaded(false);
+      setItems([]);
+      setFilteredItems([]);
+    };
+    
+    // Make refresh function available globally
+    (window as any).refreshBucketlistCount = refreshBucketlist;
+    
+    return () => {
+      delete (window as any).refreshBucketlistCount;
+    };
+  }, []);
+
   useEffect(() => {
     if (activeFilter === 'stays') {
       setFilteredItems(items.filter(item => item._type === 'property'));
@@ -299,17 +309,130 @@ export default function MyBucketlistPage() {
     
     try {
       // Map display type back to database type
-      let dbItemType = item._type;
-      if (item._type === 'retreat') {
-        dbItemType = 'trip'; // Retreats are stored as 'trip' in the database
-      } else if (item._type === 'hyper-local' || item._type === 'online') {
-        dbItemType = 'experience'; // Both hyper-local and online are stored as 'experience'
+      let dbItemTypes = [];
+      if (item._type === 'property') {
+        dbItemTypes = ['stays', 'property']; // Try both old and new types
+      } else if (item._type === 'hyper-local' || item._type === 'online' || item._type === 'retreat') {
+        dbItemTypes = ['experiences']; // All experiences and retreats are stored as 'experiences'
       }
-      await removeFromBucketlist(user!.id, item.id, dbItemType);
-      setItems(prev => prev.filter(i => !(i.id === item.id && i._type === item._type)));
-      // Refresh bucketlist count in navigation
-      if ((window as any).refreshBucketlistCount) {
-        (window as any).refreshBucketlistCount();
+      
+      console.log('🗑️ Removing from bucketlist:', { 
+        userId: user!.id, 
+        itemId: item.id, 
+        displayType: item._type, 
+        dbItemTypes 
+      });
+      
+      let success = false;
+      for (const dbItemType of dbItemTypes) {
+        const result = await removeFromBucketlist(user!.id, item.id, dbItemType);
+        if (result) {
+          success = true;
+          break; // Stop trying other types once one succeeds
+        }
+      }
+      
+      console.log('🗑️ Remove result:', success);
+      
+      if (success) {
+        console.log('✅ Removal successful, updating local state...');
+        setItems(prev => {
+          const filtered = prev.filter(i => !(i.id === item.id && i._type === item._type));
+          console.log('📊 Items before removal:', prev.length);
+          console.log('📊 Items after removal:', filtered.length);
+          return filtered;
+        });
+        
+        // Refresh bucketlist count in navigation
+        if ((window as any).refreshBucketlistCount) {
+          (window as any).refreshBucketlistCount();
+        }
+        
+        // Force a re-fetch of the bucketlist data to ensure consistency
+        console.log('🔄 Re-fetching bucketlist data to ensure consistency...');
+        try {
+          const freshData = await getBucketlist(user!.id);
+          console.log('🔄 Fresh bucketlist data length:', freshData.length);
+          
+          // Re-process the fresh data to match our local state format
+          const processedItems: BucketlistItem[] = [];
+          
+          // Process properties
+          const propertyIds = freshData
+            .filter(b => b.item_type === 'stays' || b.item_type === 'property')
+            .map(b => b.item_id);
+            
+          if (propertyIds.length > 0) {
+            const { data: properties, error: propError } = await supabase
+              .from('properties')
+              .select('*')
+              .in('id', propertyIds);
+              
+            if (!propError && properties) {
+              properties.forEach(prop => {
+                const propertyImages = buildCoverFirstImages(prop.cover_image, prop.gallery);
+                processedItems.push({
+                  id: prop.id,
+                  _type: 'property',
+                  title: prop.title,
+                  description: prop.description,
+                  city: prop.city,
+                  country: prop.country,
+                  images: propertyImages,
+                  image: propertyImages[0],
+                  price_per_night: prop.base_price,
+                  rating: prop.google_average_rating,
+                  review_count: prop.google_reviews_count
+                });
+              });
+            }
+          }
+          
+          // Process experiences
+          const experienceIds = freshData
+            .filter(b => b.item_type === 'experiences')
+            .map(b => b.item_id);
+            
+          if (experienceIds.length > 0) {
+            const { data: experiences, error: expError } = await supabase
+              .from('experiences_with_host')
+              .select('*')
+              .in('id', experienceIds);
+              
+            if (!expError && experiences) {
+              experiences.forEach(exp => {
+                let itemType = 'hyper-local';
+                if (exp.location?.toLowerCase() === 'online' || 
+                    exp.location?.toLowerCase().includes('virtual') || 
+                    exp.location?.toLowerCase().includes('remote')) {
+                  itemType = 'online';
+                } else if (exp.location?.toLowerCase() === 'retreats' || 
+                           exp.location?.toLowerCase().includes('retreat')) {
+                  itemType = 'retreat';
+                }
+                
+                processedItems.push({
+                  id: exp.id,
+                  _type: itemType as 'hyper-local' | 'online' | 'retreat',
+                  title: exp.title,
+                  description: exp.description,
+                  location: exp.location,
+                  image: exp.cover_image,
+                  price: exp.price,
+                  rating: exp.rating,
+                  review_count: exp.review_count
+                });
+              });
+            }
+          }
+          
+          console.log('🔄 Setting fresh processed items:', processedItems.length);
+          setItems(processedItems);
+        } catch (error) {
+          console.error('❌ Error re-fetching bucketlist:', error);
+        }
+      } else {
+        console.error('❌ Failed to remove from bucketlist');
       }
     } catch (error) {
       console.error('Error removing from bucketlist:', error);
@@ -370,8 +493,15 @@ export default function MyBucketlistPage() {
   };
 
   const getImageUrl = (item: BucketlistItem) => {
-    const imageUrl = item.images?.[0] || item.image || '/placeholder-property.jpg';
-    return imageErrors.has(imageUrl) ? '/placeholder-property.jpg' : imageUrl;
+    console.log('🖼️ getImageUrl called for:', { 
+      id: item.id, 
+      type: item._type, 
+      images: item.images, 
+      image: item.image 
+    });
+    const imageUrl = item.images?.[0] || item.image;
+    console.log('🖼️ Final imageUrl:', imageUrl);
+    return imageErrors.has(imageUrl) ? null : imageUrl;
   };
 
   if (authLoading) {
@@ -496,14 +626,20 @@ export default function MyBucketlistPage() {
                   >
                     {/* Image Section */}
                     <div className="relative h-48 overflow-hidden">
-                      <Image
-                        src={getImageUrl(item)}
-                        alt={item.title}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                        onError={() => handleImageError(item.images?.[0] || item.image || '')}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
+                      {getImageUrl(item) ? (
+                        <Image
+                          src={getImageUrl(item)!}
+                          alt={item.title}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-500"
+                          onError={() => handleImageError(item.images?.[0] || item.image || '')}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <div className="text-gray-400 text-4xl">🏠</div>
+                        </div>
+                      )}
                       
                       {/* Type Badge */}
                       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1">

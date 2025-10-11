@@ -14,13 +14,6 @@ export function HeroSection() {
     <div className="relative h-[85vh] bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 overflow-hidden">
       {/* Enhanced Animated Background Elements */}
       <div className="absolute inset-0">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')`
-          }}
-        />
-        
         {/* Enhanced Floating Elements */}
         <div className="absolute top-20 left-10 w-20 h-20 bg-white/20 rounded-full blur-xl animate-float-1" />
         <div className="absolute top-40 right-20 w-32 h-32 bg-yellow-300/30 rounded-full blur-xl animate-float-2" />

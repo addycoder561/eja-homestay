@@ -100,9 +100,9 @@ export default function Home() {
         setExperiences(experiencesResult);
         setProperties(propertiesResult);
 
-        // Fetch unique moods from experiences_unified table
+        // Fetch unique moods from experiences_with_host view
         const { data: moodData, error: moodError } = await supabase
-          .from('experiences_unified')
+          .from('experiences_with_host')
           .select('mood')
           .not('mood', 'is', null)
           .neq('mood', '');
@@ -238,28 +238,28 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-4">
               {[
                 {
-                  id: 'just-opened',
-                  title: 'just opened',
-                  subtitle: 'be the first to go!',
+                  id: 'hyper-local',
+                  title: 'hyper-local',
+                  subtitle: 'in your city',
                   image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=400&q=80',
                   dotColor: 'bg-green-400',
-                  href: '/discover?filter=just-opened'
+                  href: '/discover?filter=hyper-local'
                 },
                 {
-                  id: 'trending',
-                  title: 'trending',
-                  subtitle: "buzzing now",
+                  id: 'retreats',
+                  title: 'retreats',
+                  subtitle: "far-away",
                   image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=400&q=80',
                   dotColor: 'bg-orange-400',
-                  href: '/discover?filter=trending'
+                  href: '/discover?filter=retreats'
                 },
                 {
-                  id: 'lowkey',
-                  title: 'lowkey',
-                  subtitle: 'dare to try',
+                  id: 'online',
+                  title: 'online',
+                  subtitle: 'at home',
                   image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=400&q=80',
                   dotColor: 'bg-purple-400',
-                  href: '/discover?filter=lowkey'
+                  href: '/discover?filter=online'
                 },
                 {
                   id: 'popular',

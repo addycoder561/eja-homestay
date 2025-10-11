@@ -6,28 +6,28 @@ import { useRouter } from 'next/navigation';
 
 const CATEGORIES = [
   {
-    id: 'just-opened',
-    title: 'just opened',
-    subtitle: 'be the first to go!',
+    id: 'hyper-local',
+    title: 'hyper-local',
+    subtitle: 'in your city',
     image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80',
     dotColor: 'bg-green-400',
-    href: '/discover?filter=just-opened'
+    href: '/discover?filter=hyper-local'
   },
   {
-    id: 'trending',
-    title: 'trending',
-    subtitle: "buzzing now",
+    id: 'retreats',
+    title: 'retreats',
+    subtitle: "far-away",
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=400&q=80',
     dotColor: 'bg-orange-400',
-    href: '/discover?filter=trending'
+    href: '/discover?filter=retreats'
   },
   {
-    id: 'lowkey',
-    title: 'lowkey',
-    subtitle: 'dare to try',
+    id: 'online',
+    title: 'online',
+    subtitle: 'at home',
     image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=400&q=80',
     dotColor: 'bg-purple-400',
-    href: '/discover?filter=lowkey'
+    href: '/discover?filter=online'
   },
   {
     id: 'popular',

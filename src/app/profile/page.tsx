@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getUserSocialStats, getUserReactionCount } from '@/lib/social-api';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { SupportModal } from '@/components/SupportModal';
@@ -93,7 +94,7 @@ export default function ProfilePage() {
 
         // Fetch created experiences using the database function
         const { data: experiencesData, error: experiencesError } = await supabase
-          .from('experiences_unified')
+          .from('experiences_with_host')
           .select('id, title, cover_image, mood, location, created_at')
           .eq('created_by', user.id)
           .order('created_at', { ascending: false });
@@ -113,10 +114,15 @@ export default function ProfilePage() {
 
         // Calculate metrics
         const totalLikes = experiencesWithMetrics.reduce((sum, exp) => sum + exp.likes_count, 0);
+        
+        // Get real social stats
+        const socialStats = await getUserSocialStats(user.id);
+        const reactionCount = await getUserReactionCount(user.id);
+        
         setMetrics({
           check_ins: experiencesData?.length || 0,
-          followers: Math.floor(Math.random() * 1000), // Mock data
-          smiles: totalLikes
+          followers: socialStats.success ? socialStats.data?.follower_count || 0 : 0,
+          smiles: reactionCount.success ? reactionCount.count : 0
         });
         }
 

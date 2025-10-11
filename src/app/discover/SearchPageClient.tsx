@@ -12,7 +12,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { PropertyCard } from '@/components/PropertyCard';
-import { getProperties, searchProperties, getExperiences, getRetreats, getExperienceCategories, getRetreatCategories, createExperienceBooking, createTripBooking, isBucketlisted, addToBucketlist, removeFromBucketlist, ensureProfile, testWishlistTable } from '@/lib/database';
+import { getProperties, searchProperties, getExperiences, getRetreats, getExperienceCategories, getRetreatCategories, createExperienceBooking, createTripBooking, isBucketlisted, addToBucketlist, removeFromBucketlist, ensureProfile, testBucketlistTable } from '@/lib/database';
+import { addReaction } from '@/lib/social-api';
 import { PropertyWithHost, SearchFilters as SearchFiltersType, Experience, PropertyType } from '@/lib/types';
 import ExperienceModal from '@/components/ExperienceModal';
 import RetreatModal from '@/components/RetreatModal';
@@ -97,6 +98,9 @@ export default function SearchPageClient() {
   // Wishlist states
   const [wishlistedExperienceIds, setWishlistedExperienceIds] = useState<string[]>([]);
   const [wishlistedRetreatIds, setWishlistedRetreatIds] = useState<string[]>([]);
+  
+  // Reaction menu states
+  const [openReactionMenu, setOpenReactionMenu] = useState<string | null>(null);
   
   // Experience modal states
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
@@ -188,7 +192,7 @@ export default function SearchPageClient() {
         if (user && experiences.length > 0) {
           const wishlist = await Promise.all(
             experiences.map(exp => 
-              exp && exp.id ? isBucketlisted(user.id, exp.id, 'experience') : Promise.resolve(false)
+              exp && exp.id ? isBucketlisted(user.id, exp.id, 'experiences') : Promise.resolve(false)
             )
           );
           if (!ignore) {
@@ -216,7 +220,7 @@ export default function SearchPageClient() {
         if (user && retreats.length > 0) {
           const wishlist = await Promise.all(
             retreats.map(retreat => 
-              retreat && retreat.id ? isBucketlisted(user.id, retreat.id, 'trip') : Promise.resolve(false)
+              retreat && retreat.id ? isBucketlisted(user.id, retreat.id, 'experiences') : Promise.resolve(false)
             )
           );
           if (!ignore) {
@@ -253,16 +257,18 @@ export default function SearchPageClient() {
       currentState: wishlisted 
     });
     
-    // Test if wishlist table exists first
-    const tableExists = await testWishlistTable();
+    // Test if bucketlist table exists first
+    const tableExists = await testBucketlistTable();
     if (!tableExists) {
-      toast.error('Wishlist table not accessible. Please check database setup.');
+      toast.error('Bucketlist table not accessible. Please check database setup.');
       return;
     }
     
     try {
       if (wishlisted) {
-        const success = await removeFromBucketlist(user.id, expId, 'experience');
+        console.log('🗑️ Removing experience from bucketlist:', { userId: user.id, expId, itemType: 'experiences' });
+        const success = await removeFromBucketlist(user.id, expId, 'experiences');
+        console.log('🗑️ Remove result:', success);
         if (success) {
           setWishlistedExperienceIds(ids => ids.filter(id => id !== expId));
           toast.success('Experience removed from saved');
@@ -270,7 +276,9 @@ export default function SearchPageClient() {
           toast.error('Failed to remove from saved');
         }
       } else {
-        const success = await addToBucketlist(user.id, expId, 'experience');
+        console.log('➕ Adding experience to bucketlist:', { userId: user.id, expId, itemType: 'experiences' });
+        const success = await addToBucketlist(user.id, expId, 'experiences');
+        console.log('➕ Add result:', success);
         if (success) {
           setWishlistedExperienceIds(ids => [...ids, expId]);
           toast.success('Experience added to saved');
@@ -279,7 +287,7 @@ export default function SearchPageClient() {
         }
       }
     } catch (error) {
-      console.error('❌ Discover page wishlist error:', error);
+      console.error('❌ Discover page bucketlist error:', error);
       toast.error('Failed to update saved items');
     }
   };
@@ -294,25 +302,49 @@ export default function SearchPageClient() {
     
     try {
       if (wishlisted) {
-        const success = await removeFromBucketlist(user.id, retreatId, 'retreat');
+        console.log('🗑️ Removing retreat from bucketlist:', { userId: user.id, retreatId, itemType: 'experiences' });
+        const success = await removeFromBucketlist(user.id, retreatId, 'experiences');
+        console.log('🗑️ Remove result:', success);
         if (success) {
           setWishlistedRetreatIds(ids => ids.filter(id => id !== retreatId));
-          toast.success('Retreat removed from wishlist');
+          toast.success('Retreat removed from saved');
         } else {
-          toast.error('Failed to remove from wishlist');
+          toast.error('Failed to remove from saved');
         }
       } else {
-        const success = await addToBucketlist(user.id, retreatId, 'retreat');
+        console.log('➕ Adding retreat to bucketlist:', { userId: user.id, retreatId, itemType: 'experiences' });
+        const success = await addToBucketlist(user.id, retreatId, 'experiences');
+        console.log('➕ Add result:', success);
         if (success) {
           setWishlistedRetreatIds(ids => [...ids, retreatId]);
-          toast.success('Retreat added to wishlist');
+          toast.success('Retreat added to saved');
         } else {
-          toast.error('Failed to add to wishlist');
+          toast.error('Failed to add to saved');
         }
       }
     } catch (error) {
-      console.error('Wishlist error:', error);
-      toast.error('Failed to update wishlist');
+      console.error('❌ Discover page retreat bucketlist error:', error);
+      toast.error('Failed to update saved items');
+    }
+  };
+
+  // Reaction handler
+  const handleReaction = async (itemId: string, itemType: 'experience' | 'retreat', reactionType: 'wow' | 'care') => {
+    if (!user) {
+      toast.error('Please sign in to react');
+      return;
+    }
+
+    try {
+      const result = await addReaction(user.id, itemId, itemType, reactionType);
+      if (result.success) {
+        toast.success(`Reacted with ${reactionType}!`);
+      } else {
+        toast.error(result.error || 'Failed to react');
+      }
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+      toast.error('Failed to react. Please try again.');
     }
   };
 
@@ -605,6 +637,40 @@ export default function SearchPageClient() {
     return loc === 'online' || loc.includes('virtual') || loc.includes('remote');
   };
 
+  // Define retreat order
+  const retreatOrder = [
+    'Family Getaways',
+    'Corporate Retreat',
+    'Pet Parent Retreat',
+    'Break-Up Retreat',
+    'Cousins Meetup Retreat',
+    'Sibling Reconnect Retreat',
+    'Senior Citizen Retreat',
+    'Single Parent Retreat',
+    'Wellness Retreat',
+    'First Trip Retreat',
+    'Silent Retreat',
+    'Re-unions Retreat'
+  ];
+
+  // Sort retreats by the specified order
+  const sortedRetreats = [...retreats].sort((a, b) => {
+    const aIndex = retreatOrder.indexOf(a.title);
+    const bIndex = retreatOrder.indexOf(b.title);
+    
+    // If both are in the order array, sort by their position
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex;
+    }
+    
+    // If only one is in the order array, prioritize it
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    
+    // If neither is in the order array, sort alphabetically
+    return a.title.localeCompare(b.title);
+  });
+
   // Apply mood filter to ALL experiences (regardless of content type)
   const filteredExperiences = experiences.filter((exp) => {
     console.log('🔍 DEBUG - Filtering experience:', { title: exp.title, mood: exp.mood, selectedMood, location: exp.location });
@@ -630,8 +696,13 @@ export default function SearchPageClient() {
     return true;
   });
 
+  // Separate experiences into hyper-local and online for proper ordering
+  // Exclude Karaoke Nights from hyper-local since it's displayed separately
+  const hyperLocalExperiences = filteredExperiences.filter(exp => !isOnlineExperience(exp) && exp.title !== 'Karaoke Nights');
+  const onlineExperiences = filteredExperiences.filter(exp => isOnlineExperience(exp));
+
   // Only show retreats section when no specific mood is selected and content filter allows it
-  const filteredRetreats = (selectedMood === 'all' && (contentFilter === 'retreats' || contentFilter === 'all')) ? retreats : [];
+  const filteredRetreats = (selectedMood === 'all' && (contentFilter === 'retreats' || contentFilter === 'all')) ? sortedRetreats : [];
 
   // Filter properties based on content type toggle - Properties moved to search page
   const filteredProperties = properties.filter((property) => {
@@ -790,91 +861,7 @@ export default function SearchPageClient() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Experiences */}
-              {filteredExperiences.map((exp, index) => {
-                const isBucketlisted = wishlistedExperienceIds.includes(exp.id);
-                return (
-                  <div
-                    key={exp.id}
-                    onClick={() => handleExperienceClick(exp)}
-                    className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    {/* Image Section */}
-                    <div className="relative h-48 overflow-hidden">
-                      <Image
-                        src={exp.cover_image || '/placeholder-experience.jpg'}
-                        alt={exp.title}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                      
-                      {/* Category Badge - Top Left */}
-                      {exp.mood && (
-                        <div className="absolute top-4 left-4 z-10">
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
-                            {exp.mood}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Saved Button - Top Right */}
-                      {user && (
-                        <button 
-                          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
-                          onClick={(e) => handleExperienceWishlist(exp.id, isBucketlisted, e)}
-                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
-                          disabled={false}
-                        >
-                          {isBucketlisted ? (
-                            <BookmarkSolid className="w-5 h-5 text-yellow-500" />
-                          ) : (
-                            <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
-                          )}
-                        </button>
-                      )}
-                      
-
-                      
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="p-4">
-                      <h3 className="font-bold text-base text-gray-900 group-hover:text-yellow-500 transition-colors line-clamp-2 leading-tight mb-2">
-                        {exp.title}
-                      </h3>
-                      
-                      {/* Location & Duration */}
-                      <div className="flex items-center gap-3 text-gray-600 mb-3">
-                        <div className="flex items-center gap-1">
-                          <MapPinIcon className="w-3 h-3" />
-                          <span className="text-xs">{exp.location}</span>
-                        </div>
-                        {exp.duration && (
-                          <div className="flex items-center gap-1">
-                            <ClockIcon className="w-3 h-3" />
-                            <span className="text-xs">{exp.duration}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Price */}
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-base font-bold text-gray-900">₹{exp.price?.toLocaleString()}</span>
-                          <span className="text-xs text-gray-500">/ person</span>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-                );
-              })}
-              
-              {/* Retreats */}
+              {/* Retreats First */}
               {filteredRetreats.map((retreat, index) => {
                 const isBucketlisted = wishlistedRetreatIds.includes(retreat.id);
                 return (
@@ -919,8 +906,6 @@ export default function SearchPageClient() {
                         </button>
                       )}
                       
-
-                      
                       {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
@@ -944,6 +929,493 @@ export default function SearchPageClient() {
                         <div className="flex items-baseline gap-1">
                           <span className="text-base font-bold text-gray-900">₹{retreat.price?.toLocaleString()}</span>
                           <span className="text-xs text-gray-500">for 2 adults</span>
+                        </div>
+                        {/* Reaction Menu - Bottom Right */}
+                        <div className="relative">
+                          <button 
+                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenReactionMenu(openReactionMenu === retreat.id ? null : retreat.id);
+                            }}
+                          >
+                            <span className="text-xl">😮</span>
+                          </button>
+                          
+                          {/* Reaction Options - Controlled by state */}
+                          {openReactionMenu === retreat.id && (
+                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
+                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Wow"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Wow reaction
+                                    handleReaction(exp.id, 'experience', 'wow');
+                                  }}
+                                >
+                                  <span className="text-lg">😮</span>
+                                </button>
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Care"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Care reaction
+                                    handleReaction(exp.id, 'experience', 'care');
+                                  }}
+                                >
+                                  <span className="text-lg">🥰</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Karaoke Nights Card - Special Active Experience */}
+              {(() => {
+                // Find Karaoke Nights from experiences
+                const karaokeNights = experiences.find(exp => exp.title === 'Karaoke Nights');
+                if (!karaokeNights) return null;
+                
+                const isBucketlisted = wishlistedExperienceIds.includes(karaokeNights.id);
+                return (
+                  <div
+                    key={karaokeNights.id}
+                    onClick={() => handleExperienceClick(karaokeNights)}
+                    className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
+                    style={{ animationDelay: `${filteredRetreats.length * 0.1}s` }}
+                  >
+                    {/* Image Section */}
+                    <div className="relative h-48 overflow-hidden">
+                      <Image
+                        src={karaokeNights.cover_image || '/placeholder-experience.jpg'}
+                        alt={karaokeNights.title}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      
+                      {/* Category Badge - Top Left */}
+                      {karaokeNights.mood && (
+                        <div className="absolute top-4 left-4 z-10">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
+                            {karaokeNights.mood}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Active Badge - Top Right */}
+                      <div className="absolute top-4 right-4 z-10">
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-green-500/95 backdrop-blur-sm shadow-lg text-white border-green-400">
+                          <span className="w-2 h-2 bg-white rounded-full"></span>
+                          Active
+                        </span>
+                      </div>
+                      
+                      {/* Saved Button - Bottom Right */}
+                      {user && (
+                        <button 
+                          className="absolute bottom-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                          onClick={(e) => handleExperienceWishlist(karaokeNights.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                          disabled={false}
+                        >
+                          {isBucketlisted ? (
+                            <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                          ) : (
+                            <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                          )}
+                        </button>
+                      )}
+                      
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-4">
+                      <h3 className="font-bold text-base text-gray-900 group-hover:text-yellow-500 transition-colors line-clamp-2 leading-tight mb-2">
+                        {karaokeNights.title}
+                      </h3>
+                      
+                      {/* Location & Duration */}
+                      <div className="flex items-center gap-3 text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <MapPinIcon className="w-3 h-3" />
+                          <span className="text-xs">{karaokeNights.location}</span>
+                        </div>
+                        {karaokeNights.duration && (
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="w-3 h-3" />
+                            <span className="text-xs">{karaokeNights.duration}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-bold text-gray-900">₹{karaokeNights.price?.toLocaleString()}</span>
+                          <span className="text-xs text-gray-500">/ person</span>
+                        </div>
+                        {/* Reaction Menu - Bottom Right */}
+                        <div className="relative">
+                          <button 
+                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenReactionMenu(openReactionMenu === karaokeNights.id ? null : karaokeNights.id);
+                            }}
+                          >
+                            <span className="text-xl">😮</span>
+                          </button>
+                          
+                          {/* Reaction Options - Controlled by state */}
+                          {openReactionMenu === karaokeNights.id && (
+                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
+                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Wow"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Wow reaction
+                                    handleReaction(exp.id, 'experience', 'wow');
+                                  }}
+                                >
+                                  <span className="text-lg">😮</span>
+                                </button>
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Care"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Care reaction
+                                    handleReaction(exp.id, 'experience', 'care');
+                                  }}
+                                >
+                                  <span className="text-lg">🥰</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {/* Hyper-local Experiences */}
+              {hyperLocalExperiences.map((exp, index) => {
+                const isBucketlisted = wishlistedExperienceIds.includes(exp.id);
+                return (
+                  <div
+                    key={exp.id}
+                    onClick={() => handleExperienceClick(exp)}
+                    className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {/* Image Section */}
+                    <div className="relative h-48 overflow-hidden">
+                      <Image
+                        src={exp.cover_image || '/placeholder-experience.jpg'}
+                        alt={exp.title}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      
+                      {/* Category Badge - Top Left */}
+                      {exp.mood && (
+                        <div className="absolute top-4 left-4 z-10">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
+                            {exp.mood}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Upcoming Label - Top Right (except for Karaoke Nights) */}
+                      {exp.title !== 'Karaoke Nights' && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-yellow-500/95 backdrop-blur-sm shadow-lg text-white border-yellow-400">
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                            Upcoming
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Saved Button - Top Right (only if no Upcoming label) */}
+                      {user && exp.title === 'Karaoke Nights' && (
+                        <button 
+                          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                          onClick={(e) => handleExperienceWishlist(exp.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                          disabled={false}
+                        >
+                          {isBucketlisted ? (
+                            <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                          ) : (
+                            <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                          )}
+                        </button>
+                      )}
+                      
+                      {/* Saved Button - Bottom Right (when Upcoming label is shown) */}
+                      {user && exp.title !== 'Karaoke Nights' && (
+                        <button 
+                          className="absolute bottom-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                          onClick={(e) => handleExperienceWishlist(exp.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                          disabled={false}
+                        >
+                          {isBucketlisted ? (
+                            <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                          ) : (
+                            <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                          )}
+                        </button>
+                      )}
+                      
+
+                      
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-4">
+                      <h3 className="font-bold text-base text-gray-900 group-hover:text-yellow-500 transition-colors line-clamp-2 leading-tight mb-2">
+                        {exp.title}
+                      </h3>
+                      
+                      
+                      {/* Location & Duration */}
+                      <div className="flex items-center gap-3 text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <MapPinIcon className="w-3 h-3" />
+                          <span className="text-xs">{exp.location}</span>
+                        </div>
+                        {exp.duration && (
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="w-3 h-3" />
+                            <span className="text-xs">{exp.duration}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-bold text-gray-900">₹{exp.price?.toLocaleString()}</span>
+                          <span className="text-xs text-gray-500">/ person</span>
+                        </div>
+                        {/* Reaction Menu - Bottom Right */}
+                        <div className="relative">
+                          <button 
+                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenReactionMenu(openReactionMenu === exp.id ? null : exp.id);
+                            }}
+                          >
+                            <span className="text-xl">😮</span>
+                          </button>
+                          
+                          {/* Reaction Options - Controlled by state */}
+                          {openReactionMenu === exp.id && (
+                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
+                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Wow"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Wow reaction
+                                    handleReaction(exp.id, 'experience', 'wow');
+                                  }}
+                                >
+                                  <span className="text-lg">😮</span>
+                                </button>
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Care"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Care reaction
+                                    handleReaction(exp.id, 'experience', 'care');
+                                  }}
+                                >
+                                  <span className="text-lg">🥰</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Online Experiences */}
+              {onlineExperiences.map((exp, index) => {
+                const isBucketlisted = wishlistedExperienceIds.includes(exp.id);
+                return (
+                  <div
+                    key={exp.id}
+                    onClick={() => handleExperienceClick(exp)}
+                    className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden animate-fade-in cursor-pointer transform hover:-translate-y-2"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {/* Image Section */}
+                    <div className="relative h-48 overflow-hidden">
+                      <Image
+                        src={exp.cover_image || '/placeholder-experience.jpg'}
+                        alt={exp.title}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      
+                      {/* Category Badge - Top Left */}
+                      {exp.mood && (
+                        <div className="absolute top-4 left-4 z-10">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/95 backdrop-blur-sm shadow-lg text-gray-700 border-gray-200">
+                            {exp.mood}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Upcoming Label - Top Right (except for Karaoke Nights) */}
+                      {exp.title !== 'Karaoke Nights' && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-yellow-500/95 backdrop-blur-sm shadow-lg text-white border-yellow-400">
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                            Upcoming
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Saved Button - Top Right (only if no Upcoming label) */}
+                      {user && exp.title === 'Karaoke Nights' && (
+                        <button 
+                          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                          onClick={(e) => handleExperienceWishlist(exp.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                          disabled={false}
+                        >
+                          {isBucketlisted ? (
+                            <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                          ) : (
+                            <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                          )}
+                        </button>
+                      )}
+                      
+                      {/* Saved Button - Bottom Right (when Upcoming label is shown) */}
+                      {user && exp.title !== 'Karaoke Nights' && (
+                        <button 
+                          className="absolute bottom-4 right-4 z-10 p-2 rounded-full bg-white/95 backdrop-blur-sm shadow-lg hover:bg-yellow-50 transition-all duration-200 hover:scale-110 active:scale-95"
+                          onClick={(e) => handleExperienceWishlist(exp.id, isBucketlisted, e)}
+                          aria-label={isBucketlisted ? 'Remove from bucketlist' : 'Add to bucketlist'}
+                          disabled={false}
+                        >
+                          {isBucketlisted ? (
+                            <BookmarkSolid className="w-5 h-5 text-yellow-500" />
+                          ) : (
+                            <BookmarkOutline className="w-5 h-5 text-gray-600 hover:text-yellow-500 transition-colors" />
+                          )}
+                        </button>
+                      )}
+                      
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-4">
+                      <h3 className="font-bold text-base text-gray-900 group-hover:text-yellow-500 transition-colors line-clamp-2 leading-tight mb-2">
+                        {exp.title}
+                      </h3>
+                      
+                      {/* Location & Duration */}
+                      <div className="flex items-center gap-3 text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <MapPinIcon className="w-3 h-3" />
+                          <span className="text-xs">{exp.location}</span>
+                        </div>
+                        {exp.duration && (
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="w-3 h-3" />
+                            <span className="text-xs">{exp.duration}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-bold text-gray-900">₹{exp.price?.toLocaleString()}</span>
+                          <span className="text-xs text-gray-500">/ person</span>
+                        </div>
+                        {/* Reaction Menu - Bottom Right */}
+                        <div className="relative">
+                          <button 
+                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenReactionMenu(openReactionMenu === exp.id ? null : exp.id);
+                            }}
+                          >
+                            <span className="text-xl">😮</span>
+                          </button>
+                          
+                          {/* Reaction Options - Controlled by state */}
+                          {openReactionMenu === exp.id && (
+                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
+                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Wow"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Wow reaction
+                                    handleReaction(exp.id, 'experience', 'wow');
+                                  }}
+                                >
+                                  <span className="text-lg">😮</span>
+                                </button>
+                                <button 
+                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
+                                  title="Care"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenReactionMenu(null);
+                                    // Handle Care reaction
+                                    handleReaction(exp.id, 'experience', 'care');
+                                  }}
+                                >
+                                  <span className="text-lg">🥰</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
