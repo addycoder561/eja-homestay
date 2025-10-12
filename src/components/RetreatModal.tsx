@@ -31,6 +31,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist, testWishlistTable } from '@/lib/database';
+import { followUser, unfollowUser } from '@/lib/social-api';
 import Image from 'next/image';
 import Script from 'next/script';
 
@@ -117,6 +118,8 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [roomImageIndices, setRoomImageIndices] = useState<{[key: string]: number}>({});
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [selectedExperiences, setSelectedExperiences] = useState<any[]>([]);
+  const [isFollowingHost, setIsFollowingHost] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -667,6 +670,39 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     }
   };
 
+  const handleFollowToggle = async () => {
+    if (!user || !retreat) {
+      toast.error('Please sign in to follow hosts');
+      return;
+    }
+
+    setFollowLoading(true);
+    try {
+      if (isFollowingHost) {
+        const result = await unfollowUser(user.id, retreat.host_id || 'eja-host-id');
+        if (result.success) {
+          setIsFollowingHost(false);
+          toast.success('Unfollowed successfully');
+        } else {
+          toast.error(result.error || 'Failed to unfollow');
+        }
+      } else {
+        const result = await followUser(user.id, retreat.host_id || 'eja-host-id');
+        if (result.success) {
+          setIsFollowingHost(true);
+          toast.success('Following successfully');
+        } else {
+          toast.error(result.error || 'Failed to follow');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      toast.error('Failed to follow/unfollow. Please try again.');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -1154,8 +1190,12 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                     <span className="text-xs font-medium text-gray-900">
                       {retreat.host_name || 'EJA'}
                     </span>
-                    <button className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                      Follow
+                    <button 
+                      onClick={handleFollowToggle}
+                      disabled={followLoading}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {followLoading ? '...' : (isFollowingHost ? 'Following' : 'Follow')}
                     </button>
                   </div>
                 </div>

@@ -24,6 +24,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 interface ProfileData {
   id: string;
@@ -194,9 +195,65 @@ function ProfilePageContent() {
       } : null);
 
       setIsEditing(false);
+      toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
+      toast.error('Failed to update profile. Please try again.');
     }
+  };
+
+  const handleImageUpload = async () => {
+    if (!user) return;
+
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        // Upload to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        // Update profile with new avatar URL
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            avatar_url: publicUrl,
+            updated_at: new Date().toISOString()
+          });
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setProfileData(prev => prev ? {
+          ...prev,
+          avatar_url: publicUrl
+        } : null);
+
+        toast.success('Profile picture updated successfully!');
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast.error('Failed to upload image. Please try again.');
+      }
+    };
+    input.click();
   };
 
   const handleSignOut = async () => {
@@ -314,7 +371,10 @@ function ProfilePageContent() {
                 )}
               </div>
               {isEditing && (
-                <button className="absolute bottom-0 right-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors">
+                <button 
+                  onClick={handleImageUpload}
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors"
+                >
                   <CameraIcon className="w-4 h-4" />
                 </button>
               )}
