@@ -82,7 +82,6 @@ export function AuthModal({ open, mode, onClose, onSwitchMode }: AuthModalProps)
       }
       try {
         const { error } = await signUp(formData.email, formData.password, formData.fullName, 'guest');
-        console.log('Signup error:', error); // DEBUG LOG
         if (error) {
           setFormError(error.message || 'Failed to create account');
         } else {

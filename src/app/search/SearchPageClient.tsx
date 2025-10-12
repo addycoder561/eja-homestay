@@ -133,18 +133,10 @@ export default function SearchPageClient() {
           // Logic: 
           // 1. If no filters at all -> fetch all properties
           // 2. If location only OR location + other criteria OR advanced filters -> use search
-          console.log('🔍 Search Debug - Filters:', combinedFilters);
-          console.log('🔍 Search Debug - selectedFilterChips:', selectedFilterChips);
-          console.log('🔍 Search Debug - hasNoFilters:', hasNoFilters);
-          console.log('🔍 Search Debug - hasLocationOnly:', hasLocationOnly);
-          console.log('🔍 Search Debug - hasAdvancedFilters:', hasAdvancedFilters);
-          console.log('🔍 Search Debug - hasFilters:', hasFilters);
           
           if (hasNoFilters && !hasAdvancedFilters) {
-            console.log('🔍 Search Debug - Fetching all properties');
             data = await getProperties();
           } else {
-            console.log('🔍 Search Debug - Using search with filters');
             data = await searchProperties(combinedFilters);
           }
           
@@ -166,19 +158,13 @@ export default function SearchPageClient() {
     fetchData();
   }, [filters, selectedFilterChips, advancedFilters, searchType, category]);
 
-  // Check database content on mount for debugging
-  useEffect(() => {
-    checkDatabaseContent();
-  }, []);
 
   // Filter chip click handler
   const handleFilterChipClick = (chipName: string) => {
-    console.log('🔍 DEBUG - Filter chip clicked:', chipName);
     setSelectedFilterChips(prev => {
       const newChips = prev.includes(chipName) 
         ? prev.filter(chip => chip !== chipName)
         : [...prev, chipName];
-      console.log('🔍 DEBUG - Updated selectedFilterChips:', newChips);
       return newChips;
     });
   };
@@ -440,7 +426,6 @@ export default function SearchPageClient() {
                             key={type.label}
                             onClick={() => {
                               const newPropertyType = advancedFilters.propertyType === type.label ? '' : type.label;
-                              console.log('🔍 DEBUG - Property type changed to:', newPropertyType);
                               setAdvancedFilters(prev => ({ 
                                 ...prev, 
                                 propertyType: newPropertyType

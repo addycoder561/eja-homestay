@@ -51,7 +51,6 @@ export default function SignUpForm() {
 
     try {
       const result = await signUp(formData.email, formData.password, 'User', 'guest');
-      console.log('Signup result:', result); // DEBUG LOG
       if (!result.error) {
         toast.success('Account created and logged in!');
         router.push('/');

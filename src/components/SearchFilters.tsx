@@ -229,7 +229,10 @@ export function SearchFilters({ filters, onFilterChange }: SearchFiltersProps) {
               icon="🏷️"
               label="Special offers"
               isSelected={false}
-              onClick={() => {}} // TODO: Implement special offers filter
+              onClick={() => {
+                // Toggle special offers filter
+                onFilterChange('specialOffers', !filters.specialOffers);
+              }}
             />
 
             {/* Scroll Indicator */}

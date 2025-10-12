@@ -115,8 +115,6 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
 
 // Property functions
 export async function getProperties(filters?: SearchFilters): Promise<PropertyWithHost[]> {
-  console.log('🔍 DEBUG - getProperties called with filters:', filters);
-  
   let query = supabase
     .from('properties')
     .select('*')
@@ -144,9 +142,6 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
     console.error('Error fetching properties:', error);
     return [];
   }
-
-  console.log('🔍 DEBUG - getProperties found', data?.length || 0, 'properties');
-  console.log('🔍 DEBUG - First few properties:', data?.slice(0, 3).map(p => ({ id: p.id, title: p.title, is_available: p.is_available })));
 
   // Keep original platform ratings separate from Google ratings
   const propertiesWithRatings = (data || []).map(property => {
@@ -377,8 +372,6 @@ export async function checkAvailability(
 
 // Search properties
 export async function searchProperties(filters: SearchFilters): Promise<PropertyWithHost[]> {
-  console.log('🔍 DEBUG - searchProperties called with filters:', filters);
-  
   let query = supabase
     .from('properties')
     .select('*')
@@ -397,12 +390,10 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
   }
 
   if (filters.propertyType) {
-    console.log('🔍 DEBUG - Applying propertyType filter:', filters.propertyType);
     query = query.eq('property_type', filters.propertyType);
   }
 
   if (filters.amenities && filters.amenities.length > 0) {
-    console.log('🔍 DEBUG - Applying amenities filter:', filters.amenities);
     // Convert amenity IDs to actual amenity names for database query
     const amenityMap: Record<string, string> = {
       'pet-friendly': 'Pet Friendly',
@@ -410,7 +401,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     };
     
     const dbAmenities = filters.amenities.map(id => amenityMap[id]).filter(Boolean);
-    console.log('🔍 DEBUG - Converted amenities:', dbAmenities);
     if (dbAmenities.length > 0) {
       query = query.overlaps('amenities', dbAmenities);
     }
@@ -418,8 +408,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
 
   // Handle filter chips
   if (filters.selectedChips && filters.selectedChips.length > 0) {
-    console.log('🔍 DEBUG - Processing selectedChips:', filters.selectedChips);
-    
     const propertyTypeChips = filters.selectedChips.filter(chip => 
               ['Boutique', 'Homely', 'Off-Beat'].includes(chip)
     );
@@ -430,13 +418,8 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
       ['WiFi', 'Mountain View'].includes(chip)
     );
 
-    console.log('🔍 DEBUG - Property type chips:', propertyTypeChips);
-    console.log('🔍 DEBUG - Tag chips:', tagChips);
-    console.log('🔍 DEBUG - Amenity chips:', amenityChips);
-
     // Filter by property type chips (case-insensitive)
     if (propertyTypeChips.length > 0) {
-      console.log('🔍 DEBUG - Applying property type chips filter:', propertyTypeChips);
       // Convert to lowercase for case-insensitive matching
       const dbPropertyTypes = propertyTypeChips.map(chip => chip.toLowerCase());
       query = query.in('property_type', dbPropertyTypes);
@@ -444,7 +427,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
 
     // Filter by tag chips (handle different formats)
     if (tagChips.length > 0) {
-      console.log('🔍 DEBUG - Applying tag chips filter:', tagChips);
       // Tags are already in the correct format (Families-only, Females-only)
       query = query.overlaps('tags', tagChips);
     }
@@ -456,7 +438,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
         'Mountain View': 'Mountain View'
       };
       const dbAmenities = amenityChips.map(chip => amenityMap[chip]).filter(Boolean);
-      console.log('🔍 DEBUG - Converted amenity chips:', dbAmenities);
       if (dbAmenities.length > 0) {
         query = query.overlaps('amenities', dbAmenities);
       }
@@ -485,8 +466,6 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
     return [];
   }
 
-  console.log('🔍 DEBUG - Query results:', data?.length || 0, 'properties found');
-  console.log('🔍 DEBUG - First few properties:', data?.slice(0, 3).map(p => ({ id: p.id, title: p.title, property_type: p.property_type, amenities: p.amenities, tags: p.tags })));
 
   let filteredProperties = data || [];
 
@@ -1204,166 +1183,8 @@ export async function setRoomInventory(roomId: string, date: string, available: 
   return true;
 }
 
-// Function to check database content for debugging
-export async function checkDatabaseContent(): Promise<void> {
-  console.log('🔍 DEBUG - Checking database content...');
-  
-  const { data, error } = await supabase
-    .from('properties')
-    .select('id, title, property_type, amenities, tags')
-    .eq('is_available', true)
-    .limit(10);
-  
-  if (error) {
-    console.error('🔍 DEBUG - Error fetching data:', error);
-    return;
-  }
-  
-  console.log('🔍 DEBUG - Total properties found:', data?.length || 0);
-  
-  // Check property types
-  const propertyTypes = [...new Set(data?.map(p => p.property_type).filter(Boolean))];
-  console.log('🔍 DEBUG - Available property types:', propertyTypes);
-  
-  // Check amenities
-  const allAmenities = data?.flatMap(p => p.amenities || []).filter(Boolean);
-  const uniqueAmenities = [...new Set(allAmenities)];
-  console.log('🔍 DEBUG - Available amenities:', uniqueAmenities);
-  
-  // Check tags
-  const allTags = data?.flatMap(p => p.tags || []).filter(Boolean);
-  const uniqueTags = [...new Set(allTags)];
-  console.log('🔍 DEBUG - Available tags:', uniqueTags);
-  
-  // Show sample properties
-  console.log('🔍 DEBUG - Sample properties:');
-  data?.slice(0, 3).forEach((property, index) => {
-    console.log(`  Property ${index + 1}:`, {
-      id: property.id,
-      title: property.title,
-      property_type: property.property_type,
-      amenities: property.amenities,
-      tags: property.tags
-    });
-  });
-}
 
-// Function to check experiences database content for debugging
-export async function checkExperiencesContent(): Promise<void> {
-  console.log('🔍 DEBUG - Checking experiences database content...');
-  
-  const { data, error } = await supabase
-    .from('experiences_with_host')
-    .select('*')
-    .limit(10);
-  
-  if (error) {
-    console.error('🔍 DEBUG - Error fetching experiences:', error);
-    return;
-  }
-  
-  console.log('🔍 DEBUG - Total experiences found:', data?.length || 0);
-  
-  // Check categories
-  const allCategories = data?.flatMap(exp => {
-    if (Array.isArray(exp.categories)) {
-      return exp.categories;
-    } else if (exp.categories) {
-      return [exp.categories];
-    }
-    return [];
-  }).filter(Boolean);
-  const uniqueCategories = [...new Set(allCategories)];
-  console.log('🔍 DEBUG - Available experience categories:', uniqueCategories);
-  console.log('🔍 DEBUG - Experience categories data types:', data?.map(e => ({ 
-    id: e.id, 
-    title: e.title, 
-    categories: e.categories, 
-    isArray: Array.isArray(e.categories) 
-  })));
-  
-  // Check host names
-  const hostNames = [...new Set(data?.map(exp => exp.host_name).filter(Boolean))];
-  console.log('🔍 DEBUG - Available host names:', hostNames);
-  
-  // Show sample experiences
-  console.log('🔍 DEBUG - Sample experiences:');
-  data?.slice(0, 3).forEach((experience, index) => {
-    console.log(`  Experience ${index + 1}:`, {
-      id: experience.id,
-      title: experience.title,
-      location: experience.location,
-      price: experience.price,
-      duration: experience.duration,
-      categories: experience.categories,
-      host_name: experience.host_name,
-      host_type: experience.host_type,
-      images: experience.images?.length || 0,
-      cover_image: experience.cover_image ? 'Yes' : 'No',
-      unique_propositions: experience.unique_propositions?.length || 0
-    });
-  });
-}
 
-// Function to check retreats database content for debugging
-export async function checkRetreatsContent(): Promise<void> {
-  console.log('🔍 DEBUG - Checking retreats database content...');
-  
-  const { data, error } = await supabase
-    .from('retreats')
-    .select('id, title, subtitle, location, price, duration, categories, host_name, host_type, unique_propositions')
-    .eq('is_active', true)
-    .limit(10);
-  
-  if (error) {
-    console.error('🔍 DEBUG - Error fetching retreats:', error);
-    return;
-  }
-  
-  console.log('🔍 DEBUG - Total retreats found:', data?.length || 0);
-  
-  // Check categories
-  const allCategories = data?.flatMap(r => Array.isArray(r.categories) ? r.categories : [r.categories]).filter(Boolean);
-  const uniqueCategories = [...new Set(allCategories)];
-  console.log('🔍 DEBUG - Available retreat categories:', uniqueCategories);
-  console.log('🔍 DEBUG - Categories data types:', data?.map(r => ({ 
-    id: r.id, 
-    title: r.title, 
-    categories: r.categories, 
-    isArray: Array.isArray(r.categories) 
-  })));
-  
-  // Check host types
-  const hostTypes = [...new Set(data?.map(r => r.host_type).filter(Boolean))];
-  console.log('🔍 DEBUG - Available host types:', hostTypes);
-  
-  // Check unique propositions
-  const allPropositions = data?.flatMap(r => r.unique_propositions || []).filter(Boolean);
-  const uniquePropositions = [...new Set(allPropositions)];
-  console.log('🔍 DEBUG - Available unique propositions:', uniquePropositions);
-  
-  // Log sample retreat data
-  if (data && data.length > 0) {
-    console.log('🔍 DEBUG - Sample retreat data:', data[0]);
-  }
-  
-  // Show sample retreats
-  console.log('🔍 DEBUG - Sample retreats:');
-  data?.slice(0, 3).forEach((retreat, index) => {
-    console.log(`  Retreat ${index + 1}:`, {
-      id: retreat.id,
-      title: retreat.title,
-      subtitle: retreat.subtitle,
-      location: retreat.location,
-      price: retreat.price,
-      duration: retreat.duration,
-      categories: retreat.categories,
-      host_name: retreat.host_name,
-      host_type: retreat.host_type,
-      unique_propositions: retreat.unique_propositions?.length || 0
-    });
-  });
-}
 
 // Function to get unique experience categories
 export async function getExperienceCategories(): Promise<string[]> {

@@ -119,12 +119,7 @@ export default function SearchPageClient() {
       
       try {
         // Property search retained for future use; Discover shows experiences/retreats
-        console.log('No property filters applied on Discover; fetching all properties');
-        const combinedFilters = { ...filters };
-        console.log('🔍 DEBUG - Filters (properties unused on Discover):', combinedFilters);
         const data = await getProperties();
-        
-        console.log('Fetched properties:', data);
         setProperties(data || []);
         setTotalResults((data || []).length);
       } catch (error) {
@@ -147,9 +142,7 @@ export default function SearchPageClient() {
         setExperiences(data || []);
         
         // Extract unique mood values
-        console.log('🔍 DEBUG - All experiences with moods:', data?.map(exp => ({ id: exp.id, title: exp.title, mood: exp.mood })));
         const moods = [...new Set(data?.map(exp => exp.mood).filter(mood => mood && mood.trim() !== '') || [])];
-        console.log('🔍 DEBUG - Extracted moods:', moods);
         setAvailableMoods(moods);
       } catch (error) {
         console.error('Error fetching experiences:', error);
@@ -168,7 +161,6 @@ export default function SearchPageClient() {
       try {
         setLoadingRetreats(true);
         const data = await getRetreats();
-        console.log('🔍 DEBUG - Retreats fetched:', data?.length || 0, 'retreats');
         setRetreats(data || []);
       } catch (error) {
         console.error('Error fetching retreats:', error);
@@ -673,14 +665,11 @@ export default function SearchPageClient() {
 
   // Apply mood filter to ALL experiences (regardless of content type)
   const filteredExperiences = experiences.filter((exp) => {
-    console.log('🔍 DEBUG - Filtering experience:', { title: exp.title, mood: exp.mood, selectedMood, location: exp.location });
-    
     // If a specific mood is selected, ONLY filter by mood (ignore content filters)
     if (selectedMood !== 'all') {
       const expMood = exp.mood?.trim();
       const filterMood = selectedMood?.trim();
       const moodMatch = expMood === filterMood;
-      console.log('🔍 DEBUG - Mood filtering:', { expMood, filterMood, moodMatch });
       return moodMatch;
     }
     

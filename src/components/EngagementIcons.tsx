@@ -213,8 +213,19 @@ export function EngagementIcons({ itemId, itemType, itemTitle, itemUrl }: Engage
 
     setLoading(true);
     try {
-      // TODO: Add contribute story to database
-      // await addContributeStory(user.id, itemId, itemType, contributeForm.story);
+      // Add contribute story to database
+      const { error } = await supabase
+        .from('contribute_stories')
+        .insert({
+          user_id: user.id,
+          item_id: itemId,
+          item_type: itemType,
+          story: contributeForm.story,
+          created_at: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+      
       toast.success('Your story has been shared!');
       setShowContributeModal(false);
       setContributeForm({

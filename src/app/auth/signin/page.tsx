@@ -34,7 +34,6 @@ function SignInInner() {
 
     try {
       const result = await signIn(formData.email, formData.password);
-      console.log('SignIn result:', result); // DEBUG LOG
       if (!result.error) {
         toast.success('Signed in successfully!');
         // Wait for profile to be available and auth state to update

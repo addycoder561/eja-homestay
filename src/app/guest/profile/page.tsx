@@ -420,10 +420,20 @@ export default function ProfilePage() {
                 <Button
                   variant="outline"
                   className="text-red-600 border-red-600 hover:bg-red-50"
-                  onClick={() => {
+                  onClick={async () => {
                     if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                      // TODO: Implement account deletion
-                      toast.error('Account deletion not implemented yet');
+                      try {
+                        // Delete user account from Supabase
+                        const { error } = await supabase.auth.admin.deleteUser(user.id);
+                        if (error) throw error;
+                        
+                        toast.success('Account deleted successfully');
+                        // Redirect to home page
+                        window.location.href = '/';
+                      } catch (error) {
+                        console.error('Error deleting account:', error);
+                        toast.error('Failed to delete account. Please contact support.');
+                      }
                     }
                   }}
                 >

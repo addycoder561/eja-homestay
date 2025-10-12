@@ -7,10 +7,10 @@ const API_CACHE = 'eja-homestay-api-v2';
 const STATIC_ASSETS = [
   '/',
   '/offline',
-  '/placeholder-experience.jpg',
+  '/placeholder-experience.svg',
   '/eja_svg.svg',
   '/eja_transparent svg.svg',
-  '/eja_transparent logo.png',
+  '/eja_transparent_logo.png',
   '/manifest.json',
 ];
 
