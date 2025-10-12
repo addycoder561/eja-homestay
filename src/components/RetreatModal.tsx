@@ -37,6 +37,7 @@ import Script from 'next/script';
 
 interface Retreat {
   id: string;
+  host_id: string;
   title: string;
   description: string;
   price: number;
@@ -676,10 +677,15 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
       return;
     }
 
+    if (!retreat.host_id) {
+      toast.error('Host information not available');
+      return;
+    }
+
     setFollowLoading(true);
     try {
       if (isFollowingHost) {
-        const result = await unfollowUser(user.id, retreat.host_id || 'eja-host-id');
+        const result = await unfollowUser(user.id, retreat.host_id);
         if (result.success) {
           setIsFollowingHost(false);
           toast.success('Unfollowed successfully');
@@ -687,7 +693,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           toast.error(result.error || 'Failed to unfollow');
         }
       } else {
-        const result = await followUser(user.id, retreat.host_id || 'eja-host-id');
+        const result = await followUser(user.id, retreat.host_id);
         if (result.success) {
           setIsFollowingHost(true);
           toast.success('Following successfully');

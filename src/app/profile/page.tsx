@@ -175,7 +175,14 @@ function ProfilePageContent() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      console.log('💾 Saving profile:', {
+        id: user.id,
+        full_name: editForm.full_name,
+        bio: editForm.bio,
+        mood_tag: editForm.mood_tag
+      });
+
+      const { data, error } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
@@ -183,9 +190,15 @@ function ProfilePageContent() {
           bio: editForm.bio,
           mood_tag: editForm.mood_tag,
           updated_at: new Date().toISOString()
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      console.log('💾 Profile save result:', { data, error });
+
+      if (error) {
+        console.error('❌ Profile save error:', error);
+        throw error;
+      }
 
       setProfileData(prev => prev ? {
         ...prev,
@@ -198,7 +211,7 @@ function ProfilePageContent() {
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile. Please try again.');
+      toast.error(`Failed to update profile: ${error.message || 'Please try again.'}`);
     }
   };
 
@@ -214,32 +227,58 @@ function ProfilePageContent() {
       if (!file) return;
 
       try {
+        console.log('📸 Uploading image:', file.name, file.size);
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error('Image size must be less than 5MB');
+          return;
+        }
+
         // Upload to Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
         const filePath = `avatars/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file);
+        console.log('📸 Uploading to:', filePath);
 
-        if (uploadError) throw uploadError;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        console.log('📸 Upload result:', { uploadData, uploadError });
+
+        if (uploadError) {
+          console.error('❌ Upload error:', uploadError);
+          throw uploadError;
+        }
 
         // Get public URL
         const { data: { publicUrl } } = supabase.storage
           .from('avatars')
           .getPublicUrl(filePath);
 
+        console.log('📸 Public URL:', publicUrl);
+
         // Update profile with new avatar URL
-        const { error: updateError } = await supabase
+        const { data: updateData, error: updateError } = await supabase
           .from('profiles')
           .upsert({
             id: user.id,
             avatar_url: publicUrl,
             updated_at: new Date().toISOString()
-          });
+          })
+          .select();
 
-        if (updateError) throw updateError;
+        console.log('📸 Profile update result:', { updateData, updateError });
+
+        if (updateError) {
+          console.error('❌ Profile update error:', updateError);
+          throw updateError;
+        }
 
         // Update local state
         setProfileData(prev => prev ? {
@@ -250,7 +289,7 @@ function ProfilePageContent() {
         toast.success('Profile picture updated successfully!');
       } catch (error) {
         console.error('Error uploading image:', error);
-        toast.error('Failed to upload image. Please try again.');
+        toast.error(`Failed to upload image: ${error.message || 'Please try again.'}`);
       }
     };
     input.click();
