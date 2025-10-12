@@ -82,7 +82,7 @@ export default function Home() {
         setLoading(true);
         
         // Fetch data with timeout and better error handling
-        const fetchWithTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 8000): Promise<T | null> => {
+        const fetchWithTimeout = async (promise: Promise<any>, timeoutMs: number = 8000): Promise<any | null> => {
           try {
             const timeoutPromise = new Promise<never>((_, reject) => 
               setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
