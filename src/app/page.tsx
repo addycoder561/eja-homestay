@@ -19,6 +19,7 @@ import { PropertyWithHost } from '@/lib/types';
 import ExperienceModal from '@/components/ExperienceModal';
 import RetreatModal from '@/components/RetreatModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 
 
@@ -80,35 +81,47 @@ export default function Home() {
       try {
         setLoading(true);
         
-        // Fetch data with simple error handling
-        const [retreatsData, experiencesData, propertiesData] = await Promise.allSettled([
-          getRetreats(),
-          getExperiences(),
-          getProperties()
+        // Fetch data with timeout and better error handling
+        const fetchWithTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 8000): Promise<T | null> => {
+          try {
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+            );
+            return await Promise.race([promise, timeoutPromise]);
+          } catch (error) {
+            console.error('Request failed or timed out:', error);
+            return null;
+          }
+        };
+
+        const [retreatsData, experiencesData, propertiesData, moodData] = await Promise.allSettled([
+          fetchWithTimeout(getRetreats()),
+          fetchWithTimeout(getExperiences()),
+          fetchWithTimeout(getProperties()),
+          fetchWithTimeout(
+            supabase
+              .from('experiences_with_host')
+              .select('mood')
+              .not('mood', 'is', null)
+              .neq('mood', '')
+              .then(({ data, error }) => {
+                if (error) throw error;
+                return data;
+              })
+          )
         ]);
 
         const retreatsResult = retreatsData.status === 'fulfilled' ? (retreatsData.value || []) : [];
         const experiencesResult = experiencesData.status === 'fulfilled' ? (experiencesData.value || []) : [];
         const propertiesResult = propertiesData.status === 'fulfilled' ? (propertiesData.value || []) : [];
-        
-        // Debug: Log the data structure
-        console.log('Retreats data:', retreatsResult);
-        console.log('Experiences data:', experiencesResult);
-        console.log('Properties data:', propertiesResult);
+        const moodResult = moodData.status === 'fulfilled' ? (moodData.value || []) : [];
         
         setRetreats(retreatsResult);
         setExperiences(experiencesResult);
         setProperties(propertiesResult);
 
-        // Fetch unique moods from experiences_with_host view
-        const { data: moodData, error: moodError } = await supabase
-          .from('experiences_with_host')
-          .select('mood')
-          .not('mood', 'is', null)
-          .neq('mood', '');
-
-        if (!moodError && moodData) {
-          const uniqueMoods = [...new Set(moodData.map(item => item.mood).filter(Boolean))];
+        if (moodResult.length > 0) {
+          const uniqueMoods = [...new Set(moodResult.map(item => item.mood).filter(Boolean))];
           setMoods(uniqueMoods.slice(0, 9)); // Limit to 9 moods
         }
 
@@ -196,14 +209,7 @@ export default function Home() {
 
   // Show loading state while data is being fetched
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading amazing experiences...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading amazing experiences..." />;
   }
 
   return (

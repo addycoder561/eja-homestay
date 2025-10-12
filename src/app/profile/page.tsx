@@ -7,6 +7,8 @@ import { getUserSocialStats, getUserReactionCount } from '@/lib/social-api';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { SupportModal } from '@/components/SupportModal';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { 
   UserIcon, 
   HeartIcon, 
@@ -49,7 +51,7 @@ interface Metrics {
   smiles: number;
 }
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, profile } = useAuth();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [experiences, setExperiences] = useState<Experience[]>([]);
@@ -72,7 +74,10 @@ export default function ProfilePage() {
   // Fetch profile data
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         // Use the profile from AuthContext if available, otherwise fetch from API
@@ -92,39 +97,51 @@ export default function ProfilePage() {
           });
         }
 
-        // Fetch created experiences using the database function
-        const { data: experiencesData, error: experiencesError } = await supabase
-          .from('experiences_with_host')
-          .select('id, title, cover_image, mood, location, created_at')
-          .eq('created_by', user.id)
-          .order('created_at', { ascending: false });
+        // Fetch data in parallel to improve performance
+        const [experiencesResult, socialStatsResult, reactionCountResult] = await Promise.allSettled([
+          // Fetch created experiences
+          supabase
+            .from('experiences_with_host')
+            .select('id, title, cover_image, mood, location, created_at')
+            .eq('created_by', user.id)
+            .order('created_at', { ascending: false }),
+          // Get social stats
+          getUserSocialStats(user.id),
+          // Get reaction count
+          getUserReactionCount(user.id)
+        ]);
 
-        if (experiencesError) {
-          console.error('Error fetching experiences:', experiencesError);
-          setExperiences([]);
+        // Handle experiences data
+        if (experiencesResult.status === 'fulfilled') {
+          const { data: experiencesData, error: experiencesError } = experiencesResult.value;
+          
+          if (experiencesError) {
+            console.error('Error fetching experiences:', experiencesError);
+            setExperiences([]);
+          } else {
+            // Add mock metrics for now (you can implement real metrics later)
+            const experiencesWithMetrics = (experiencesData || []).map(exp => ({
+              ...exp,
+              likes_count: Math.floor(Math.random() * 100),
+              views_count: Math.floor(Math.random() * 500)
+            }));
+
+            setExperiences(experiencesWithMetrics);
+          }
         } else {
-        // Add mock metrics for now (you can implement real metrics later)
-        const experiencesWithMetrics = (experiencesData || []).map(exp => ({
-          ...exp,
-          likes_count: Math.floor(Math.random() * 100),
-          views_count: Math.floor(Math.random() * 500)
-        }));
+          console.error('Error in experiences fetch:', experiencesResult.reason);
+          setExperiences([]);
+        }
 
-        setExperiences(experiencesWithMetrics);
-
-        // Calculate metrics
-        const totalLikes = experiencesWithMetrics.reduce((sum, exp) => sum + exp.likes_count, 0);
-        
-        // Get real social stats
-        const socialStats = await getUserSocialStats(user.id);
-        const reactionCount = await getUserReactionCount(user.id);
+        // Handle social stats
+        const socialStats = socialStatsResult.status === 'fulfilled' ? socialStatsResult.value : { success: false };
+        const reactionCount = reactionCountResult.status === 'fulfilled' ? reactionCountResult.value : { success: false };
         
         setMetrics({
-          check_ins: experiencesData?.length || 0,
+          check_ins: experiencesResult.status === 'fulfilled' ? (experiencesResult.value.data?.length || 0) : 0,
           followers: socialStats.success ? socialStats.data?.follower_count || 0 : 0,
           smiles: reactionCount.success ? reactionCount.count : 0
         });
-        }
 
       } catch (error) {
         console.error('Error fetching profile data:', error);
@@ -192,11 +209,7 @@ export default function ProfilePage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading your profile..." />;
   }
 
   if (!user) {
@@ -469,5 +482,13 @@ export default function ProfilePage() {
         onClose={() => setSupportOpen(false)} 
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <ErrorBoundary>
+      <ProfilePageContent />
+    </ErrorBoundary>
   );
 }
