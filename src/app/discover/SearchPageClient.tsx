@@ -64,11 +64,20 @@ export default function SearchPageClient() {
   const [availableMoods, setAvailableMoods] = useState<string[]>([]);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  // Read mood parameter from URL on component mount
+  // Read mood and filter parameters from URL on component mount
   useEffect(() => {
     const moodParam = searchParams.get('mood');
+    const filterParam = searchParams.get('filter');
+    
     if (moodParam) {
       setSelectedMood(moodParam);
+    }
+    
+    if (filterParam) {
+      // Map filter parameter to contentFilter
+      if (filterParam === 'hyper-local' || filterParam === 'online' || filterParam === 'retreats' || filterParam === 'popular') {
+        setContentFilter(filterParam as 'hyper-local' | 'online' | 'retreats' | 'all');
+      }
     }
   }, [searchParams]);
   const [filters, setFilters] = useState<SearchFiltersType>({
@@ -629,6 +638,18 @@ export default function SearchPageClient() {
     return loc === 'online' || loc.includes('virtual') || loc.includes('remote');
   };
 
+  // Determine if an experience is "hyper-local"
+  const isHyperLocalExperience = (exp: any) => {
+    const loc = (exp?.location || '').toLowerCase();
+    return loc === 'hyper-local';
+  };
+
+  // Determine if an experience is a "retreat"
+  const isRetreatExperience = (exp: any) => {
+    const loc = (exp?.location || '').toLowerCase();
+    return loc === 'retreats';
+  };
+
   // Define retreat order
   const retreatOrder = [
     'Family Getaways',
@@ -674,9 +695,10 @@ export default function SearchPageClient() {
     }
     
     // If "All Moods" is selected, apply content filters
-    if (contentFilter === 'retreats') return false;
+    if (contentFilter === 'retreats') return false; // Retreats are handled separately
     if (contentFilter === 'online') return isOnlineExperience(exp);
-    if (contentFilter === 'hyper-local') return !isOnlineExperience(exp);
+    if (contentFilter === 'hyper-local') return isHyperLocalExperience(exp);
+    if (contentFilter === 'popular') return true; // Show all experiences for popular
     if (contentFilter === 'all') {
       // When showing all, exclude retreats from experiences section (they have their own section)
       if (exp.location === 'Retreats') return false;
@@ -687,11 +709,11 @@ export default function SearchPageClient() {
 
   // Separate experiences into hyper-local and online for proper ordering
   // Exclude Karaoke Nights from hyper-local since it's displayed separately
-  const hyperLocalExperiences = filteredExperiences.filter(exp => !isOnlineExperience(exp) && exp.title !== 'Karaoke Nights');
+  const hyperLocalExperiences = filteredExperiences.filter(exp => isHyperLocalExperience(exp) && exp.title !== 'Karaoke Nights');
   const onlineExperiences = filteredExperiences.filter(exp => isOnlineExperience(exp));
 
   // Only show retreats section when no specific mood is selected and content filter allows it
-  const filteredRetreats = (selectedMood === 'all' && (contentFilter === 'retreats' || contentFilter === 'all')) ? sortedRetreats : [];
+  const filteredRetreats = (selectedMood === 'all' && (contentFilter === 'retreats' || contentFilter === 'all' || contentFilter === 'popular')) ? sortedRetreats : [];
 
   // Filter properties based on content type toggle - Properties moved to search page
   const filteredProperties = properties.filter((property) => {
@@ -721,7 +743,7 @@ export default function SearchPageClient() {
     retreats: filteredRetreats.length,
     totalExperiences: experiences.length,
     onlineExperiences: experiences.filter(isOnlineExperience).length,
-    hyperLocalExperiences: experiences.filter(exp => !isOnlineExperience(exp)).length,
+    hyperLocalExperiences: experiences.filter(isHyperLocalExperience).length,
     experiencesWithSelectedMood: selectedMood !== 'all' ? experiences.filter(exp => exp.mood?.trim() === selectedMood?.trim()).length : 0
   });
   

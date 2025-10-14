@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getHyperLocalExperiences, getRetreats, getOnlineExperiences, getPopularExperiences } from '@/lib/database';
 
 const CATEGORIES = [
   {
@@ -42,6 +43,41 @@ const CATEGORIES = [
 export function CategoryCards() {
   const router = useRouter();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [categoryData, setCategoryData] = useState({
+    hyperLocal: 0,
+    retreats: 0,
+    online: 0,
+    popular: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategoryData = async () => {
+      try {
+        setLoading(true);
+        
+        const [hyperLocalData, retreatsData, onlineData, popularData] = await Promise.allSettled([
+          getHyperLocalExperiences(),
+          getRetreats(),
+          getOnlineExperiences(),
+          getPopularExperiences()
+        ]);
+
+        setCategoryData({
+          hyperLocal: hyperLocalData.status === 'fulfilled' ? hyperLocalData.value?.length || 0 : 0,
+          retreats: retreatsData.status === 'fulfilled' ? retreatsData.value?.length || 0 : 0,
+          online: onlineData.status === 'fulfilled' ? onlineData.value?.length || 0 : 0,
+          popular: popularData.status === 'fulfilled' ? popularData.value?.length || 0 : 0
+        });
+      } catch (error) {
+        console.error('Error fetching category data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategoryData();
+  }, []);
 
   const handleCardClick = (href: string) => {
     router.push(href);
@@ -75,6 +111,11 @@ export function CategoryCards() {
                 <h3 className="font-bold text-gray-900 text-lg capitalize group-hover:text-yellow-500 transition-colors">
                   {category.title}
                 </h3>
+                {!loading && (
+                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                    {categoryData[category.id as keyof typeof categoryData] || 0}
+                  </span>
+                )}
               </div>
               <p className="text-gray-600 text-sm">
                 {category.subtitle}

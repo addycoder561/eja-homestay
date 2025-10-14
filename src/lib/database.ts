@@ -1115,6 +1115,71 @@ export async function getRetreats(): Promise<any[]> {
   }
 }
 
+// New functions for location-based filtering
+export async function getHyperLocalExperiences(): Promise<Experience[]> {
+  try {
+    const { data, error } = await supabase
+      .from('experiences_unified')
+      .select('*')
+      .eq('is_active', true)
+      .eq('location', 'Hyper-local')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching hyper-local experiences:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Unexpected error in getHyperLocalExperiences:', error);
+    return [];
+  }
+}
+
+export async function getOnlineExperiences(): Promise<Experience[]> {
+  try {
+    const { data, error } = await supabase
+      .from('experiences_unified')
+      .select('*')
+      .eq('is_active', true)
+      .eq('location', 'Online')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching online experiences:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Unexpected error in getOnlineExperiences:', error);
+    return [];
+  }
+}
+
+export async function getPopularExperiences(): Promise<Experience[]> {
+  try {
+    // Get experiences with highest ratings or most bookings
+    const { data, error } = await supabase
+      .from('experiences_unified')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error('Error fetching popular experiences:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Unexpected error in getPopularExperiences:', error);
+    return [];
+  }
+}
+
 export async function getTrip(id: string): Promise<Trip | null> {
   console.log('⚠️ getTrip() called - using unified table for retreats');
   const { data, error } = await supabase
