@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import { useEffect, useState } from 'react';
-import { getRetreats, getExperiences, getProperties, isBucketlisted, addToBucketlist, removeFromBucketlist, getHyperLocalExperiences, getOnlineExperiences, getPopularExperiences } from '@/lib/database';
+import { getRetreats, getExperiences, getProperties, isBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import { supabase } from '@/lib/supabase';
 import { PropertyWithHost } from '@/lib/types';
 import ExperienceModal from '@/components/ExperienceModal';
@@ -69,12 +69,6 @@ export default function Home() {
   const [experiences, setExperiences] = useState<any[]>([]);
   const [properties, setProperties] = useState<PropertyWithHost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryCounts, setCategoryCounts] = useState({
-    hyperLocal: 0,
-    retreats: 0,
-    online: 0,
-    popular: 0
-  });
   const [selectedExperience, setSelectedExperience] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRetreat, setSelectedRetreat] = useState<any>(null);
@@ -100,7 +94,7 @@ export default function Home() {
           }
         };
 
-        const [retreatsData, experiencesData, propertiesData, moodData, hyperLocalData, onlineData, popularData] = await Promise.allSettled([
+        const [retreatsData, experiencesData, propertiesData, moodData] = await Promise.allSettled([
           fetchWithTimeout(getRetreats()),
           fetchWithTimeout(getExperiences()),
           fetchWithTimeout(getProperties()),
@@ -114,28 +108,13 @@ export default function Home() {
                 if (error) throw error;
                 return data;
               })
-          ),
-          fetchWithTimeout(getHyperLocalExperiences()),
-          fetchWithTimeout(getOnlineExperiences()),
-          fetchWithTimeout(getPopularExperiences())
+          )
         ]);
 
         const retreatsResult = retreatsData.status === 'fulfilled' ? (retreatsData.value || []) : [];
         const experiencesResult = experiencesData.status === 'fulfilled' ? (experiencesData.value || []) : [];
         const propertiesResult = propertiesData.status === 'fulfilled' ? (propertiesData.value || []) : [];
         const moodResult = moodData.status === 'fulfilled' ? (moodData.value || []) : [];
-        
-        // Set category counts for location-based filtering
-        const hyperLocalResult = hyperLocalData.status === 'fulfilled' ? (hyperLocalData.value || []) : [];
-        const onlineResult = onlineData.status === 'fulfilled' ? (onlineData.value || []) : [];
-        const popularResult = popularData.status === 'fulfilled' ? (popularData.value || []) : [];
-        
-        setCategoryCounts({
-          hyperLocal: hyperLocalResult.length,
-          retreats: retreatsResult.length,
-          online: onlineResult.length,
-          popular: popularResult.length
-        });
         
         setRetreats(retreatsResult);
         setExperiences(experiencesResult);
@@ -316,11 +295,6 @@ export default function Home() {
                          <h3 className="font-semibold text-gray-900 text-xs capitalize">
                            {category.title}
                          </h3>
-                         {!loading && (
-                           <span className="bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">
-                             {categoryCounts[category.id as keyof typeof categoryCounts] || 0}
-                           </span>
-                         )}
                        </div>
                        <p className="text-gray-600 text-xs">
                          {category.subtitle}
