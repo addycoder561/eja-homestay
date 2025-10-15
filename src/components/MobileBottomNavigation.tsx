@@ -21,12 +21,14 @@ import {
   SparklesIcon as SparklesIconSolid
 } from '@heroicons/react/24/solid';
 import CreateExperienceModal from '@/components/CreateExperienceModal';
+import { AuthPromptModal } from '@/components/AuthPromptModal';
 
 export function MobileBottomNavigation() {
   const { user, profile } = useAuth();
   const pathname = usePathname();
   const [wishlistCount, setWishlistCount] = useState(0);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Prevent hydration mismatch by only rendering on client
@@ -128,7 +130,14 @@ export function MobileBottomNavigation() {
 
           {/* Create Button - Central Floating */}
           <button
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => {
+              if (!user) {
+                // Show auth prompt modal instead of redirecting
+                setIsAuthPromptOpen(true);
+                return;
+              }
+              setCreateModalOpen(true);
+            }}
             className="flex items-center justify-center w-14 h-14 -mt-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
           >
             <PlusIcon className="w-7 h-7" />
@@ -179,6 +188,18 @@ export function MobileBottomNavigation() {
       <CreateExperienceModal 
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
+      />
+      
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={isAuthPromptOpen}
+        onClose={() => setIsAuthPromptOpen(false)}
+        title="Sign in to create content"
+        description="Please sign in to create and share your experiences with the community."
+        primaryAction="Sign In"
+        secondaryAction="Create Account"
+        primaryHref="/auth/signin"
+        secondaryHref="/auth/signup"
       />
     </>
   );

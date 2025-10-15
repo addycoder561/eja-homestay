@@ -525,15 +525,25 @@ export default function MyBucketlistPage() {
         <Navigation />
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-16">
-            <div className="text-6xl mb-6">🔐</div>
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <HeartIcon className="w-8 h-8 text-yellow-600" />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign in to view your bucketlist</h1>
             <p className="text-gray-600 mb-8">Please sign in to access your saved places and experiences.</p>
-            <button 
-              onClick={() => router.push('/auth/signin')}
-              className="bg-yellow-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-yellow-600 transition-colors"
-            >
-              Sign In
-            </button>
+            <div className="space-y-3">
+              <button 
+                onClick={() => router.push('/auth/signin')}
+                className="bg-yellow-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-yellow-600 transition-colors w-full max-w-xs"
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => router.push('/auth/signup')}
+                className="border border-gray-300 text-gray-700 px-8 py-3 rounded-xl font-medium hover:bg-gray-50 transition-colors w-full max-w-xs"
+              >
+                Create Account
+              </button>
+            </div>
           </div>
         </main>
         <Footer />

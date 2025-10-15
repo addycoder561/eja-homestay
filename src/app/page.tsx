@@ -5,7 +5,6 @@ import { HeroSection } from '@/components/HeroSection';
 import { Footer } from '@/components/Footer';
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { CategoryCard } from '@/components/CategoryCard';
-import AuthGuard from '@/components/AuthGuard';
 import Link from 'next/link';
 import { 
   MapPinIcon,
@@ -168,7 +167,8 @@ export default function Home() {
 
   const handleBucketlistToggle = async (item: any, isExperience: boolean) => {
     if (!user) {
-      // Redirect to sign in or show auth modal
+      // Redirect to sign in page
+      window.location.href = '/auth/signin';
       return;
     }
 
@@ -213,8 +213,7 @@ export default function Home() {
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
           <style jsx global>{`
             .scrollbar-hide {
               -ms-overflow-style: none;
@@ -935,6 +934,5 @@ export default function Home() {
       />
       )}
       </div>
-    </AuthGuard>
   );
 }

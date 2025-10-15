@@ -8,14 +8,18 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import Link from 'next/link';
+import { UserIcon } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { AuthPromptModal } from '@/components/AuthPromptModal';
 
 export default function ProfilePage() {
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -39,10 +43,7 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/signin');
-      return;
-    }
+    // No longer redirect - let users see the page with signin message
 
     if (profile) {
       const nameParts = profile.full_name?.split(' ') || [];
@@ -196,7 +197,37 @@ export default function ProfilePage() {
   };
 
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-16 h-16 bg-yellow-50 border-2 border-yellow-200 rounded-full flex items-center justify-center mx-auto mb-6">
+              <UserIcon className="w-8 h-8 text-yellow-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Sign in to view your profile
+            </h2>
+            <p className="text-gray-600 mb-8">
+              Please sign in to access your profile settings and preferences.
+            </p>
+            <div className="space-y-3">
+              <Link href="/auth/signin">
+                <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button variant="outline" className="w-full bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50">
+                  Create Account
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (

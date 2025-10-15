@@ -430,8 +430,13 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!experience || !user) {
-      toast.error('Please sign in to book this experience');
+    if (!experience) {
+      toast.error('Experience not found');
+      return;
+    }
+    
+    if (!user) {
+      window.location.href = '/auth/signin';
       return;
     }
 

@@ -15,13 +15,9 @@ import {
   UserGroupIcon, 
   SparklesIcon,
   CameraIcon,
-  PencilIcon,
-  Bars3Icon,
-  XMarkIcon,
-  Cog6ToothIcon,
-  QuestionMarkCircleIcon,
-  ArrowRightOnRectangleIcon
+  PencilIcon
 } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/Button';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -68,9 +64,7 @@ function ProfilePageContent() {
     bio: '',
     mood_tag: ''
   });
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   // Fetch profile data
   useEffect(() => {
@@ -154,22 +148,6 @@ function ProfilePageContent() {
     fetchProfileData();
   }, [user, profile]);
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -310,13 +288,30 @@ function ProfilePageContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h1>
-          <Link href="/auth/signin" className="text-yellow-500 hover:text-yellow-600">
-            Sign in to view your profile
-          </Link>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserIcon className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign in to view your profile</h2>
+            <p className="text-gray-600 mb-6">Create an account or sign in to manage your profile settings and preferences.</p>
+            <div className="space-y-3">
+              <Link href="/auth/signin">
+                <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button variant="outline" className="w-full">
+                  Create Account
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -338,59 +333,6 @@ function ProfilePageContent() {
               Edit
             </button>
             
-            {/* Three Dashes Menu */}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <Bars3Icon className="w-5 h-5 text-gray-700" />
-              </button>
-              
-              {/* Dropdown Menu */}
-              {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                  <div className="py-2">
-                    <Link
-                      href="/guest/dashboard"
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Cog6ToothIcon className="w-5 h-5" />
-                      Dashboard
-                    </Link>
-                    <Link
-                      href="/guest/profile"
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <UserIcon className="w-5 h-5" />
-                      Profile Settings
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setSupportOpen(true);
-                        setIsMenuOpen(false);
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
-                    >
-                      <QuestionMarkCircleIcon className="w-5 h-5" />
-                      Support
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleSignOut();
-                        setIsMenuOpen(false);
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
-                    >
-                      <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">

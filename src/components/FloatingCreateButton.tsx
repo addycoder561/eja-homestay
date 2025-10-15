@@ -1,11 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthPromptModal } from '@/components/AuthPromptModal';
 
 export function FloatingCreateButton() {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
   const handleOpenModal = () => {
+    if (!user) {
+      // Show auth prompt modal instead of redirecting
+      setIsAuthPromptOpen(true);
+      return;
+    }
     setIsModalOpen(true);
   };
 
@@ -92,6 +101,18 @@ export function FloatingCreateButton() {
           </div>
         </div>
       )}
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={isAuthPromptOpen}
+        onClose={() => setIsAuthPromptOpen(false)}
+        title="Sign in to create content"
+        description="Please sign in to create and share your experiences with the community."
+        primaryAction="Sign In"
+        secondaryAction="Create Account"
+        primaryHref="/auth/signin"
+        secondaryHref="/auth/signup"
+      />
     </>
   );
 }

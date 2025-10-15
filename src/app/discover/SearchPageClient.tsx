@@ -239,7 +239,7 @@ export default function SearchPageClient() {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
-      toast.error('Please sign in to add experiences to wishlist');
+      window.location.href = '/auth/signin';
       return;
     }
     
@@ -288,7 +288,7 @@ export default function SearchPageClient() {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
-      toast.error('Please sign in to add retreats to wishlist');
+      window.location.href = '/auth/signin';
       return;
     }
     
@@ -323,7 +323,7 @@ export default function SearchPageClient() {
   // Reaction handler
   const handleReaction = async (itemId: string, itemType: 'experience' | 'retreat', reactionType: 'wow' | 'care') => {
     if (!user) {
-      toast.error('Please sign in to react');
+      window.location.href = '/auth/signin';
       return;
     }
 

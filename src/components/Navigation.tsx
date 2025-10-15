@@ -35,6 +35,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { SupportModal } from '@/components/SupportModal';
 import CreateExperienceModal from '@/components/CreateExperienceModal';
+import { AuthPromptModal } from '@/components/AuthPromptModal';
 
 export function Navigation() {
   const { user, profile, signOut } = useAuth();
@@ -45,6 +46,7 @@ export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [destinationsOpen, setDestinationsOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -152,7 +154,15 @@ export function Navigation() {
         return;
       }
       
+      // Don't close if clicking inside the account menu
+      if ((target as Element).closest('[data-account-menu]')) {
+        return;
+      }
       
+      // Handle account menu dropdown
+      if (isAccountMenuOpen) {
+        setIsAccountMenuOpen(false);
+      }
 
       // Handle about dropdown
       if (destinationsOpen) {
@@ -160,14 +170,22 @@ export function Navigation() {
       }
     }
     
-    if (destinationsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (isAccountMenuOpen || destinationsOpen) {
+      // Use a small delay to allow click handlers to execute first
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('click', handleClickOutside);
+      };
     }
     
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
-  }, [destinationsOpen]);
+  }, [isAccountMenuOpen, destinationsOpen]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -222,7 +240,14 @@ export function Navigation() {
 
                 {/* Create Button */}
                 <button
-                  onClick={() => setCreateModalOpen(true)}
+                  onClick={() => {
+                    if (!user) {
+                      // Show auth prompt modal instead of redirecting
+                      setIsAuthPromptOpen(true);
+                      return;
+                    }
+                    setCreateModalOpen(true);
+                  }}
                   className="text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group hover:bg-gray-50 hover:scale-105"
                 >
                   <PlusIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -272,6 +297,69 @@ export function Navigation() {
                         </span>
                       )}
                     </button>
+
+                    {/* Three Dashes Menu */}
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          console.log('Menu button clicked, current state:', isAccountMenuOpen);
+                          setIsAccountMenuOpen(!isAccountMenuOpen);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <Bars3Icon className="w-5 h-5 text-gray-700" />
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {isAccountMenuOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50" data-account-menu>
+                          <Link
+                            href="/guest/dashboard"
+                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => {
+                              console.log('Dashboard clicked');
+                              setIsAccountMenuOpen(false);
+                            }}
+                          >
+                            <Cog6ToothIcon className="w-5 h-5" />
+                            Dashboard
+                          </Link>
+                          <Link
+                            href="/guest/profile"
+                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => {
+                              console.log('Profile Settings clicked');
+                              setIsAccountMenuOpen(false);
+                            }}
+                          >
+                            <UserIcon className="w-5 h-5" />
+                            Profile Settings
+                          </Link>
+                          <button
+                            onClick={() => {
+                              console.log('Support clicked');
+                              setSupportOpen(true);
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
+                          >
+                            <QuestionMarkCircleIcon className="w-5 h-5" />
+                            Support
+                          </button>
+                          <button
+                            onClick={() => {
+                              console.log('Sign Out clicked');
+                              handleSignOut();
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                          >
+                            <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                            Sign Out
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
                 
@@ -302,18 +390,73 @@ export function Navigation() {
                 </div>
               </Link>
 
-              {/* Mobile Notification Bell */}
+              {/* Mobile User Menu */}
               {user && (
-                <button 
-                  className="relative w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
-                >
-                  <BellIcon className="w-5 h-5 text-gray-700" />
-                  {notificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
-                      {notificationCount > 99 ? '99+' : notificationCount}
-                    </span>
-                  )}
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Mobile Notification Bell */}
+                  <button 
+                    className="relative w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
+                  >
+                    <BellIcon className="w-5 h-5 text-gray-700" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Mobile Three Dashes Menu */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <Bars3Icon className="w-5 h-5 text-gray-700" />
+                    </button>
+                    
+                    {/* Mobile Dropdown Menu */}
+                    {isAccountMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50" data-account-menu>
+                        <Link
+                          href="/guest/dashboard"
+                          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                        >
+                          <Cog6ToothIcon className="w-5 h-5" />
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/guest/profile"
+                          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                        >
+                          <UserIcon className="w-5 h-5" />
+                          Profile Settings
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setSupportOpen(true);
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
+                        >
+                          <QuestionMarkCircleIcon className="w-5 h-5" />
+                          Support
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleSignOut();
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                        >
+                          <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                          Sign Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -325,6 +468,16 @@ export function Navigation() {
       <CreateExperienceModal 
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
+      />
+      <AuthPromptModal
+        isOpen={isAuthPromptOpen}
+        onClose={() => setIsAuthPromptOpen(false)}
+        title="Sign in to create content"
+        description="Please sign in to create and share your experiences with the community."
+        primaryAction="Sign In"
+        secondaryAction="Create Account"
+        primaryHref="/auth/signin"
+        secondaryHref="/auth/signup"
       />
     </>
   );

@@ -735,8 +735,13 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!retreat || !user) {
-      toast.error('Please sign in to book this retreat');
+    if (!retreat) {
+      toast.error('Retreat not found');
+      return;
+    }
+    
+    if (!user) {
+      window.location.href = '/auth/signin';
       return;
     }
 
