@@ -7,9 +7,10 @@ interface ModalProps {
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   className?: string;
+  contentClassName?: string;
 }
 
-export function Modal({ open, onClose, title, children, size = 'md', className = '' }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md', className = '', contentClassName }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -96,7 +97,7 @@ export function Modal({ open, onClose, title, children, size = 'md', className =
             <h2 id="modal-title" className="text-xl font-bold text-gray-900 pr-8">{title}</h2>
           </div>
         )}
-        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className={contentClassName ?? 'overflow-y-auto max-h-[calc(90vh-120px)]'}>
           {children}
         </div>
       </div>

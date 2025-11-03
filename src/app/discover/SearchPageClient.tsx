@@ -13,7 +13,6 @@ import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { PropertyCard } from '@/components/PropertyCard';
 import { getProperties, searchProperties, getExperiences, getRetreats, getExperienceCategories, getRetreatCategories, createExperienceBooking, createTripBooking, isBucketlisted, addToBucketlist, removeFromBucketlist, ensureProfile, testBucketlistTable } from '@/lib/database';
-import { addReaction } from '@/lib/social-api';
 import { PropertyWithHost, SearchFilters as SearchFiltersType, Experience, PropertyType } from '@/lib/types';
 import ExperienceModal from '@/components/ExperienceModal';
 import RetreatModal from '@/components/RetreatModal';
@@ -99,8 +98,6 @@ export default function SearchPageClient() {
   const [wishlistedExperienceIds, setWishlistedExperienceIds] = useState<string[]>([]);
   const [wishlistedRetreatIds, setWishlistedRetreatIds] = useState<string[]>([]);
   
-  // Reaction menu states
-  const [openReactionMenu, setOpenReactionMenu] = useState<string | null>(null);
   
   // Experience modal states
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
@@ -320,25 +317,6 @@ export default function SearchPageClient() {
     }
   };
 
-  // Reaction handler
-  const handleReaction = async (itemId: string, itemType: 'experience' | 'retreat', reactionType: 'wow' | 'care') => {
-    if (!user) {
-      window.location.href = '/auth/signin';
-      return;
-    }
-
-    try {
-      const result = await addReaction(user.id, itemId, itemType, reactionType);
-      if (result.success) {
-        toast.success(`Reacted with ${reactionType}!`);
-      } else {
-        toast.error(result.error || 'Failed to react');
-      }
-    } catch (error) {
-      console.error('Error adding reaction:', error);
-      toast.error('Failed to react. Please try again.');
-    }
-  };
 
   // Experience modal handlers
   const handleExperienceClick = (experience: Experience) => {
@@ -919,50 +897,6 @@ export default function SearchPageClient() {
                           <span className="text-base font-bold text-gray-900">₹{retreat.price?.toLocaleString()}</span>
                           <span className="text-xs text-gray-500">for 2 adults</span>
                         </div>
-                        {/* Reaction Menu - Bottom Right */}
-                        <div className="relative">
-                          <button 
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenReactionMenu(openReactionMenu === retreat.id ? null : retreat.id);
-                            }}
-                          >
-                            <span className="text-xl">😮</span>
-                          </button>
-                          
-                          {/* Reaction Options - Controlled by state */}
-                          {openReactionMenu === retreat.id && (
-                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
-                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Wow"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Wow reaction
-                                    handleReaction(exp.id, 'experience', 'wow');
-                                  }}
-                                >
-                                  <span className="text-lg">😮</span>
-                                </button>
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Care"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Care reaction
-                                    handleReaction(exp.id, 'experience', 'care');
-                                  }}
-                                >
-                                  <span className="text-lg">🥰</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1055,50 +989,6 @@ export default function SearchPageClient() {
                         <div className="flex items-baseline gap-1">
                           <span className="text-base font-bold text-gray-900">₹{karaokeNights.price?.toLocaleString()}</span>
                           <span className="text-xs text-gray-500">/ person</span>
-                        </div>
-                        {/* Reaction Menu - Bottom Right */}
-                        <div className="relative">
-                          <button 
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenReactionMenu(openReactionMenu === karaokeNights.id ? null : karaokeNights.id);
-                            }}
-                          >
-                            <span className="text-xl">😮</span>
-                          </button>
-                          
-                          {/* Reaction Options - Controlled by state */}
-                          {openReactionMenu === karaokeNights.id && (
-                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
-                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Wow"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Wow reaction
-                                    handleReaction(exp.id, 'experience', 'wow');
-                                  }}
-                                >
-                                  <span className="text-lg">😮</span>
-                                </button>
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Care"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Care reaction
-                                    handleReaction(exp.id, 'experience', 'care');
-                                  }}
-                                >
-                                  <span className="text-lg">🥰</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1210,50 +1100,6 @@ export default function SearchPageClient() {
                           <span className="text-base font-bold text-gray-900">₹{exp.price?.toLocaleString()}</span>
                           <span className="text-xs text-gray-500">/ person</span>
                         </div>
-                        {/* Reaction Menu - Bottom Right */}
-                        <div className="relative">
-                          <button 
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenReactionMenu(openReactionMenu === exp.id ? null : exp.id);
-                            }}
-                          >
-                            <span className="text-xl">😮</span>
-                          </button>
-                          
-                          {/* Reaction Options - Controlled by state */}
-                          {openReactionMenu === exp.id && (
-                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
-                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Wow"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Wow reaction
-                                    handleReaction(exp.id, 'experience', 'wow');
-                                  }}
-                                >
-                                  <span className="text-lg">😮</span>
-                                </button>
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Care"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Care reaction
-                                    handleReaction(exp.id, 'experience', 'care');
-                                  }}
-                                >
-                                  <span className="text-lg">🥰</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       </div>
 
                     </div>
@@ -1361,50 +1207,6 @@ export default function SearchPageClient() {
                         <div className="flex items-baseline gap-1">
                           <span className="text-base font-bold text-gray-900">₹{exp.price?.toLocaleString()}</span>
                           <span className="text-xs text-gray-500">/ person</span>
-                        </div>
-                        {/* Reaction Menu - Bottom Right */}
-                        <div className="relative">
-                          <button 
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenReactionMenu(openReactionMenu === exp.id ? null : exp.id);
-                            }}
-                          >
-                            <span className="text-xl">😮</span>
-                          </button>
-                          
-                          {/* Reaction Options - Controlled by state */}
-                          {openReactionMenu === exp.id && (
-                            <div className="absolute bottom-full right-0 mb-2 opacity-100 transition-opacity duration-200 pointer-events-auto">
-                              <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1">
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Wow"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Wow reaction
-                                    handleReaction(exp.id, 'experience', 'wow');
-                                  }}
-                                >
-                                  <span className="text-lg">😮</span>
-                                </button>
-                                <button 
-                                  className="p-1 hover:scale-110 transition-transform duration-150 animate-bounce" 
-                                  title="Care"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenReactionMenu(null);
-                                    // Handle Care reaction
-                                    handleReaction(exp.id, 'experience', 'care');
-                                  }}
-                                >
-                                  <span className="text-lg">🥰</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
 

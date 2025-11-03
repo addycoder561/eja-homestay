@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { buildCoverFirstImages } from "@/lib/media";
+import StoriesViewer, { StoryThumbnail, AddStoryButton } from "@/components/StoriesViewer";
+import CreateStoryModal from "@/components/CreateStoryModal";
 import { 
   MapPinIcon, 
   ClockIcon, 
@@ -27,7 +29,8 @@ import {
   UserIcon,
   DocumentTextIcon,
   HeartIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  CameraIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist, testWishlistTable } from '@/lib/database';
@@ -77,7 +80,7 @@ interface RetreatModalProps {
 
 export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalProps) {
   const { user } = useAuth();
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [tales, setTales] = useState<Review[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
@@ -85,10 +88,10 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [isWishlistedState, setIsWishlistedState] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBookingForm, setShowBookingForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'About' | 'Reviews'>('About');
+  const [activeTab, setActiveTab] = useState<'About' | 'Tales'>('About');
   const [showMobileBooking, setShowMobileBooking] = useState(false);
-  const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'reviews' | 'checkin' | null>(null);
-  const [aboutDrawerTab, setAboutDrawerTab] = useState<'about' | 'reviews'>('about');
+  const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'tales' | 'checkin' | null>(null);
+  const [aboutDrawerTab, setAboutDrawerTab] = useState<'about' | 'tales'>('about');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
@@ -121,6 +124,11 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   const [selectedExperiences, setSelectedExperiences] = useState<any[]>([]);
   const [isFollowingHost, setIsFollowingHost] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  
+  // Stories state
+  const [storiesViewerOpen, setStoriesViewerOpen] = useState(false);
+  const [storiesViewerIndex, setStoriesViewerIndex] = useState(0);
+  const [createStoryModalOpen, setCreateStoryModalOpen] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -231,9 +239,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           }
         }
 
-        // Fetch experiences from retreat_experiences table (same as desktop)
+        // Fetch experiences from micro_experiences table (same as desktop)
         const { data: experiencesData, error: experiencesError } = await supabase
-          .from('retreat_experiences')
+          .from('micro_experiences')
           .select('*')
           .eq('experience_type', bookingForm.budget)
           .eq('is_active', true);
@@ -248,7 +256,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
         } else {
           // Fallback: try to get all experiences for this retreat (same as desktop)
           const { data: allExperiences } = await supabase
-            .from('retreat_experiences')
+            .from('micro_experiences')
             .select('*')
             .eq('is_active', true)
             .limit(10);
@@ -401,9 +409,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           }
         }
 
-        // Fetch experiences from retreat_experiences table
+        // Fetch experiences from micro_experiences table
         const { data: experiencesData, error: experiencesError } = await supabase
-          .from('retreat_experiences')
+          .from('micro_experiences')
           .select('*')
           .eq('experience_type', bookingForm.budget)
           .eq('is_active', true);
@@ -418,7 +426,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
         } else {
           // Fallback: try to get all experiences for this retreat
           const { data: allExperiences } = await supabase
-            .from('retreat_experiences')
+            .from('micro_experiences')
             .select('*')
             .eq('retreat_id', retreat.id);
           
@@ -473,9 +481,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
       
       try {
         const { data, error } = await supabase
-          .from("retreat_reviews")
+          .from("tales")
           .select("*")
-          .eq("retreat_id", retreat.id)
+          .eq("experience_id", retreat.id)
           .order("created_at", { ascending: false });
         
         if (error) {
@@ -483,7 +491,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           return;
         }
         
-        setReviews(data || []);
+        setTales(data || []);
         setHasReviewed(data?.some((r) => r.guest_email === user?.email) || false);
       } catch (err) {
         console.error('Error fetching reviews:', err);
@@ -516,8 +524,8 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   // Set canReview to false by default
   useEffect(() => {
     setCanReview(false);
-    setHasReviewed(reviews.some((r) => r.guest_email === user?.email));
-  }, [user, reviews]);
+    setHasReviewed(tales.some((r) => r.guest_email === user?.email));
+  }, [user, tales]);
 
   // Handle escape key
   useEffect(() => {
@@ -598,9 +606,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     setSubmitting(true);
     try {
       const { data, error } = await supabase
-        .from("retreat_reviews")
+        .from("tales")
         .insert({
-          retreat_id: retreat.id,
+          experience_id: retreat.id,
           guest_id: user?.id || null,
           guest_name: reviewForm.name || user?.email?.split('@')[0] || 'Anonymous',
           guest_email: reviewForm.email || user?.email || '',
@@ -615,9 +623,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
       setReviewText("");
       setReviewRating(5);
       setReviewForm({ name: '', email: '' });
-      setReviews([data, ...reviews]);
+      setTales([data, ...tales]);
       setHasReviewed(true);
-      toast.success("Review submitted successfully!");
+      toast.success("Tale submitted successfully!");
     } catch (err) {
       console.error('Error submitting review:', err);
       toast.error("Failed to submit review");
@@ -732,6 +740,66 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
     }
   };
 
+  const handleStorySubmit = async (storyData: { rating: number; comment: string; image?: File }) => {
+    if (!retreat || !user) return;
+
+    try {
+      let imageUrl = null;
+      
+      // Upload image if provided
+      if (storyData.image) {
+        const fileExt = storyData.image.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `stories/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('experience-images')
+          .upload(filePath, storyData.image);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('experience-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
+
+      // Create story record
+      const { data, error } = await supabase
+        .from("tales")
+        .insert({
+          experience_id: retreat.id,
+          guest_id: user.id,
+          guest_name: user.email?.split('@')[0] || 'Anonymous',
+          guest_email: user.email || '',
+          rating: storyData.rating,
+          comment: storyData.comment,
+          image_url: imageUrl,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTales([data, ...tales]);
+      setHasReviewed(true);
+      setCreateStoryModalOpen(false);
+      toast.success("Story shared successfully!");
+    } catch (err) {
+      console.error('Error creating story:', err);
+      toast.error("Failed to share story");
+    }
+  };
+
+  const handleStoryClick = (index: number) => {
+    console.log('RetreatModal handleStoryClick called with index:', index);
+    console.log('Current tales:', tales);
+    setStoriesViewerIndex(index);
+    setStoriesViewerOpen(true);
+    console.log('Set storiesViewerOpen to true');
+  };
+
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -835,9 +903,9 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
   };
 
   const calculateAverageRating = () => {
-    if (reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-    return sum / reviews.length;
+    if (tales.length === 0) return 0;
+    const sum = tales.reduce((acc, tale) => acc + tale.rating, 0);
+    return sum / tales.length;
   };
 
   // Calculate pricing based on budget and selections
@@ -1298,14 +1366,14 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         About
                       </button>
                       <button
-                        onClick={() => setActiveTab('Reviews')}
+                        onClick={() => setActiveTab('Tales')}
                         className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          activeTab === 'Reviews'
+                          activeTab === 'Tales'
                             ? 'text-white shadow-md'
                             : 'text-gray-600 hover:text-gray-800'
                         }`}
                       >
-                        Reviews
+                        Tales
                       </button>
                       {/* Sliding background */}
                       <div
@@ -1326,21 +1394,29 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                   </div>
                     </>
                   ) : (
-                    /* Reviews Tab Content */
+                    /* Tales Tab Content */
                     <div>
-                  {/* Guest Reviews */}
+                  {/* Stories */}
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Guest Reviews</h3>
+                    {/* Stories Row */}
+                    <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
                       {user && !hasReviewed && (
-                        <button
-                          onClick={() => setCanReview(!canReview)}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          {canReview ? 'Cancel' : 'Add review'}
-                        </button>
+                        <AddStoryButton onClick={() => setCreateStoryModalOpen(true)} />
                       )}
+                      
+                      {tales.map((tale, index) => (
+                        <div key={tale.id} className="flex flex-col items-center gap-2">
+                          <StoryThumbnail 
+                            story={tale} 
+                            onClick={() => handleStoryClick(index)} 
+                          />
+                          <span className="text-xs text-gray-500 max-w-16 truncate">
+                            {tale.guest_name || 'Anonymous'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
+                  </div>
 
                     {/* Add Review Form */}
                     {canReview && user && (
@@ -1371,7 +1447,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                             
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Your review
+                                Your tale
                               </label>
                               <textarea
                                 value={reviewText}
@@ -1420,35 +1496,34 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                     )}
 
                     {/* Reviews List */}
-                    {reviews.length > 0 ? (
+                    {tales.length > 0 ? (
                       <div className="space-y-4">
-                        {reviews.map((review) => (
-                          <div key={review.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                        {tales.map((tale) => (
+                          <div key={tale.id} className="border-b border-gray-200 pb-4 last:border-b-0">
                             <div className="flex items-center gap-2 mb-2">
                               <div className="flex items-center gap-1">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <StarSolid
                                     key={star}
                                     className={`w-4 h-4 ${
-                                      star <= review.rating ? 'text-yellow-400' : 'text-gray-300'
+                                      star <= tale.rating ? 'text-yellow-400' : 'text-gray-300'
                                     }`}
                                   />
                                 ))}
                               </div>
                               <span className="text-sm text-gray-500">
-                                {new Date(review.created_at).toLocaleDateString()}
+                                {new Date(tale.created_at).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="text-gray-700">{review.comment}</p>
-                            <p className="text-sm text-gray-500 mt-1">- {review.guest_name}</p>
+                            <p className="text-gray-700">{tale.comment}</p>
+                            <p className="text-sm text-gray-500 mt-1">- {tale.guest_name}</p>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to review!</p>
+                      <p className="text-gray-500 text-center py-8">No tales yet. Be the first to share your experience!</p>
                     )}
                   </div>
-                    </div>
                   )}
                 </div>
               ) : (
@@ -2387,14 +2462,14 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                       About
                     </button>
                     <button
-                      onClick={() => setAboutDrawerTab('reviews')}
+                      onClick={() => setAboutDrawerTab('tales')}
                       className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                        aboutDrawerTab === 'reviews'
+                        aboutDrawerTab === 'tales'
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Reviews
+                      Tales
                     </button>
                   </div>
 
@@ -2455,7 +2530,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                   )}
 
                   {/* Reviews Tab Content */}
-                  {aboutDrawerTab === 'reviews' && (
+                  {aboutDrawerTab === 'tales' && (
                     <div className="space-y-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -2467,37 +2542,37 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                             </div>
                             <span className="ml-2 text-gray-600">({averageRating.toFixed(1)})</span>
                           </div>
-                          <p className="text-gray-600 text-sm">{reviews.length} reviews</p>
+                          <p className="text-gray-600 text-sm">{tales.length} tales</p>
                         </div>
                       </div>
 
                       <div className="space-y-4">
-                        {reviews.map((review, index) => (
+                        {tales.map((tale, index) => (
                           <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center">
                                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
                                   <span className="text-sm font-medium text-gray-600">
-                                    {review.guest_name?.charAt(0) || 'A'}
+                                    {tale.guest_name?.charAt(0) || 'A'}
                                   </span>
                                 </div>
                                 <div>
-                                  <div className="font-medium text-gray-900">{review.guest_name}</div>
+                                  <div className="font-medium text-gray-900">{tale.guest_name}</div>
                                   <div className="flex items-center">
                                     {[...Array(5)].map((_, i) => (
                                       <StarSolid 
                                         key={i} 
-                                        className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                                        className={`w-4 h-4 ${i < tale.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
                                       />
                                     ))}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-sm text-gray-500">
-                                {new Date(review.created_at).toLocaleDateString()}
+                                {new Date(tale.created_at).toLocaleDateString()}
                               </div>
                             </div>
-                            <p className="text-gray-700">{review.comment}</p>
+                            <p className="text-gray-700">{tale.comment}</p>
                           </div>
                         ))}
                       </div>
@@ -2773,6 +2848,22 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
           </div>
         </div>
       )}
+
+      {/* Stories Viewer */}
+      <StoriesViewer
+        stories={tales}
+        isOpen={storiesViewerOpen}
+        onClose={() => setStoriesViewerOpen(false)}
+        initialIndex={storiesViewerIndex}
+      />
+
+      {/* Create Story Modal */}
+      <CreateStoryModal
+        isOpen={createStoryModalOpen}
+        onClose={() => setCreateStoryModalOpen(false)}
+        onSubmit={handleStorySubmit}
+        submitting={submitting}
+      />
     </>
   );
 }

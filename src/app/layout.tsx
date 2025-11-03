@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { AIChatAssistant } from "@/components/AIChatAssistant";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

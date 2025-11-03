@@ -163,7 +163,7 @@ export default function ExperienceDetailPage() {
   const experienceId = params.id as string;
 
   const [experience, setExperience] = useState<Experience | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [tales, setTales] = useState<Review[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
@@ -233,21 +233,21 @@ export default function ExperienceDetailPage() {
     const fetchReviews = async () => {
       try {
         const { data, error } = await supabase
-        .from("experience_reviews")
+        .from("tales")
         .select("*")
         .eq("experience_id", experienceId)
         .order("created_at", { ascending: false });
         
         if (error) {
           console.error('Error fetching reviews:', error);
-          setReviews([]);
+          setTales([]);
           return;
         }
         
-      setReviews(data || []);
+        setTales(data || []);
       } catch (err) {
         console.error('Error fetching reviews:', err);
-        setReviews([]);
+        setTales([]);
       }
     };
     
@@ -274,8 +274,8 @@ export default function ExperienceDetailPage() {
 
   useEffect(() => {
     setCanReview(true); // Allow anyone to review
-    setHasReviewed(reviews.some((r) => r.guest_email === user?.email));
-  }, [user, reviews]);
+    setHasReviewed(tales.some((r) => r.guest_email === user?.email));
+  }, [user, tales]);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,7 +283,7 @@ export default function ExperienceDetailPage() {
     setSubmitting(true);
     try {
     const { data, error } = await supabase
-      .from("experience_reviews")
+      .from("tales")
       .insert({
         experience_id: experienceId,
           guest_id: user?.id || null,
@@ -300,9 +300,9 @@ export default function ExperienceDetailPage() {
       setReviewText("");
       setReviewRating(5);
       setReviewForm({ name: '', email: '' });
-      setReviews([data, ...reviews]);
+      setTales([data, ...tales]);
       setHasReviewed(true);
-      toast.success("Review submitted successfully!");
+      toast.success("Tale submitted successfully!");
     } catch (err) {
       console.error('Error submitting review:', err);
       toast.error("Failed to submit review");
@@ -424,14 +424,15 @@ export default function ExperienceDetailPage() {
           try {
             // Create booking after successful payment
             const { data, error } = await supabase
-              .from('experience_bookings')
+              .from('bookings')
               .insert({
-                experience_id: experience.id,
+                property_id: experience.id, // Using property_id for experience/retreat ID
                 guest_id: user.id,
                 guest_name: profile?.full_name || user.email?.split('@')[0] || 'Guest',
                 guest_email: user.email || '',
                 guest_phone: profile?.phone || '',
-                date: bookingForm.date,
+                check_in: bookingForm.date,
+                booking_type: 'experience', // Add type to distinguish experience bookings
                 guests: bookingForm.guests,
                 special_requests: bookingForm.specialRequests,
                 total_price: totalPrice,
@@ -500,9 +501,9 @@ export default function ExperienceDetailPage() {
 
   const calculateAverageRating = () => {
     try {
-      if (!reviews || reviews.length === 0) return 0;
-      const total = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
-      return Math.round((total / reviews.length) * 10) / 10;
+      if (!tales || tales.length === 0) return 0;
+      const total = tales.reduce((sum, tale) => sum + (tale.rating || 0), 0);
+      return Math.round((total / tales.length) * 10) / 10;
     } catch (error) {
       console.error('Error calculating average rating:', error);
       return 0;
@@ -681,7 +682,7 @@ export default function ExperienceDetailPage() {
             </div>
 
                 {/* Rating */}
-                {reviews.length > 0 && (
+                {tales.length > 0 && (
                           <div className="flex items-center space-x-4">
                             <div className="flex items-center text-yellow-500">
                               <StarIcon className="w-4 h-4 fill-current" />
@@ -689,7 +690,7 @@ export default function ExperienceDetailPage() {
                                 {averageRating}
                               </span>
                               <span className="text-sm text-gray-500 ml-1">
-                                ({reviews.length} reviews)
+                                ({tales.length} tales)
                               </span>
                       </div>
                   </div>
@@ -793,30 +794,30 @@ export default function ExperienceDetailPage() {
 
                   {/* Reviews Display */}
                   <div className="space-y-4">
-                    {reviews.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to share your experience!</p>
+                    {tales.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No tales yet. Be the first to share your experience!</p>
                     ) : (
                       <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {reviews.slice(0, 5).map((review) => (
-                          <div key={review.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                        {tales.slice(0, 5).map((tale) => (
+                          <div key={tale.id} className="border-b border-gray-200 pb-4 last:border-b-0">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                   <span className="text-sm font-medium text-blue-600">
-                                    {(review.guest_name || review.guest_email || 'Anonymous').charAt(0).toUpperCase()}
+                                    {(tale.guest_name || tale.guest_email || 'Anonymous').charAt(0).toUpperCase()}
                                   </span>
                                 </div>
                                 <span className="font-medium text-gray-900">
-                                  {review.guest_name || review.guest_email?.split('@')[0] || 'Anonymous'}
+                                  {tale.guest_name || tale.guest_email?.split('@')[0] || 'Anonymous'}
                                 </span>
                               </div>
-                              <StarRating rating={review.rating} readonly size="sm" />
+                              <StarRating rating={tale.rating} readonly size="sm" />
                             </div>
-                            {review.comment && (
-                              <p className="text-gray-700 text-sm">{review.comment}</p>
+                            {tale.comment && (
+                              <p className="text-gray-700 text-sm">{tale.comment}</p>
                             )}
                             <p className="text-gray-500 text-xs mt-2">
-                              {new Date(review.created_at).toLocaleDateString()}
+                              {new Date(tale.created_at).toLocaleDateString()}
                             </p>
                           </div>
                         ))}

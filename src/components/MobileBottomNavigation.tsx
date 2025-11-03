@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,25 +11,28 @@ import {
   HeartIcon,
   UserIcon,
   SparklesIcon,
-  PlusIcon
+  PlusIcon,
+  FireIcon
 } from '@heroicons/react/24/outline';
 import { 
   HomeIcon as HomeIconSolid, 
   MagnifyingGlassIcon as MagnifyingGlassIconSolid, 
   HeartIcon as HeartIconSolid,
   UserIcon as UserIconSolid,
-  SparklesIcon as SparklesIconSolid
+  SparklesIcon as SparklesIconSolid,
+  FireIcon as FireIconSolid
 } from '@heroicons/react/24/solid';
-import CreateExperienceModal from '@/components/CreateExperienceModal';
+import { CreateDropdown } from '@/components/CreateExperienceModal';
 import { AuthPromptModal } from '@/components/AuthPromptModal';
 
 export function MobileBottomNavigation() {
   const { user, profile } = useAuth();
   const pathname = usePathname();
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
 
   // Prevent hydration mismatch by only rendering on client
   useEffect(() => {
@@ -128,15 +131,31 @@ export function MobileBottomNavigation() {
             <span className="text-xs font-semibold mt-1">Discover</span>
           </Link>
 
+          {/* Dares */}
+          <Link
+            href="/drop"
+            className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
+              pathname?.startsWith('/drop')
+                ? 'text-yellow-500 bg-yellow-50/80'
+                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
+            }`}
+          >
+            <div className="relative">
+              {pathname?.startsWith('/drop') ? <FireIconSolid className="w-6 h-6" /> : <FireIcon className="w-6 h-6" />}
+            </div>
+            <span className="text-xs font-semibold mt-1">Dares</span>
+          </Link>
+
           {/* Create Button - Central Floating */}
           <button
+            ref={createButtonRef}
             onClick={() => {
               if (!user) {
                 // Show auth prompt modal instead of redirecting
                 setIsAuthPromptOpen(true);
                 return;
               }
-              setCreateModalOpen(true);
+              setCreateDropdownOpen(true);
             }}
             className="flex items-center justify-center w-14 h-14 -mt-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
           >
@@ -185,9 +204,10 @@ export function MobileBottomNavigation() {
     </div>
 
       {/* Create Experience Modal */}
-      <CreateExperienceModal 
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+      <CreateDropdown 
+        isOpen={createDropdownOpen}
+        onClose={() => setCreateDropdownOpen(false)}
+        buttonRef={createButtonRef}
       />
       
       {/* Auth Prompt Modal */}

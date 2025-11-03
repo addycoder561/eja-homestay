@@ -7,7 +7,6 @@ export function PreloadResources() {
     // Preload critical images
     const criticalImages = [
       '/eja_svg.svg',
-      '/eja_transparent svg.svg',
       '/placeholder-experience.jpg'
     ];
 

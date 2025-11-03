@@ -44,7 +44,7 @@ export function LiveRating({ propertyId, propertyTitle, size = 'md' }: LiveRatin
 
       // 1. Fetch platform ratings from reviews table
       const { data: reviews, error: reviewsError } = await supabase
-        .from('reviews')
+        .from('tales')
         .select('rating')
         .eq('item_id', propertyId)
         .eq('review_type', 'property');

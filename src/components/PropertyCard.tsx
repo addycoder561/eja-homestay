@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { PropertyWithHost } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { isBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
 import { BookmarkIcon as BookmarkOutline } from '@heroicons/react/24/outline';
@@ -21,7 +21,7 @@ interface PropertyCardProps {
   index?: number;
 }
 
-export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
+function PropertyCard({ property, index = 0 }: PropertyCardProps) {
   const { user } = useAuth();
   const [wishlisted, setWishlisted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +33,9 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
       isBucketlisted(user.id, property.id, 'property').then((b) => {
         if (!ignore) setWishlisted(b);
       }).catch((error) => {
+        if (process.env.NODE_ENV !== 'production') {
         console.error('Error checking bucketlist status:', error);
+        }
         if (!ignore) setWishlisted(false);
       });
     } else {
@@ -42,7 +44,7 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
     return () => { ignore = true; };
   }, [user, property.id]);
 
-  const handleWishlist = async (e: React.MouseEvent) => {
+  const handleWishlist = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) return;
@@ -57,29 +59,31 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
         setWishlisted(true);
       }
     } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('Error updating wishlist:', error);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, wishlisted, property.id]);
 
-  const getAmenityIcon = (amenity: string) => {
+  const getAmenityIcon = useCallback((amenity: string) => {
     const amenityLower = amenity.toLowerCase();
     if (amenityLower.includes('wifi') || amenityLower.includes('internet')) return <WifiIcon className="w-4 h-4" />;
     if (amenityLower.includes('parking')) return <TruckIcon className="w-4 h-4" />;
     if (amenityLower.includes('fire') || amenityLower.includes('heating')) return <FireIcon className="w-4 h-4" />;
     if (amenityLower.includes('kitchen') || amenityLower.includes('cooking')) return <HomeIcon className="w-4 h-4" />;
     return null;
-  };
+  }, []);
 
-  const getPropertyTypeColor = (type: string) => {
-    const typeLower = type.toLowerCase();
+  const propertyTypeColor = useMemo(() => {
+    const typeLower = property.property_type.toLowerCase();
     if (typeLower.includes('villa')) return 'bg-purple-100 text-purple-700 border-purple-200';
     if (typeLower.includes('cabin')) return 'bg-orange-100 text-orange-700 border-orange-200';
     if (typeLower.includes('apartment')) return 'bg-blue-100 text-blue-700 border-blue-200';
     if (typeLower.includes('house')) return 'bg-green-100 text-green-700 border-green-200';
     return 'bg-gray-100 text-gray-700 border-gray-200';
-  };
+  }, [property.property_type]);
 
   return (
     <>
@@ -97,13 +101,15 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
                 src={property.cover_image || '/placeholder-experience.jpg'}
                 alt={property.title}
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover transition-all duration-500 group-hover:scale-110"
+                loading="lazy"
               />
             </div>
 
             {/* Property Type Badge */}
             <div className="absolute top-4 left-4 z-10">
-              <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border ${getPropertyTypeColor(property.property_type)}`}>
+              <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border ${propertyTypeColor}`}>
                 <HomeIcon className="w-3 h-3" />
                 {property.property_type}
               </span>
@@ -169,8 +175,10 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
       <PropertyModal
         property={property}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={useCallback(() => setIsModalOpen(false), [])}
       />
     </>
   );
 }
+
+export default memo(PropertyCard);

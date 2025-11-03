@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { buildCoverFirstImages } from "@/lib/media";
 import { followUser, unfollowUser, isFollowing, addReaction, removeReaction } from "@/lib/social-api";
+import StoriesViewer, { StoryThumbnail, AddStoryButton } from "@/components/StoriesViewer";
+import CreateStoryModal from "@/components/CreateStoryModal";
 import { 
   MapPinIcon, 
   ClockIcon, 
@@ -26,7 +28,8 @@ import {
   ShieldCheckIcon,
   DocumentTextIcon,
   HeartIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  CameraIcon
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { isBucketlisted as checkIsBucketlisted, addToBucketlist, removeFromBucketlist, testWishlistTable } from '@/lib/database';
@@ -114,7 +117,7 @@ function StarRating({ rating, onRatingChange, readonly = false, size = "md" }: {
 
 export default function ExperienceModal({ experience, isOpen, onClose }: ExperienceModalProps) {
   const { user, profile } = useAuth();
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [tales, setTales] = useState<Review[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
@@ -127,10 +130,10 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   const [isBucketlistedState, setIsBucketlistedState] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBookingForm, setShowBookingForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'About' | 'Reviews'>('About');
+  const [activeTab, setActiveTab] = useState<'About' | 'Tales'>('About');
   const [showMobileBooking, setShowMobileBooking] = useState(false);
-  const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'reviews' | 'checkin' | null>(null);
-  const [aboutDrawerTab, setAboutDrawerTab] = useState<'about' | 'reviews'>('about');
+  const [mobileDrawerType, setMobileDrawerType] = useState<'about' | 'tales' | 'checkin' | null>(null);
+  const [aboutDrawerTab, setAboutDrawerTab] = useState<'about' | 'tales'>('about');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: '',
@@ -142,6 +145,11 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [isFollowingHost, setIsFollowingHost] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  
+  // Stories state
+  const [storiesViewerOpen, setStoriesViewerOpen] = useState(false);
+  const [storiesViewerIndex, setStoriesViewerIndex] = useState(0);
+  const [createStoryModalOpen, setCreateStoryModalOpen] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -161,32 +169,32 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   // Determine if we should show "Join Waitlist" instead of "Check-in"
   const shouldShowWaitlist = experience && !isKaraokeNights && (isOnlineExperience(experience) || experience.location !== 'Retreats');
 
-  // Fetch reviews when experience changes
+  // Fetch tales when experience changes
   useEffect(() => {
-    const fetchReviews = async () => {
+    const fetchTales = async () => {
       if (!experience) return;
       
       try {
         const { data, error } = await supabase
-          .from("experience_reviews")
+          .from("tales")
           .select("*")
           .eq("experience_id", experience.id)
           .order("created_at", { ascending: false });
         
         if (error) {
-          console.error('Error fetching reviews:', error);
-          setReviews([]);
+          console.error('Error fetching tales:', error);
+          setTales([]);
           return;
         }
         
-        setReviews(data || []);
+        setTales(data || []);
       } catch (err) {
-        console.error('Error fetching reviews:', err);
-        setReviews([]);
+        console.error('Error fetching tales:', err);
+        setTales([]);
       }
     };
     
-    fetchReviews();
+    fetchTales();
   }, [experience]);
 
   // Check bucketlist status and follow status
@@ -222,8 +230,8 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   // Check if user can review
   useEffect(() => {
     setCanReview(false); // Start with review form hidden
-    setHasReviewed(reviews.some((r) => r.guest_email === user?.email));
-  }, [user, reviews]);
+    setHasReviewed(tales.some((r) => r.guest_email === user?.email));
+  }, [user, tales]);
 
   // Handle escape key
   useEffect(() => {
@@ -285,7 +293,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     setSubmitting(true);
     try {
       const { data, error } = await supabase
-        .from("experience_reviews")
+        .from("tales")
         .insert({
           experience_id: experience.id,
           guest_id: user?.id || null,
@@ -302,9 +310,9 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
       setReviewText("");
       setReviewRating(5);
       setReviewForm({ name: '', email: '' });
-      setReviews([data, ...reviews]);
+      setTales([data, ...tales]);
       setHasReviewed(true);
-      toast.success("Review submitted successfully!");
+      toast.success("Tale submitted successfully!");
     } catch (err) {
       console.error('Error submitting review:', err);
       toast.error("Failed to submit review");
@@ -427,6 +435,66 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
     }
   };
 
+  const handleStorySubmit = async (storyData: { rating: number; comment: string; image?: File }) => {
+    if (!experience || !user) return;
+
+    try {
+      let imageUrl = null;
+      
+      // Upload image if provided
+      if (storyData.image) {
+        const fileExt = storyData.image.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `stories/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('experience-images')
+          .upload(filePath, storyData.image);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('experience-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
+
+      // Create story record
+      const { data, error } = await supabase
+        .from("tales")
+        .insert({
+          experience_id: experience.id,
+          guest_id: user.id,
+          guest_name: user.email?.split('@')[0] || 'Anonymous',
+          guest_email: user.email || '',
+          rating: storyData.rating,
+          comment: storyData.comment,
+          image_url: imageUrl,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTales([data, ...tales]);
+      setHasReviewed(true);
+      setCreateStoryModalOpen(false);
+      toast.success("Story shared successfully!");
+    } catch (err) {
+      console.error('Error creating story:', err);
+      toast.error("Failed to share story");
+    }
+  };
+
+  const handleStoryClick = (index: number) => {
+    console.log('handleStoryClick called with index:', index);
+    console.log('Current tales:', tales);
+    setStoriesViewerIndex(index);
+    setStoriesViewerOpen(true);
+    console.log('Set storiesViewerOpen to true');
+  };
+
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -476,14 +544,15 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
         handler: async function (response: any) {
           try {
             const { data, error } = await supabase
-              .from('experience_bookings')
+              .from('bookings')
               .insert({
-                experience_id: experience.id,
+                property_id: experience.id, // Using property_id for experience/retreat ID
                 guest_id: user.id,
                 guest_name: profile?.full_name || user.email?.split('@')[0] || 'Guest',
                 guest_email: user.email || '',
                 guest_phone: profile?.phone || '',
-                date: bookingForm.date,
+                check_in: bookingForm.date,
+                booking_type: 'experience', // Add type to distinguish experience bookings
                 guests: bookingForm.guests,
                 special_requests: bookingForm.specialRequests,
                 total_price: totalPrice,
@@ -533,9 +602,9 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
   };
 
   const calculateAverageRating = () => {
-    if (!reviews || reviews.length === 0) return 0;
-    const total = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
-    return Math.round((total / reviews.length) * 10) / 10;
+    if (!tales || tales.length === 0) return 0;
+    const total = tales.reduce((sum, tale) => sum + (tale.rating || 0), 0);
+    return Math.round((total / tales.length) * 10) / 10;
   };
 
   const getCategoryIcon = (category: string | string[]) => {
@@ -925,7 +994,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
               </div>
               
               {/* Rating */}
-              {reviews.length > 0 && (
+              {tales.length > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="flex items-center text-yellow-500">
                     <StarIcon className="w-4 h-4 fill-current" />
@@ -933,7 +1002,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                       {averageRating}
                     </span>
                     <span className="text-sm text-gray-500 ml-1">
-                      ({reviews.length} reviews)
+                      ({tales.length} tales)
                     </span>
                   </div>
                 </div>
@@ -965,7 +1034,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                             : 'text-gray-600 hover:text-gray-800'
                         }`}
                       >
-                        Reviews
+                        Tales
                       </button>
                       {/* Sliding background */}
                       <div
@@ -992,111 +1061,26 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                   ) : (
                     /* Reviews Tab Content */
                    <div>
-                     <div className="flex items-center justify-between mb-4">
-                       <h3 className="text-lg font-semibold text-gray-900">Guest Reviews</h3>
+                     {/* Stories Row */}
+                     <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
                        {!hasReviewed && (
-                         <button
-                           onClick={() => setCanReview(!canReview)}
-                           className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                         >
-                           {canReview ? 'Cancel' : 'Add a review'}
-                         </button>
+                         <AddStoryButton onClick={() => setCreateStoryModalOpen(true)} />
                        )}
-                     </div>
-
-                     {/* Reviews Display */}
-                     <div className="space-y-3">
-                       {reviews.length === 0 ? (
-                         <p className="text-gray-500 text-center py-4 text-sm">No reviews yet. Be the first to share your experience!</p>
-                       ) : (
-                         <div className="space-y-3 max-h-64 overflow-y-auto">
-                           {reviews.slice(0, 3).map((review) => (
-                             <div key={review.id} className="border-b border-gray-200 pb-3 last:border-b-0">
-                               <div className="flex items-center justify-between mb-1">
-                                 <div className="flex items-center gap-2">
-                                   <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                     <span className="text-xs font-medium text-blue-600">
-                                       {(review.guest_name || review.guest_email || 'Anonymous').charAt(0).toUpperCase()}
-                                     </span>
-                                   </div>
-                                   <span className="font-medium text-gray-900 text-sm">
-                                     {review.guest_name || review.guest_email?.split('@')[0] || 'Anonymous'}
-                                   </span>
-                                 </div>
-                                 <StarRating rating={review.rating} readonly size="sm" />
-                               </div>
-                               {review.comment && (
-                                 <p className="text-gray-700 text-xs">{review.comment}</p>
-                               )}
-                               <p className="text-gray-500 text-xs mt-1">
-                                 {new Date(review.created_at).toLocaleDateString()}
-                               </p>
-                             </div>
-                           ))}
+                       
+                       {tales.map((tale, index) => (
+                         <div key={tale.id} className="flex flex-col items-center gap-2">
+                           <StoryThumbnail 
+                             story={tale} 
+                             onClick={() => handleStoryClick(index)} 
+                           />
+                           <span className="text-xs text-gray-500 max-w-16 truncate">
+                             {tale.guest_name || 'Anonymous'}
+                           </span>
                          </div>
-                       )}
+                       ))}
                      </div>
 
                      {/* Review Form - Only shown when canReview is true */}
-                     {canReview && !hasReviewed && (
-                       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mt-4 border border-blue-100">
-                         <form onSubmit={handleReviewSubmit} className="space-y-3">
-                           {!user && (
-                             <div className="grid grid-cols-1 gap-3">
-                               <Input
-                                 label="Your Name"
-                                 type="text"
-                                 value={reviewForm.name}
-                                 onChange={e => setReviewForm(prev => ({ ...prev, name: e.target.value }))}
-                                 placeholder="Enter your name"
-                                 required
-                               />
-                               <Input
-                                 label="Your Email"
-                                 type="email"
-                                 value={reviewForm.email}
-                                 onChange={e => setReviewForm(prev => ({ ...prev, email: e.target.value }))}
-                                 placeholder="Enter your email"
-                                 required
-                               />
-                             </div>
-                           )}
-                           
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-                             <StarRating rating={reviewRating} onRatingChange={setReviewRating} />
-                           </div>
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
-                             <textarea
-                               value={reviewText}
-                               onChange={(e) => setReviewText(e.target.value)}
-                               rows={2}
-                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
-                               placeholder="Share your experience..."
-                               required
-                             />
-                           </div>
-                           <div className="flex gap-2">
-                             <Button
-                               type="submit"
-                               disabled={submitting || !reviewText.trim() || (!user && (!reviewForm.name || !reviewForm.email))}
-                               className="flex-1 text-sm"
-                             >
-                               {submitting ? 'Submitting...' : 'Submit Review'}
-                             </Button>
-                             <Button
-                               type="button"
-                               variant="outline"
-                               onClick={() => setCanReview(false)}
-                               className="text-sm"
-                             >
-                               Cancel
-                             </Button>
-                           </div>
-                         </form>
-                       </div>
-                     )}
                    </div>
                   )}
                 </div>
@@ -1553,14 +1537,14 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                       About
                     </button>
                     <button
-                      onClick={() => setAboutDrawerTab('reviews')}
+                      onClick={() => setAboutDrawerTab('tales')}
                       className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                        aboutDrawerTab === 'reviews'
+                        aboutDrawerTab === 'tales'
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Reviews
+                      Tales
                     </button>
                   </div>
 
@@ -1607,7 +1591,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                   )}
 
                   {/* Reviews Tab Content */}
-                  {aboutDrawerTab === 'reviews' && (
+                  {aboutDrawerTab === 'tales' && (
                     <div className="space-y-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -1619,37 +1603,37 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                             </div>
                             <span className="ml-2 text-gray-600">({averageRating.toFixed(1)})</span>
                           </div>
-                          <p className="text-gray-600 text-sm">{reviews.length} reviews</p>
+                          <p className="text-gray-600 text-sm">{tales.length} tales</p>
                         </div>
                       </div>
 
                       <div className="space-y-4">
-                        {reviews.map((review, index) => (
+                        {tales.map((tale, index) => (
                           <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center">
                                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
                                   <span className="text-sm font-medium text-gray-600">
-                                    {review.guest_name?.charAt(0) || 'A'}
+                                    {tale.guest_name?.charAt(0) || 'A'}
                                   </span>
                                 </div>
                                 <div>
-                                  <div className="font-medium text-gray-900">{review.guest_name}</div>
+                                  <div className="font-medium text-gray-900">{tale.guest_name}</div>
                                   <div className="flex items-center">
                                     {[...Array(5)].map((_, i) => (
                                       <StarSolid 
                                         key={i} 
-                                        className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                                        className={`w-4 h-4 ${i < tale.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
                                       />
                                     ))}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-sm text-gray-500">
-                                {new Date(review.created_at).toLocaleDateString()}
+                                {new Date(tale.created_at).toLocaleDateString()}
                               </div>
                             </div>
-                            <p className="text-gray-700">{review.comment}</p>
+                            <p className="text-gray-700">{tale.comment}</p>
                           </div>
                         ))}
                       </div>
@@ -1657,7 +1641,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                       {/* Add Review Form */}
                       {user && !hasReviewed && (
                         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                          <h4 className="font-semibold text-gray-900 mb-3">Write a Review</h4>
+                          <h4 className="font-semibold text-gray-900 mb-3">Write a Tale</h4>
                           <form onSubmit={handleReviewSubmit} className="space-y-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
@@ -1685,7 +1669,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                               />
                             </div>
                             <Button type="submit" disabled={submitting} className="w-full">
-                              {submitting ? 'Submitting...' : 'Submit Review'}
+                              {submitting ? 'Submitting...' : 'Submit Tale'}
                             </Button>
                           </form>
                         </div>
@@ -1799,6 +1783,22 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
           </div>
         </div>
       )}
+
+      {/* Stories Viewer */}
+      <StoriesViewer
+        stories={tales}
+        isOpen={storiesViewerOpen}
+        onClose={() => setStoriesViewerOpen(false)}
+        initialIndex={storiesViewerIndex}
+      />
+
+      {/* Create Story Modal */}
+      <CreateStoryModal
+        isOpen={createStoryModalOpen}
+        onClose={() => setCreateStoryModalOpen(false)}
+        onSubmit={handleStorySubmit}
+        submitting={submitting}
+      />
     </>
   );
 }

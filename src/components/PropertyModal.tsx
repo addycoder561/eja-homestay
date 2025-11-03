@@ -135,7 +135,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
 
     try {
       const { data, error } = await supabase
-        .from('reviews')
+        .from('tales')
         .select('*')
         .eq('item_id', property.id)
         .eq('review_type', 'property')
@@ -227,7 +227,7 @@ export default function PropertyModal({ property, isOpen, onClose }: PropertyMod
     setSubmitting(true);
     try {
       const { error } = await supabase
-        .from('reviews')
+        .from('tales')
         .insert({
           item_id: property.id,
           review_type: 'property',

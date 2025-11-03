@@ -3,7 +3,6 @@
 import { Navigation } from '@/components/Navigation';
 import { HeroSection } from '@/components/HeroSection';
 import { Footer } from '@/components/Footer';
-import { OptimizedImage } from '@/components/OptimizedImage';
 import { CategoryCard } from '@/components/CategoryCard';
 import Link from 'next/link';
 import { 
@@ -11,14 +10,17 @@ import {
   BookmarkIcon as BookmarkOutline
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
-import { useEffect, useState } from 'react';
-import { getRetreats, getExperiences, getProperties, isBucketlisted, addToBucketlist, removeFromBucketlist } from '@/lib/database';
+import { useEffect, useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { getRetreats, getExperiences, getProperties, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import { supabase } from '@/lib/supabase';
 import { PropertyWithHost } from '@/lib/types';
-import ExperienceModal from '@/components/ExperienceModal';
-import RetreatModal from '@/components/RetreatModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { AIChatAssistant } from '@/components/AIChatAssistant';
+
+// Lazy load heavy modals - only load when needed
+const ExperienceModal = lazy(() => import('@/components/ExperienceModal'));
+const RetreatModal = lazy(() => import('@/components/RetreatModal'));
 
 
 
@@ -88,7 +90,9 @@ export default function Home() {
             );
             return await Promise.race([promise, timeoutPromise]);
           } catch (error) {
+            if (process.env.NODE_ENV !== 'production') {
             console.error('Request failed or timed out:', error);
+            }
             return null;
           }
         };
@@ -125,7 +129,9 @@ export default function Home() {
         }
 
       } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
         console.error('Error fetching data:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -134,40 +140,27 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const handleExperienceClick = (experience: any) => {
-    try {
-      if (experience && experience.id) {
+  const handleExperienceClick = useCallback((experience: any) => {
+    if (experience?.id) {
     setSelectedExperience(experience);
     setIsModalOpen(true);
       }
-    } catch (error) {
-      console.error('Error handling experience click:', error);
-    }
-  };
+  }, []);
 
-  const handleCloseModal = () => {
-    try {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedExperience(null);
-    } catch (error) {
-      console.error('Error closing modal:', error);
-    }
-  };
+  }, []);
 
-  const handleRetreatClick = (retreat: any) => {
-    try {
-      if (retreat && retreat.id) {
+  const handleRetreatClick = useCallback((retreat: any) => {
+    if (retreat?.id) {
     setSelectedRetreat(retreat);
     setIsRetreatModalOpen(true);
       }
-    } catch (error) {
-      console.error('Error handling retreat click:', error);
-    }
-  };
+  }, []);
 
-  const handleBucketlistToggle = async (item: any, isExperience: boolean) => {
+  const handleBucketlistToggle = useCallback(async (item: any, isExperience: boolean) => {
     if (!user) {
-      // Redirect to sign in page
       window.location.href = '/auth/signin';
       return;
     }
@@ -189,23 +182,20 @@ export default function Home() {
         setBucketlistedItems(prev => new Set(prev).add(itemId));
       }
     } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('Error toggling bucketlist:', error);
     }
-  };
+    }
+  }, [user, bucketlistedItems]);
 
-  const handleMoodClick = (mood: string) => {
-    // Navigate to discover page with mood filter to fetch only experiences with that specific mood
+  const handleMoodClick = useCallback((mood: string) => {
     window.location.href = `/discover?mood=${encodeURIComponent(mood)}`;
-  };
+  }, []);
 
-  const handleCloseRetreatModal = () => {
-    try {
+  const handleCloseRetreatModal = useCallback(() => {
     setIsRetreatModalOpen(false);
     setSelectedRetreat(null);
-    } catch (error) {
-      console.error('Error closing retreat modal:', error);
-    }
-  };
+  }, []);
 
   // Show loading state while data is being fetched
   if (loading) {
@@ -238,70 +228,242 @@ export default function Home() {
           `}</style>
           <Navigation />
         <main className="md:hidden">
-          {/* Mobile Hero Banner - 4 Grid Categories */}
-          <section className="px-4 py-6 bg-white">
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                {
-                  id: 'hyper-local',
-                  title: 'hyper-local',
-                  subtitle: 'in your city',
-                  image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=400&q=80',
-                  dotColor: 'bg-green-400',
-                  href: '/discover?filter=hyper-local'
-                },
-                {
-                  id: 'retreats',
-                  title: 'retreats',
-                  subtitle: "far-away",
-                  image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=400&q=80',
-                  dotColor: 'bg-orange-400',
-                  href: '/discover?filter=retreats'
-                },
-                {
-                  id: 'online',
-                  title: 'online',
-                  subtitle: 'at home',
-                  image: 'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=400&q=80',
-                  dotColor: 'bg-purple-400',
-                  href: '/discover?filter=online'
-                },
-                {
-                  id: 'popular',
-                  title: 'popular',
-                  subtitle: 'all time favorites',
-                  image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=400&q=80',
-                  dotColor: 'bg-pink-400',
-                  href: '/discover?filter=popular'
+          {/* Mobile Hero Gallery - Hyper-local Experiences & Retreats */}
+          <section className="px-4 py-6 bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-200">
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-gray-900 text-center">Experiences for Everyone</h2>
+            </div>
+            {(() => {
+              // Filter hyper-local experiences
+              const hyperLocalExperiences = experiences.filter(
+                (exp: any) => {
+                  const location = exp.location?.toLowerCase() || '';
+                  return location === 'hyper-local' || location.includes('hyper-local') || 
+                         (location !== 'online' && location !== 'retreats' && location !== 'retreat');
                 }
-              ].map((category, index) => (
-                <div
-                  key={category.id}
-                  onClick={() => window.location.href = category.href}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+              );
+              
+              // Combine hyper-local experiences and retreats - filter out photography and walking tours
+              let galleryItems = [
+                ...hyperLocalExperiences.slice(0, 10).map((exp: any) => ({
+                  ...exp,
+                  type: 'experience' as const
+                })),
+                ...retreats.slice(0, 10).map((ret: any) => ({
+                  ...ret,
+                  type: 'retreat' as const
+                }))
+              ].filter((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return !title.includes('photography') && !title.includes('walking');
+              });
+
+              // Replace specific items with correct ones from database
+              const familyGetaways = retreats.find((ret: any) => {
+                const title = (ret.title || ret.name || '').toLowerCase();
+                return title.includes('family getaway');
+              });
+              const corporateRetreats = retreats.find((ret: any) => {
+                const title = (ret.title || ret.name || '').toLowerCase();
+                return title.includes('corporate retreat');
+              });
+
+              // Replace items in gallery
+              galleryItems = galleryItems.map((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                
+                if (title.includes('gratitude trek') && familyGetaways) {
+                  return {
+                    ...familyGetaways,
+                    type: 'retreat' as const
+                  };
+                }
+                
+                if (title.includes('pubg') && corporateRetreats) {
+                  return {
+                    ...corporateRetreats,
+                    type: 'retreat' as const
+                  };
+                }
+                
+                return item;
+              });
+
+              // Mobile-specific replacements
+              // Find replacement items from the data
+              const musicFestival = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('music festival');
+              });
+              
+              const streetFoodTourForReplacement = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('street food');
+              });
+              
+              const corporateRetreatForReplacement = corporateRetreats;
+              
+              const communityDining = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('community dining');
+              });
+
+              // Apply replacements for mobile gallery
+              galleryItems = galleryItems.map((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                
+                // Replace Spiritual Tour with Music Festival
+                if (title.includes('spiritual') && musicFestival) {
+                  return {
+                    ...musicFestival,
+                    type: musicFestival.type || 'experience' as const
+                  };
+                }
+                
+                // Replace Corporate Retreat with Street Food Tour
+                if (title.includes('corporate retreat') && streetFoodTourForReplacement) {
+                  return {
+                    ...streetFoodTourForReplacement,
+                    type: streetFoodTourForReplacement.type || 'experience' as const
+                  };
+                }
+                
+                // Replace Street Food Tour with Corporate Retreat
+                if (title.includes('street food') && corporateRetreatForReplacement) {
+                  return {
+                    ...corporateRetreatForReplacement,
+                    type: 'retreat' as const
+                  };
+                }
+                
+                // Replace Art n Craft Tour with Community Dining
+                if ((title.includes('art') && title.includes('craft')) || title.includes('art n craft') || title.includes('art & craft')) {
+                  if (communityDining) {
+                    return {
+                      ...communityDining,
+                      type: communityDining.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                return item;
+              });
+
+              // Get image helper
+              const getImageUrl = (item: any) => {
+                if (!item) return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                return item.cover_image || item.image || item.images?.[0] || 
+                  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+              };
+
+              // Helper to check if item is spiritual tour
+              const isSpiritualTour = (item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('spiritual');
+              };
+
+              // Helper to check if item is street food tour
+              const isStreetFoodTour = (item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('street food');
+              };
+
+              // For mobile: Specific layout - 5 images total
+              // Layout: Col 1 (2 images), Col 2 (1 image double-height), Col 3 (2 images)
+              const maxItems = 5;
+              const itemsToDisplay = galleryItems.slice(0, maxItems);
+              
+              if (itemsToDisplay.length === 0) {
+                return (
+                  <div className="grid grid-cols-3 gap-2" style={{ gridTemplateRows: '120px 120px', overflow: 'hidden' }}>
+                    <div className="h-[120px] bg-gray-200 rounded-xl animate-pulse" />
+                    <div className="h-[244px] bg-gray-200 rounded-xl animate-pulse row-span-2" />
+                    <div className="h-[120px] bg-gray-200 rounded-xl animate-pulse" />
+                    <div className="h-[120px] bg-gray-200 rounded-xl animate-pulse" />
+                    <div className="h-[120px] bg-gray-200 rounded-xl animate-pulse" />
+                  </div>
+                );
+              }
+
+              // Layout structure:
+              // Item 0: Col 1, Row 1
+              // Item 1: Col 1, Row 2
+              // Item 2: Col 2, Rows 1-2 (double-height, spans both rows)
+              // Item 3: Col 3, Row 1
+              // Item 4: Col 3, Row 2
+              return (
+                <div className="grid grid-cols-3 gap-2" style={{ gridTemplateRows: '120px 120px', overflow: 'hidden' }}>
+                  {itemsToDisplay.map((item, index) => {
+                    let gridColumn = '';
+                    let gridRow = '';
+                    let height = '120px';
+                    
+                    if (index === 0) {
+                      // Col 1, Row 1
+                      gridColumn = '1';
+                      gridRow = '1';
+                    } else if (index === 1) {
+                      // Col 1, Row 2
+                      gridColumn = '1';
+                      gridRow = '2';
+                    } else if (index === 2) {
+                      // Col 2, Rows 1-2 (double-height)
+                      gridColumn = '2';
+                      gridRow = '1 / 3';
+                      height = '244px';
+                    } else if (index === 3) {
+                      // Col 3, Row 1
+                      gridColumn = '3';
+                      gridRow = '1';
+                    } else if (index === 4) {
+                      // Col 3, Row 2
+                      gridColumn = '3';
+                      gridRow = '2';
+                    }
+                    
+                    return (
+                      <div
+                        key={`mobile-gallery-item-${index}`}
+                        onClick={() => {
+                          if (item.type === 'experience') {
+                            handleExperienceClick(item);
+                          } else {
+                            handleRetreatClick(item);
+                          }
+                        }}
+                        className={`relative ${index === 2 ? 'row-span-2' : ''} rounded-xl overflow-hidden cursor-pointer group active:scale-[0.98] transition-transform duration-200`}
+                        style={{
+                          height: height,
+                          gridColumn: gridColumn,
+                          gridRow: gridRow,
+                        }}
+                      >
                       <img
-                        src={category.image}
-                        alt={category.title}
+                          src={getImageUrl(item)}
+                          alt={item.title || item.name || 'Gallery item'}
                         className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2 mb-1">
-                         <div className={`w-2 h-2 rounded-full ${category.dotColor}`} />
-                         <h3 className="font-semibold text-gray-900 text-xs capitalize">
-                           {category.title}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                          }}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-2">
+                          <h3 className="text-white font-semibold text-xs line-clamp-2 leading-tight">
+                            {item.title || item.name || 'Untitled'}
                          </h3>
                        </div>
-                       <p className="text-gray-600 text-xs">
-                         {category.subtitle}
-                       </p>
                     </div>
+                    );
+                  })}
                   </div>
-                </div>
-              ))}
+              );
+            })()}
+            {/* Chat Assistant - Below Gallery (Inline) */}
+            <div className="mt-6 flex justify-center">
+              <AIChatAssistant inline={true} />
             </div>
           </section>
 
@@ -397,6 +559,8 @@ export default function Home() {
                                     ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
                                     : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
                                 }}
+                                loading="lazy"
+                                decoding="async"
                               />
                             </div>
                             
@@ -484,6 +648,8 @@ export default function Home() {
                               src={sampleData.cover_image}
                               alt={sampleData.title}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              loading="lazy"
+                              decoding="async"
                             />
                           </div>
                           
@@ -580,6 +746,8 @@ export default function Home() {
                         src={getMoodImage(mood)}
                         alt={mood}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <div className="absolute bottom-3 left-3 right-3">
@@ -599,7 +767,169 @@ export default function Home() {
 
         {/* Desktop Layout - Keep existing for desktop */}
         <main className="hidden md:block">
-          <HeroSection />
+          {/* Desktop Hero Gallery - Hyper-local Experiences & Retreats */}
+          <section className="py-8 bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Experiences for Everyone</h2>
+              {(() => {
+                // Filter hyper-local experiences
+                const hyperLocalExperiences = experiences.filter(
+                  (exp: any) => {
+                    const location = exp.location?.toLowerCase() || '';
+                    return location === 'hyper-local' || location.includes('hyper-local') || 
+                           (location !== 'online' && location !== 'retreats' && location !== 'retreat');
+                  }
+                );
+                
+                // Combine hyper-local experiences and retreats - filter out photography and walking tours
+                let galleryItems = [
+                  ...hyperLocalExperiences.slice(0, 10).map((exp: any) => ({
+                    ...exp,
+                    type: 'experience' as const
+                  })),
+                  ...retreats.slice(0, 10).map((ret: any) => ({
+                    ...ret,
+                    type: 'retreat' as const
+                  }))
+                ].filter((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return !title.includes('photography') && !title.includes('walking');
+                });
+
+                // Replace specific items with correct ones from database
+                // Find Family Getaways and Corporate Retreats from the data
+                const familyGetaways = retreats.find((ret: any) => {
+                  const title = (ret.title || ret.name || '').toLowerCase();
+                  return title.includes('family getaway');
+                });
+                const corporateRetreats = retreats.find((ret: any) => {
+                  const title = (ret.title || ret.name || '').toLowerCase();
+                  return title.includes('corporate retreat');
+                });
+
+                // Replace items in gallery
+                galleryItems = galleryItems.map((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  
+                  // Replace "The Gratitude Trek" with "Family Getaways"
+                  if (title.includes('gratitude trek') && familyGetaways) {
+                    return {
+                      ...familyGetaways,
+                      type: 'retreat' as const
+                    };
+                  }
+                  
+                  // Replace "PUBG" with "Corporate Retreats"
+                  if (title.includes('pubg') && corporateRetreats) {
+                    return {
+                      ...corporateRetreats,
+                      type: 'retreat' as const
+                    };
+                  }
+                  
+                  return item;
+                });
+
+                // Limit items to fit exactly in 2 rows (5 columns × 2 rows = 10 cells)
+                // Count double-height items (spiritual tour and street food tour)
+                const hasSpiritualTour = galleryItems.some((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('spiritual');
+                });
+                
+                const hasStreetFoodTour = galleryItems.some((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('street food');
+                });
+                
+                // Calculate how many double-height items we have
+                const doubleHeightCount = (hasSpiritualTour ? 1 : 0) + (hasStreetFoodTour ? 1 : 0);
+                
+                // Total cells available: 10
+                // If we have 1 double-height item, it takes 2 cells, leaving 8 cells = 8 single items + 1 double = 9 total
+                // If we have 2 double-height items, they take 4 cells, leaving 6 cells = 6 single items + 2 double = 8 total
+                const maxItems = 10 - doubleHeightCount;
+                galleryItems = galleryItems.slice(0, maxItems);
+
+                // Get image helper
+                const getImageUrl = (item: any) => {
+                  if (!item) return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                  return item.cover_image || item.image || item.images?.[0] || 
+                    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                };
+
+                // Helper to check if item is spiritual tour
+                const isSpiritualTour = (item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('spiritual');
+                };
+
+                // Helper to check if item is street food tour
+                const isStreetFoodTour = (item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('street food');
+                };
+
+                if (galleryItems.length === 0) {
+                  return (
+                    <div className="grid grid-cols-5 gap-4">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                        <div key={i} className="h-[140px] bg-gray-200 rounded-xl animate-pulse" />
+                      ))}
+                    </div>
+                  );
+                }
+
+                // 5 columns, 2 rows - with spiritual tour and street food tour taking double height
+                // Limit grid to exactly 2 rows - no implicit rows
+                return (
+                  <div className="grid grid-cols-5 gap-4" style={{ gridTemplateRows: '140px 140px', overflow: 'hidden' }}>
+                    {galleryItems.map((item, index) => {
+                      const spiritualTour = isSpiritualTour(item);
+                      const streetFoodTour = isStreetFoodTour(item);
+                      const isDoubleHeight = spiritualTour || streetFoodTour;
+                      return (
+                        <div
+                          key={`gallery-item-${index}`}
+                          onClick={() => {
+                            if (item.type === 'experience') {
+                              handleExperienceClick(item);
+                            } else {
+                              handleRetreatClick(item);
+                            }
+                          }}
+                          className={`relative ${isDoubleHeight ? 'row-span-2' : ''} rounded-xl overflow-hidden cursor-pointer group hover:scale-[1.02] transition-transform duration-200`}
+                          style={isDoubleHeight ? { height: '296px' } : { height: '140px' }}
+                        >
+                          <img
+                            src={getImageUrl(item)}
+                            alt={item.title || item.name || 'Gallery item'}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <h3 className="text-white font-semibold text-base line-clamp-2 leading-tight">
+                              {item.title || item.name || 'Untitled'}
+                            </h3>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+            {/* Chat Assistant - Below Gallery (Inline) */}
+            <div className="mt-8 flex justify-center">
+              <AIChatAssistant inline={true} />
+            </div>
+          </section>
 
         {/* Trending Section */}
         <section className="py-20 bg-gray-50">
@@ -705,11 +1035,12 @@ export default function Home() {
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement;
-                                    console.log('Image failed to load:', target.src);
                                     target.src = isExperience 
                                       ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
                                       : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
                                   }}
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               </div>
                               
@@ -797,6 +1128,8 @@ export default function Home() {
                                 src={sampleData.cover_image}
                                 alt={sampleData.title}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                loading="lazy"
+                                decoding="async"
                               />
                             </div>
                             
@@ -899,6 +1232,8 @@ export default function Home() {
                       src={getMoodImage(mood)}
                       alt={mood}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4">
@@ -916,22 +1251,26 @@ export default function Home() {
 
       <Footer />
       
-      {/* Experience Modal */}
+      {/* Experience Modal - Lazy loaded */}
       {isModalOpen && selectedExperience && (
+        <Suspense fallback={<LoadingSpinner message="Loading..." />}>
       <ExperienceModal 
         experience={selectedExperience}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
+        </Suspense>
       )}
       
-      {/* Retreat Modal */}
+      {/* Retreat Modal - Lazy loaded */}
       {isRetreatModalOpen && selectedRetreat && (
+        <Suspense fallback={<LoadingSpinner message="Loading..." />}>
       <RetreatModal 
         retreat={selectedRetreat}
         isOpen={isRetreatModalOpen}
         onClose={handleCloseRetreatModal}
       />
+        </Suspense>
       )}
       </div>
   );

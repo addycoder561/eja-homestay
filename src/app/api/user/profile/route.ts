@@ -4,13 +4,17 @@ import { getProfile } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Profile API called');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Profile API called');
+    }
     
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    console.log('🔍 Auth user:', user);
-    console.log('🔍 Auth error:', authError);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Auth user:', user);
+      console.log('🔍 Auth error:', authError);
+    }
     
     if (authError || !user) {
       return NextResponse.json(
@@ -21,7 +25,9 @@ export async function GET(request: NextRequest) {
 
     // Get profile data
     const profile = await getProfile(user.id);
-    console.log('🔍 Profile data:', profile);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Profile data:', profile);
+    }
 
     return NextResponse.json({
       user: {
@@ -34,7 +40,9 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('🔍 Error fetching profile:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('🔍 Error fetching profile:', error);
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -63,26 +63,57 @@ export async function isFollowing(followerId: string, followingId: string) {
   }
 }
 
-// Reaction functionality
+// Reaction functionality (using dare_engagements table)
 export async function addReaction(userId: string, itemId: string, itemType: 'experience' | 'retreat', reactionType: 'wow' | 'care') {
   try {
-    const { data, error } = await supabase
-      .from('reactions')
-      .upsert({
-        user_id: userId,
-        item_id: itemId,
-        item_type: itemType,
-        reaction_type: reactionType
-      }, {
-        onConflict: 'user_id,item_id,item_type'
-      });
+    // Check if reaction already exists
+    const { data: existing } = await supabase
+      .from('dare_engagements')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .eq('item_type', itemType)
+      .eq('engagement_type', 'smile')
+      .single();
 
-    if (error) {
-      console.error('Error adding reaction:', error);
-      return { success: false, error: error.message };
+    if (existing) {
+      // Update existing engagement with reaction_type
+      const { data, error } = await supabase
+        .from('dare_engagements')
+        .update({
+          engagement_value: reactionType
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating reaction:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } else {
+      // Create new engagement
+      const { data, error } = await supabase
+        .from('dare_engagements')
+        .insert({
+          user_id: userId,
+          item_id: itemId,
+          item_type: itemType,
+          engagement_type: 'smile',
+          engagement_value: reactionType
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding reaction:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
     }
-
-    return { success: true, data };
   } catch (error) {
     console.error('Unexpected error adding reaction:', error);
     return { success: false, error: 'Failed to add reaction' };
@@ -92,11 +123,12 @@ export async function addReaction(userId: string, itemId: string, itemType: 'exp
 export async function removeReaction(userId: string, itemId: string, itemType: 'experience' | 'retreat') {
   try {
     const { error } = await supabase
-      .from('reactions')
+      .from('dare_engagements')
       .delete()
       .eq('user_id', userId)
       .eq('item_id', itemId)
-      .eq('item_type', itemType);
+      .eq('item_type', itemType)
+      .eq('engagement_type', 'smile');
 
     if (error) {
       console.error('Error removing reaction:', error);
@@ -113,7 +145,7 @@ export async function removeReaction(userId: string, itemId: string, itemType: '
 export async function getReactionStats(itemId: string, itemType: 'experience' | 'retreat') {
   try {
     const { data, error } = await supabase
-      .from('reaction_stats')
+      .from('reactions_stats')
       .select('*')
       .eq('item_id', itemId)
       .eq('item_type', itemType)
@@ -154,9 +186,11 @@ export async function getUserSocialStats(userId: string) {
 export async function getUserReactionCount(userId: string) {
   try {
     const { data, error } = await supabase
-      .from('reactions')
+      .from('dare_engagements')
       .select('id')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('engagement_type', 'smile')
+      .not('item_id', 'is', null);
 
     if (error) {
       console.error('Error getting user reaction count:', error);

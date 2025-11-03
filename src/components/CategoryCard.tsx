@@ -26,23 +26,20 @@ export function CategoryCard({ name, description, image, icon, type, index }: Ca
       : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
   };
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
+    if (process.env.NODE_ENV !== 'production') {
     console.log(`🎯 Category clicked: ${name} (${type})`);
-    console.log(`🎯 Event target:`, e.target);
-    console.log(`🎯 Current target:`, e.currentTarget);
+    }
     
     const url = type === 'experience' 
       ? `/search?type=experiences&category=${encodeURIComponent(name)}` 
       : `/search?type=retreats&category=${encodeURIComponent(name)}`;
     
-    console.log(`🎯 Navigating to: ${url}`);
-    
-    // Use router.push for reliable navigation
     router.push(url);
-  };
+  }, [name, type, router]);
 
   return (
     <div
@@ -60,6 +57,8 @@ export function CategoryCard({ name, description, image, icon, type, index }: Ca
             alt={`${name} ${type === 'experience' ? 'experiences' : 'retreats'}`}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             onError={handleImageError}
+            loading="lazy"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute top-4 right-4 text-4xl drop-shadow-lg">{icon}</div>
@@ -76,3 +75,5 @@ export function CategoryCard({ name, description, image, icon, type, index }: Ca
     </div>
   );
 }
+
+export default memo(CategoryCard);

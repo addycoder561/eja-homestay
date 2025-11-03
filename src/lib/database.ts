@@ -39,13 +39,10 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function ensureProfile(userId: string, email: string, fullName?: string): Promise<Profile | null> {
-  console.log('🔍 Ensuring profile exists for user:', userId);
-  
   // First try to get existing profile
   let profile = await getProfile(userId);
   
   if (!profile) {
-    console.log('🔍 Profile not found, creating new profile...');
     // Create new profile
     const { data, error } = await supabase
       .from('profiles')
@@ -59,21 +56,19 @@ export async function ensureProfile(userId: string, email: string, fullName?: st
       .single();
     
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('Error creating profile:', error);
+      }
       return null;
     }
     
     profile = data;
-    console.log('🔍 New profile created:', profile);
   } else {
-    console.log('🔍 Existing profile found:', profile);
-    
     // Update profile if email or name doesn't match
     const needsUpdate = profile.email !== email || 
                        (fullName && profile.full_name !== fullName);
     
     if (needsUpdate) {
-      console.log('🔍 Updating profile to match auth data...');
       const updates: Partial<Profile> = {};
       if (profile.email !== email) updates.email = email;
       if (fullName && profile.full_name !== fullName) updates.full_name = fullName;
@@ -86,10 +81,11 @@ export async function ensureProfile(userId: string, email: string, fullName?: st
         .single();
       
       if (error) {
+        if (process.env.NODE_ENV !== 'production') {
         console.error('Error updating profile:', error);
+        }
       } else {
         profile = data;
-        console.log('🔍 Profile updated:', profile);
       }
     }
   }
@@ -106,7 +102,9 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
     .single();
 
   if (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Error updating profile:', error);
+    }
     return null;
   }
 
@@ -139,7 +137,9 @@ export async function getProperties(filters?: SearchFilters): Promise<PropertyWi
   const { data, error } = await query;
 
   if (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Error fetching properties:', error);
+    }
     return [];
   }
 
@@ -205,7 +205,7 @@ export async function getPropertyWithReviews(id: string): Promise<PropertyWithRe
 
   // Fetch reviews separately
   const { data: reviews, error: reviewsError } = await supabase
-    .from('reviews')
+    .from('tales')
     .select('*')
     .eq('item_id', id)
     .eq('review_type', 'property');
@@ -572,110 +572,91 @@ export async function hasCompletedBooking(userId: string, propertyId: string): P
 
 // Engagement features functions
 
-// Like functions
+// Like functions (using dare_engagements table with item_id/item_type)
 export async function isLiked(userId: string, itemId: string, itemType: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from('likes')
+    .from('dare_engagements')
     .select('id')
     .eq('user_id', userId)
     .eq('item_id', itemId)
     .eq('item_type', itemType)
+    .eq('engagement_type', 'smile')
     .single();
   return !!data;
 }
 
 export async function addLike(userId: string, itemId: string, itemType: string): Promise<boolean> {
+  // Check if already liked (smile engagement exists)
+  const existing = await isLiked(userId, itemId, itemType);
+  if (existing) {
+    return true; // Already liked
+  }
+  
   const { error } = await supabase
-    .from('likes')
-    .insert([{ user_id: userId, item_id: itemId, item_type: itemType }]);
+    .from('dare_engagements')
+    .insert([{ 
+      user_id: userId, 
+      item_id: itemId, 
+      item_type: itemType,
+      engagement_type: 'smile'
+    }]);
   return !error;
 }
 
 export async function removeLike(userId: string, itemId: string, itemType: string): Promise<boolean> {
   const { error } = await supabase
-    .from('likes')
+    .from('dare_engagements')
     .delete()
     .eq('user_id', userId)
     .eq('item_id', itemId)
-    .eq('item_type', itemType);
+    .eq('item_type', itemType)
+    .eq('engagement_type', 'smile');
   return !error;
 }
 
 export async function getLikesCount(itemId: string, itemType: string): Promise<number> {
   const { count, error } = await supabase
-    .from('likes')
+    .from('dare_engagements')
     .select('*', { count: 'exact', head: true })
     .eq('item_id', itemId)
-    .eq('item_type', itemType);
+    .eq('item_type', itemType)
+    .eq('engagement_type', 'smile');
   return error ? 0 : (count || 0);
 }
 
-// Share functions
+// Share functions (using dare_engagements table with item_id/item_type)
 export async function addShare(userId: string, itemId: string, itemType: string, platform: string): Promise<boolean> {
   const { error } = await supabase
-    .from('shares')
-    .insert([{ user_id: userId, item_id: itemId, item_type: itemType, platform }]);
+    .from('dare_engagements')
+    .insert([{ 
+      user_id: userId, 
+      item_id: itemId, 
+      item_type: itemType, 
+      engagement_type: 'share',
+      engagement_value: platform
+    }]);
   return !error;
 }
 
 export async function getSharesCount(itemId: string, itemType: string): Promise<number> {
   const { count, error } = await supabase
-    .from('shares')
+    .from('dare_engagements')
     .select('*', { count: 'exact', head: true })
     .eq('item_id', itemId)
-    .eq('item_type', itemType);
+    .eq('item_type', itemType)
+    .eq('engagement_type', 'share');
   return error ? 0 : (count || 0);
 }
 
 
 
-// Collaboration functions
-export async function addCardCollaboration(
-  userId: string, 
-  itemId: string, 
-  itemType: string, 
-  collaborationType: string,
-  userData: {
-    name: string;
-    email: string;
-    phone?: string;
-    instagram?: string;
-    youtube?: string;
-    tiktok?: string;
-    proposal: string;
-  }
-): Promise<boolean> {
-  const { error } = await supabase
-    .from('card_collaborations')
-    .insert([{
-      user_id: userId,
-      item_id: itemId,
-      item_type: itemType,
-      collaboration_type: collaborationType,
-      user_name: userData.name,
-      user_email: userData.email,
-      user_phone: userData.phone,
-      user_instagram: userData.instagram,
-      user_youtube: userData.youtube,
-      user_tiktok: userData.tiktok,
-      proposal: userData.proposal
-    }]);
-  return !error;
-}
-
-export async function getUserCollaborations(userId: string): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('card_collaborations')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-  return error ? [] : (data || []);
-} 
 
 
 // Test function to check if bucketlist table exists
 export async function testBucketlistTable() {
+  if (process.env.NODE_ENV !== 'production') {
   console.log('🧪 Testing bucketlist table access...');
+  }
   
   try {
     const { data, error } = await supabase
@@ -684,50 +665,42 @@ export async function testBucketlistTable() {
       .limit(1);
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Bucketlist table test failed:', error);
+      }
       return false;
     }
     
+    if (process.env.NODE_ENV !== 'production') {
     console.log('✅ Bucketlist table is accessible');
+    }
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Bucketlist table test error:', err);
+    }
     return false;
   }
 }
 
 // Bucketlist functions
 export async function getBucketlist(userId: string) {
-  console.log('🔍 getBucketlist called with userId:', userId);
-  
   const { data, error } = await supabase
     .from('bucketlist')
     .select('*')
     .eq('user_id', userId);
     
   if (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Error fetching bucketlist:', error);
+    }
     return [];
   }
   
-  // Debug: Show what item_type values are actually in the database
-  if (data && data.length > 0) {
-    console.log('🔍 Database records breakdown by item_type:');
-    const typeBreakdown = data.reduce((acc: any, record: any) => {
-      acc[record.item_type] = (acc[record.item_type] || 0) + 1;
-      return acc;
-    }, {});
-    console.log('📊 Item types in database:', typeBreakdown);
-    console.log('📋 All records:', data.map(r => ({ id: r.item_id, type: r.item_type })));
-  }
-  
-  console.log('✅ getBucketlist result:', data);
   return data || [];
 }
 
 export async function isBucketlisted(userId: string, itemId: string, itemType: string) {
-  console.log('🔍 isBucketlisted called:', { userId, itemId, itemType });
-  
   const { data, error } = await supabase
     .from('bucketlist')
     .select('id')
@@ -736,6 +709,7 @@ export async function isBucketlisted(userId: string, itemId: string, itemType: s
     .eq('item_type', itemType);
     
   if (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Error checking bucketlist status:', error);
     console.error('❌ Error details:', {
       message: error.message,
@@ -743,37 +717,37 @@ export async function isBucketlisted(userId: string, itemId: string, itemType: s
       hint: error.hint,
       code: error.code
     });
+    }
     return false;
   }
   
-  console.log('✅ isBucketlisted result:', !!data && data.length > 0, 'Data:', data);
   return !!data && data.length > 0;
 }
 
 export async function addToBucketlist(userId: string, itemId: string, itemType: string) {
-  console.log('🔖 addToBucketlist called:', { userId, itemId, itemType });
-  
   // Validate inputs
   if (!userId || !itemId || !itemType) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Invalid inputs for addToBucketlist:', { userId, itemId, itemType });
+    }
     return false;
   }
   
   // Check if userId is a valid UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(userId)) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Invalid user ID format (not UUID):', userId);
+    }
     return false;
   }
   
   // Check if item is already in bucketlist
   const isAlreadyBucketlisted = await isBucketlisted(userId, itemId, itemType);
   if (isAlreadyBucketlisted) {
-    console.log('⚠️ Item already in bucketlist, skipping duplicate insert');
     return true; // Return true since the item is already bucketlisted
   }
   
-  console.log('🔄 Attempting to insert into bucketlist table...');
   try {
     const { data, error } = await supabase
       .from('bucketlist')
@@ -781,6 +755,7 @@ export async function addToBucketlist(userId: string, itemId: string, itemType: 
       .select();
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error adding to bucketlist:', error);
       console.error('❌ Error details:', {
         message: error.message,
@@ -788,29 +763,27 @@ export async function addToBucketlist(userId: string, itemId: string, itemType: 
         hint: error.hint,
         code: error.code
       });
+      }
       return false;
     }
     
-    console.log('✅ Item added to bucketlist successfully:', data);
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Exception in addToBucketlist:', err);
+    }
     return false;
   }
 }
 
 export async function removeFromBucketlist(userId: string, itemId: string, itemType: string) {
-  console.log('🗑️ removeFromBucketlist called:', { userId, itemId, itemType });
-  
   try {
     // First, let's check what records exist for this user and item (any type)
-    const { data: allUserRecords, error: allRecordsError } = await supabase
+    const { data: allUserRecords } = await supabase
       .from('bucketlist')
       .select('*')
       .eq('user_id', userId)
       .eq('item_id', itemId);
-      
-    console.log('🔍 All records for this user+item (any type):', allUserRecords);
     
     // Then check for the specific type we're trying to delete
     const { data: existingRecords, error: fetchError } = await supabase
@@ -820,9 +793,7 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
       .eq('item_id', itemId)
       .eq('item_type', itemType);
       
-    console.log('🔍 Records with specific type before deletion:', existingRecords);
-    
-    if (fetchError) {
+    if (fetchError && process.env.NODE_ENV !== 'production') {
       console.error('❌ Error fetching existing records:', fetchError);
     }
     
@@ -836,7 +807,6 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
       
     // If no records were found with the specific type, try deleting all records for this user+item
     if (!error && allUserRecords && allUserRecords.length > 0 && existingRecords && existingRecords.length === 0) {
-      console.log('🔄 No records found with specific type, trying to delete all records for this user+item');
       const { error: deleteAllError } = await supabase
         .from('bucketlist')
         .delete()
@@ -844,14 +814,12 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
         .eq('item_id', itemId);
         
       if (deleteAllError) {
-        console.log('❌ Error deleting all records:', deleteAllError);
         error = deleteAllError;
-      } else {
-        console.log('✅ Successfully deleted all records for this user+item');
       }
     }
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error removing from bucketlist:', error);
       console.error('❌ Error details:', {
         message: error.message,
@@ -859,24 +827,15 @@ export async function removeFromBucketlist(userId: string, itemId: string, itemT
         hint: error.hint,
         code: error.code
       });
+      }
       return false;
     }
     
-    console.log('✅ Item removed from bucketlist successfully');
-    
-    // Verify the deletion worked
-    const { data: remainingRecords, error: verifyError } = await supabase
-      .from('bucketlist')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('item_id', itemId)
-      .eq('item_type', itemType);
-      
-    console.log('🔍 Remaining records after deletion:', remainingRecords);
-    
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Exception in removeFromBucketlist:', err);
+    }
     return false;
   }
 } 
@@ -973,22 +932,12 @@ export async function createMultiRoomBooking(
     console.error('Error creating booking:', bookingError);
     return null;
   }
-  // 3. Create booking_rooms and decrement inventory
+  // 3. Update booking with room information and decrement inventory
+  // Note: booking_rooms table doesn't exist - room info stored in bookings table
   for (const req of rooms) {
-    // Create booking_rooms entry
-    const { error: brError } = await supabase
-      .from('booking_rooms')
-      .insert({
-        booking_id: bookingData.id,
-        room_id: req.room_id,
-        quantity: req.quantity,
-        check_in: req.check_in,
-        check_out: req.check_out,
-      });
-    if (brError) {
-      console.error('Error creating booking_rooms:', brError);
-      // Optionally: rollback booking here
-    }
+    // Room information should be stored in the booking record itself
+    // If separate room tracking is needed, update the booking with room details
+    // TODO: Determine how to store multiple rooms per booking in the bookings table
     // Decrement inventory for each date
     const start = new Date(req.check_in);
     const end = new Date(req.check_out);
@@ -1044,7 +993,7 @@ export async function getExperience(id: string): Promise<Experience | null> {
 
 export async function createExperience(experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>): Promise<Experience | null> {
   const { data, error } = await supabase
-    .from('experiences_unified')
+    .from('experiences')
     .insert(experience)
     .select()
     .single();
@@ -1057,7 +1006,7 @@ export async function createExperience(experience: Omit<Experience, 'id' | 'crea
 
 export async function updateExperience(id: string, updates: Partial<Experience>): Promise<Experience | null> {
   const { data, error } = await supabase
-    .from('experiences_unified')
+    .from('experiences')
     .update(updates)
     .eq('id', id)
     .select()
@@ -1071,7 +1020,7 @@ export async function updateExperience(id: string, updates: Partial<Experience>)
 
 export async function deleteExperience(id: string): Promise<boolean> {
   const { error } = await supabase
-    .from('experiences_unified')
+    .from('experiences')
     .delete()
     .eq('id', id);
   if (error) {
@@ -1083,7 +1032,6 @@ export async function deleteExperience(id: string): Promise<boolean> {
 
 // Trip functions (redirected to retreats since trips table doesn't exist)
 export async function getTrips(): Promise<Trip[]> {
-  console.log('⚠️ getTrips() called - trips table doesn\'t exist, redirecting to retreats');
   return getRetreats() as any;
 }
 
@@ -1092,14 +1040,16 @@ export async function getRetreats(): Promise<any[]> {
   try {
     // Fetch from unified table, filtering for Retreats
     const { data, error } = await supabase
-      .from('experiences_unified')
+      .from('experiences')
       .select('*')
       .eq('is_active', true)
       .eq('location', 'Retreats')
       .order('created_at', { ascending: false });
 
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('Error fetching retreats from unified table:', error);
+      }
       return [];
     }
 
@@ -1110,63 +1060,69 @@ export async function getRetreats(): Promise<any[]> {
 
     return retreats;
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Unexpected error in getRetreats:', error);
+    }
     return [];
   }
 }
 
 export async function getTrip(id: string): Promise<Trip | null> {
-  console.log('⚠️ getTrip() called - using unified table for retreats');
   const { data, error } = await supabase
-    .from('experiences_unified')
+    .from('experiences')
     .select('*')
     .eq('id', id)
     .eq('location', 'Retreats')
     .single();
   if (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Error fetching trip from unified table:', error);
+    }
     return null;
   }
   return data;
 }
 
 export async function createTrip(trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>): Promise<Trip | null> {
-  console.log('⚠️ createTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { data, error } = await supabase
-    .from('retreats')
+    .from('experiences')
     .insert(trip)
     .select()
     .single();
   if (error) {
-    console.error('Error creating trip in retreats:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error creating trip in experiences:', error);
+    }
     return null;
   }
   return data;
 }
 
 export async function updateTrip(id: string, updates: Partial<Trip>): Promise<Trip | null> {
-  console.log('⚠️ updateTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { data, error } = await supabase
-    .from('retreats')
+    .from('experiences')
     .update(updates)
     .eq('id', id)
     .select()
     .single();
   if (error) {
-    console.error('Error updating trip in retreats:', error);
-    return null;
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error updating trip in experiences:', error);
   }
   return null;
+  }
+  return data;
 }
 
 export async function deleteTrip(id: string): Promise<boolean> {
-  console.log('⚠️ deleteTrip() called - trips table doesn\'t exist, redirecting to retreats');
   const { error } = await supabase
-    .from('retreats')
+    .from('experiences')
     .delete()
     .eq('id', id);
   if (error) {
-    console.error('Error deleting trip from retreats:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error deleting trip from experiences:', error);
+    }
     return false;
   }
   return true;
@@ -1177,7 +1133,9 @@ export async function setRoomInventory(roomId: string, date: string, available: 
     .from('room_inventory')
     .upsert({ room_id: roomId, date, available }, { onConflict: 'room_id,date' });
   if (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Error setting room inventory:', error);
+    }
     return false;
   }
   return true;
@@ -1195,7 +1153,9 @@ export async function getExperienceCategories(): Promise<string[]> {
       .eq('is_active', true);
     
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('Error fetching experience categories:', error);
+      }
       return [];
     }
     
@@ -1211,21 +1171,25 @@ export async function getExperienceCategories(): Promise<string[]> {
     const uniqueCategories = [...new Set(allCategories)];
     return uniqueCategories;
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Unexpected error fetching experience categories:', error);
+    }
     return [];
   }
 }
 
-// Function to get unique retreat categories
+// Function to get unique retreat categories (now using experiences)
 export async function getRetreatCategories(): Promise<string[]> {
   try {
     const { data, error } = await supabase
-      .from('retreats')
+      .from('experiences')
       .select('categories')
       .eq('is_active', true);
     
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('Error fetching retreat categories:', error);
+      }
       return [];
     }
     
@@ -1241,15 +1205,15 @@ export async function getRetreatCategories(): Promise<string[]> {
     const uniqueCategories = [...new Set(allCategories)];
     return uniqueCategories;
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('Unexpected error fetching retreat categories:', error);
+    }
     return [];
   }
 }
 
 // Notification functions
 export async function getNotifications(userId: string) {
-  console.log('🔔 getNotifications called for user:', userId);
-  
   try {
     const { data, error } = await supabase
       .from('notifications')
@@ -1258,21 +1222,22 @@ export async function getNotifications(userId: string) {
       .order('created_at', { ascending: false });
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error fetching notifications:', error);
+      }
       return [];
     }
     
-    console.log('✅ Notifications fetched:', data?.length || 0);
     return data || [];
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ getNotifications error:', error);
+    }
     return [];
   }
 }
 
 export async function getUnreadNotificationCount(userId: string) {
-  console.log('🔔 getUnreadNotificationCount called for user:', userId);
-  
   try {
     const { count, error } = await supabase
       .from('notifications')
@@ -1281,21 +1246,22 @@ export async function getUnreadNotificationCount(userId: string) {
       .eq('is_read', false);
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error fetching unread notification count:', error);
+      }
       return 0;
     }
     
-    console.log('✅ Unread notifications count:', count || 0);
     return count || 0;
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ getUnreadNotificationCount error:', error);
+    }
     return 0;
   }
 }
 
 export async function markNotificationAsRead(notificationId: string) {
-  console.log('🔔 markNotificationAsRead called for notification:', notificationId);
-  
   try {
     const { error } = await supabase
       .from('notifications')
@@ -1303,21 +1269,22 @@ export async function markNotificationAsRead(notificationId: string) {
       .eq('id', notificationId);
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error marking notification as read:', error);
+      }
       throw error;
     }
     
-    console.log('✅ Notification marked as read');
     return { success: true };
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ markNotificationAsRead error:', error);
+    }
     throw error;
   }
 }
 
 export async function markAllNotificationsAsRead(userId: string) {
-  console.log('🔔 markAllNotificationsAsRead called for user:', userId);
-  
   try {
     const { error } = await supabase
       .from('notifications')
@@ -1326,21 +1293,22 @@ export async function markAllNotificationsAsRead(userId: string) {
       .eq('is_read', false);
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error marking all notifications as read:', error);
+      }
       throw error;
     }
     
-    console.log('✅ All notifications marked as read');
     return { success: true };
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ markAllNotificationsAsRead error:', error);
+    }
     throw error;
   }
 }
 
 export async function createNotification(userId: string, title: string, message: string, type: string = 'info', actionUrl?: string) {
-  console.log('🔔 createNotification called:', { userId, title, message, type, actionUrl });
-  
   try {
     const { data, error } = await supabase
       .from('notifications')
@@ -1354,21 +1322,22 @@ export async function createNotification(userId: string, title: string, message:
       .select();
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error creating notification:', error);
+      }
       throw error;
     }
     
-    console.log('✅ Notification created:', data);
     return data?.[0];
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ createNotification error:', error);
+    }
     throw error;
   }
 }
 
 export async function createWelcomeNotifications(userId: string) {
-  console.log('🔔 createWelcomeNotifications called for user:', userId);
-  
   try {
     const welcomeNotifications = [
       {
@@ -1400,14 +1369,17 @@ export async function createWelcomeNotifications(userId: string) {
       .select();
       
     if (error) {
+      if (process.env.NODE_ENV !== 'production') {
       console.error('❌ Error creating welcome notifications:', error);
+      }
       throw error;
     }
     
-    console.log('✅ Welcome notifications created:', data?.length || 0);
     return data;
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
     console.error('❌ createWelcomeNotifications error:', error);
+    }
     throw error;
   }
 } 

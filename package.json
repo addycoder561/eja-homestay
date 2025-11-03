@@ -9,14 +9,13 @@
     "build:vercel": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "next lint --fix",
-    "fix-profiles": "node scripts/run-profile-fix.js --direct"
+    "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.1.5",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.0",
-
     "autoprefixer": "^10.4.19",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",

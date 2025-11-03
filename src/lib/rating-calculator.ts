@@ -7,7 +7,7 @@ export async function updatePropertyRating(propertyId: string): Promise<void> {
   try {
     // Get all reviews for the property
     const { data: reviews, error } = await supabase
-      .from('reviews')
+      .from('tales')
       .select('rating')
       .eq('property_id', propertyId);
 
@@ -50,7 +50,7 @@ export async function getPropertyRatingData(propertyId: string): Promise<{
 }> {
   try {
     const { data: reviews, error } = await supabase
-      .from('reviews')
+      .from('tales')
       .select('rating')
       .eq('property_id', propertyId);
 

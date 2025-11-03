@@ -267,7 +267,7 @@ export default function PropertyDetailPage() {
     if (!user || !property) return;
     try {
       const { data } = await supabase
-        .from('wishlist')
+        .from('bucketlist')
         .select('*')
         .eq('user_id', user.id)
         .eq('item_id', property.id)
@@ -288,7 +288,7 @@ export default function PropertyDetailPage() {
     try {
       if (isWishlisted) {
         await supabase
-          .from('wishlist')
+          .from('bucketlist')
           .delete()
           .eq('user_id', user.id)
           .eq('item_id', property.id)
@@ -297,7 +297,7 @@ export default function PropertyDetailPage() {
         toast.success('Removed from wishlist');
       } else {
         await supabase
-          .from('wishlist')
+          .from('bucketlist')
           .insert({
             user_id: user.id,
             item_id: property.id,

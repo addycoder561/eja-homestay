@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the current user via server-side client (reads auth cookies)
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {

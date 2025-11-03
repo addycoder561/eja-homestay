@@ -31,10 +31,11 @@ import {
   ChevronDownIcon,
   SparklesIcon,
   PlusIcon,
-  BellIcon
+  BellIcon,
+  FireIcon
 } from '@heroicons/react/24/outline';
 import { SupportModal } from '@/components/SupportModal';
-import CreateExperienceModal from '@/components/CreateExperienceModal';
+import { CreateDropdown } from '@/components/CreateExperienceModal';
 import { AuthPromptModal } from '@/components/AuthPromptModal';
 
 export function Navigation() {
@@ -45,8 +46,9 @@ export function Navigation() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [destinationsOpen, setDestinationsOpen] = useState(false);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -81,7 +83,9 @@ export function Navigation() {
           });
           setBucketlistCount(count);
         } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
           console.error('Error fetching bucketlist count:', error);
+          }
           setBucketlistCount(0);
         }
       } else {
@@ -101,7 +105,9 @@ export function Navigation() {
           const count = await getUnreadNotificationCount(user.id);
           setNotificationCount(count);
         } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
           console.error('Error fetching notification count:', error);
+          }
           setNotificationCount(0);
         }
       } else {
@@ -238,15 +244,26 @@ export function Navigation() {
                   Discover
                 </Link>
 
+                <Link 
+                  href="/drop" 
+                  className={`text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group ${
+                    pathname?.startsWith('/drop') ? 'text-yellow-500 bg-yellow-50 shadow-sm' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <FireIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Dares
+                </Link>
+
                 {/* Create Button */}
                 <button
+                  ref={createButtonRef}
                   onClick={() => {
                     if (!user) {
                       // Show auth prompt modal instead of redirecting
                       setIsAuthPromptOpen(true);
                       return;
                     }
-                    setCreateModalOpen(true);
+                    setCreateDropdownOpen(true);
                   }}
                   className="text-gray-700 hover:text-yellow-500 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 group hover:bg-gray-50 hover:scale-105"
                 >
@@ -465,9 +482,10 @@ export function Navigation() {
       )}
       
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
-      <CreateExperienceModal 
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+      <CreateDropdown 
+        isOpen={createDropdownOpen}
+        onClose={() => setCreateDropdownOpen(false)}
+        buttonRef={createButtonRef}
       />
       <AuthPromptModal
         isOpen={isAuthPromptOpen}

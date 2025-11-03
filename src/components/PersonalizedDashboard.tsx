@@ -64,7 +64,7 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
         .eq('guest_id', user?.id);
 
       const { data: reviews } = await supabase
-        .from('reviews')
+        .from('tales')
         .select('*')
         .eq('guest_id', user?.id);
 
