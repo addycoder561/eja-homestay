@@ -40,17 +40,25 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (only if chat is maximized or has messages)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Focus input when chat opens
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    // Don't auto-scroll on initial inline render with no messages
+    if (messages.length > 0 && (isMaximized || !inline)) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isOpen]);
+  }, [messages, isMaximized, inline]);
+
+  // Focus input when chat opens (but not on initial load)
+  useEffect(() => {
+    // Only auto-focus if chat was opened by user interaction, not on initial inline render
+    if (isOpen && inputRef.current && isMaximized) {
+      // Delay focus to avoid scrolling issues
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isMaximized]);
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;

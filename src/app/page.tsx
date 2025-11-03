@@ -77,6 +77,12 @@ export default function Home() {
   const [bucketlistedItems, setBucketlistedItems] = useState<Set<string>>(new Set());
   const [moods, setMoods] = useState<string[]>([]);
 
+  // Scroll to top on initial page load
+  useEffect(() => {
+    // Ensure page starts at top when user visits or refreshes
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -197,11 +203,6 @@ export default function Home() {
     setSelectedRetreat(null);
   }, []);
 
-  // Show loading state while data is being fetched
-  if (loading) {
-    return <LoadingSpinner message="Loading amazing experiences..." />;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
           <style jsx global>{`
@@ -259,6 +260,7 @@ export default function Home() {
               });
 
               // Replace specific items with correct ones from database
+              // Find replacement items from the data
               const familyGetaways = retreats.find((ret: any) => {
                 const title = (ret.title || ret.name || '').toLowerCase();
                 return title.includes('family getaway');
@@ -267,81 +269,69 @@ export default function Home() {
                 const title = (ret.title || ret.name || '').toLowerCase();
                 return title.includes('corporate retreat');
               });
-
-              // Replace items in gallery
-              galleryItems = galleryItems.map((item: any) => {
-                const title = (item.title || item.name || '').toLowerCase();
-                
-                if (title.includes('gratitude trek') && familyGetaways) {
-                  return {
-                    ...familyGetaways,
-                    type: 'retreat' as const
-                  };
-                }
-                
-                if (title.includes('pubg') && corporateRetreats) {
-                  return {
-                    ...corporateRetreats,
-                    type: 'retreat' as const
-                  };
-                }
-                
-                return item;
-              });
-
-              // Mobile-specific replacements
-              // Find replacement items from the data
-              const musicFestival = [...hyperLocalExperiences, ...retreats].find((item: any) => {
-                const title = (item.title || item.name || '').toLowerCase();
-                return title.includes('music festival');
-              });
-              
-              const streetFoodTourForReplacement = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+              const streetFoodTour = [...hyperLocalExperiences, ...retreats].find((item: any) => {
                 const title = (item.title || item.name || '').toLowerCase();
                 return title.includes('street food');
               });
-              
-              const corporateRetreatForReplacement = corporateRetreats;
-              
               const communityDining = [...hyperLocalExperiences, ...retreats].find((item: any) => {
                 const title = (item.title || item.name || '').toLowerCase();
                 return title.includes('community dining');
+              });
+              const cyclingTour = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('cycling');
               });
 
               // Apply replacements for mobile gallery
               galleryItems = galleryItems.map((item: any) => {
                 const title = (item.title || item.name || '').toLowerCase();
                 
-                // Replace Spiritual Tour with Music Festival
-                if (title.includes('spiritual') && musicFestival) {
-                  return {
-                    ...musicFestival,
-                    type: musicFestival.type || 'experience' as const
-                  };
+                // Replace "Birthday Surprise" with "Family Getaways"
+                if ((title.includes('birthday') && title.includes('surprise')) || title.includes('birthday surprise')) {
+                  if (familyGetaways) {
+                    return {
+                      ...familyGetaways,
+                      type: 'retreat' as const
+                    };
+                  }
                 }
                 
-                // Replace Corporate Retreat with Street Food Tour
-                if (title.includes('corporate retreat') && streetFoodTourForReplacement) {
-                  return {
-                    ...streetFoodTourForReplacement,
-                    type: streetFoodTourForReplacement.type || 'experience' as const
-                  };
-                }
-                
-                // Replace Street Food Tour with Corporate Retreat
-                if (title.includes('street food') && corporateRetreatForReplacement) {
-                  return {
-                    ...corporateRetreatForReplacement,
-                    type: 'retreat' as const
-                  };
-                }
-                
-                // Replace Art n Craft Tour with Community Dining
-                if ((title.includes('art') && title.includes('craft')) || title.includes('art n craft') || title.includes('art & craft')) {
+                // Replace "Stranger Potluck" with "Community Dining"
+                if ((title.includes('stranger') && title.includes('potluck')) || title.includes('stranger potluck')) {
                   if (communityDining) {
                     return {
                       ...communityDining,
                       type: communityDining.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                // Replace "Festival Immersion" with "Street Food Tour"
+                if ((title.includes('festival') && title.includes('immersion')) || title.includes('festival immersion')) {
+                  if (streetFoodTour) {
+                    return {
+                      ...streetFoodTour,
+                      type: streetFoodTour.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                // Replace "Mystic Trails" with "Corporate Retreats"
+                if ((title.includes('mystic') && title.includes('trails')) || title.includes('mystic trails')) {
+                  if (corporateRetreats) {
+                    return {
+                      ...corporateRetreats,
+                      type: 'retreat' as const
+                    };
+                  }
+                }
+                
+                // Replace "Karaoke Nights" with "Cycling Tour"
+                if ((title.includes('karaoke') && title.includes('nights')) || title.includes('karaoke nights')) {
+                  if (cyclingTour) {
+                    return {
+                      ...cyclingTour,
+                      type: cyclingTour.type || 'experience' as const
                     };
                   }
                 }
@@ -797,7 +787,7 @@ export default function Home() {
                 });
 
                 // Replace specific items with correct ones from database
-                // Find Family Getaways and Corporate Retreats from the data
+                // Find replacement items from the data
                 const familyGetaways = retreats.find((ret: any) => {
                   const title = (ret.title || ret.name || '').toLowerCase();
                   return title.includes('family getaway');
@@ -806,49 +796,83 @@ export default function Home() {
                   const title = (ret.title || ret.name || '').toLowerCase();
                   return title.includes('corporate retreat');
                 });
+                const streetFoodTour = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('street food');
+                });
+                const communityDining = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('community dining');
+                });
+                const musicFestival = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('music festival');
+                });
 
                 // Replace items in gallery
                 galleryItems = galleryItems.map((item: any) => {
                   const title = (item.title || item.name || '').toLowerCase();
                   
-                  // Replace "The Gratitude Trek" with "Family Getaways"
-                  if (title.includes('gratitude trek') && familyGetaways) {
-                    return {
-                      ...familyGetaways,
-                      type: 'retreat' as const
-                    };
+                  // Replace "Birthday Surprise" with "Family Getaways"
+                  if ((title.includes('birthday') && title.includes('surprise')) || title.includes('birthday surprise')) {
+                    if (familyGetaways) {
+                      return {
+                        ...familyGetaways,
+                        type: 'retreat' as const
+                      };
+                    }
                   }
                   
-                  // Replace "PUBG" with "Corporate Retreats"
-                  if (title.includes('pubg') && corporateRetreats) {
-                    return {
-                      ...corporateRetreats,
-                      type: 'retreat' as const
-                    };
+                  // Replace "Stranger Potluck" with "Community Dining"
+                  if ((title.includes('stranger') && title.includes('potluck')) || title.includes('stranger potluck')) {
+                    if (communityDining) {
+                      return {
+                        ...communityDining,
+                        type: communityDining.type || 'experience' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Festival Immersion" with "Street Food Tour"
+                  if ((title.includes('festival') && title.includes('immersion')) || title.includes('festival immersion')) {
+                    if (streetFoodTour) {
+                      return {
+                        ...streetFoodTour,
+                        type: streetFoodTour.type || 'experience' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Mystic Trails" with "Corporate Retreats"
+                  if ((title.includes('mystic') && title.includes('trails')) || title.includes('mystic trails')) {
+                    if (corporateRetreats) {
+                      return {
+                        ...corporateRetreats,
+                        type: 'retreat' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Theatre" or "Theater" with "Music Festival"
+                  if (title.includes('theatre') || title.includes('theater')) {
+                    if (musicFestival) {
+                      return {
+                        ...musicFestival,
+                        type: musicFestival.type || 'experience' as const
+                      };
+                    }
                   }
                   
                   return item;
                 });
 
-                // Limit items to fit exactly in 2 rows (5 columns × 2 rows = 10 cells)
-                // Count double-height items (spiritual tour and street food tour)
-                const hasSpiritualTour = galleryItems.some((item: any) => {
-                  const title = (item.title || item.name || '').toLowerCase();
-                  return title.includes('spiritual');
-                });
-                
-                const hasStreetFoodTour = galleryItems.some((item: any) => {
-                  const title = (item.title || item.name || '').toLowerCase();
-                  return title.includes('street food');
-                });
-                
-                // Calculate how many double-height items we have
-                const doubleHeightCount = (hasSpiritualTour ? 1 : 0) + (hasStreetFoodTour ? 1 : 0);
-                
-                // Total cells available: 10
-                // If we have 1 double-height item, it takes 2 cells, leaving 8 cells = 8 single items + 1 double = 9 total
-                // If we have 2 double-height items, they take 4 cells, leaving 6 cells = 6 single items + 2 double = 8 total
-                const maxItems = 10 - doubleHeightCount;
+                // Layout pattern: 2-1-2-1-2 images across 5 columns (total 8 images)
+                // Col 1: 2 images (one below another)
+                // Col 2: 1 image (double-height, spans both rows)
+                // Col 3: 2 images (one below another)
+                // Col 4: 1 image (double-height, spans both rows)
+                // Col 5: 2 images (one below another)
+                const maxItems = 8;
                 galleryItems = galleryItems.slice(0, maxItems);
 
                 // Get image helper
@@ -858,36 +882,70 @@ export default function Home() {
                     'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
                 };
 
-                // Helper to check if item is spiritual tour
-                const isSpiritualTour = (item: any) => {
-                  const title = (item.title || item.name || '').toLowerCase();
-                  return title.includes('spiritual');
-                };
-
-                // Helper to check if item is street food tour
-                const isStreetFoodTour = (item: any) => {
-                  const title = (item.title || item.name || '').toLowerCase();
-                  return title.includes('street food');
-                };
-
                 if (galleryItems.length === 0) {
                   return (
-                    <div className="grid grid-cols-5 gap-4">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                        <div key={i} className="h-[140px] bg-gray-200 rounded-xl animate-pulse" />
-                      ))}
+                    <div className="grid grid-cols-5 gap-4" style={{ gridTemplateRows: '140px 140px', overflow: 'hidden' }}>
+                      {/* Skeleton layout matching the pattern */}
+                      <div className="h-[140px] bg-gray-200 rounded-xl animate-pulse" style={{ gridColumn: '1', gridRow: '1' }} />
+                      <div className="h-[140px] bg-gray-200 rounded-xl animate-pulse" style={{ gridColumn: '1', gridRow: '2' }} />
+                      <div className="h-[296px] bg-gray-200 rounded-xl animate-pulse row-span-2" style={{ gridColumn: '2', gridRow: '1 / 3' }} />
+                      <div className="h-[140px] bg-gray-200 rounded-xl animate-pulse" style={{ gridColumn: '3', gridRow: '1' }} />
+                      <div className="h-[140px] bg-gray-200 rounded-xl animate-pulse" style={{ gridColumn: '3', gridRow: '2' }} />
+                      <div className="h-[296px] bg-gray-200 rounded-xl animate-pulse row-span-2" style={{ gridColumn: '4', gridRow: '1 / 3' }} />
+                      <div className="h-[140px] bg-gray-200 rounded-xl animate-pulse" style={{ gridColumn: '5', gridRow: '1' }} />
+                      <div className="h-[140px] bg-gray-200 rounded-xl animate-pulse" style={{ gridColumn: '5', gridRow: '2' }} />
                     </div>
                   );
                 }
 
-                // 5 columns, 2 rows - with spiritual tour and street food tour taking double height
-                // Limit grid to exactly 2 rows - no implicit rows
+                // Render items in 2-1-2-1-2 pattern
                 return (
                   <div className="grid grid-cols-5 gap-4" style={{ gridTemplateRows: '140px 140px', overflow: 'hidden' }}>
                     {galleryItems.map((item, index) => {
-                      const spiritualTour = isSpiritualTour(item);
-                      const streetFoodTour = isStreetFoodTour(item);
-                      const isDoubleHeight = spiritualTour || streetFoodTour;
+                      let gridColumn = '';
+                      let gridRow = '';
+                      let height = '140px';
+                      let className = 'relative rounded-xl overflow-hidden cursor-pointer group hover:scale-[1.02] transition-transform duration-200';
+                      
+                      // Column 1: 2 images (index 0, 1)
+                      if (index === 0) {
+                        gridColumn = '1';
+                        gridRow = '1';
+                      } else if (index === 1) {
+                        gridColumn = '1';
+                        gridRow = '2';
+                      }
+                      // Column 2: 1 image double-height (index 2)
+                      else if (index === 2) {
+                        gridColumn = '2';
+                        gridRow = '1 / 3';
+                        height = '296px';
+                        className += ' row-span-2';
+                      }
+                      // Column 3: 2 images (index 3, 4)
+                      else if (index === 3) {
+                        gridColumn = '3';
+                        gridRow = '1';
+                      } else if (index === 4) {
+                        gridColumn = '3';
+                        gridRow = '2';
+                      }
+                      // Column 4: 1 image double-height (index 5)
+                      else if (index === 5) {
+                        gridColumn = '4';
+                        gridRow = '1 / 3';
+                        height = '296px';
+                        className += ' row-span-2';
+                      }
+                      // Column 5: 2 images (index 6, 7)
+                      else if (index === 6) {
+                        gridColumn = '5';
+                        gridRow = '1';
+                      } else if (index === 7) {
+                        gridColumn = '5';
+                        gridRow = '2';
+                      }
+                      
                       return (
                         <div
                           key={`gallery-item-${index}`}
@@ -898,8 +956,12 @@ export default function Home() {
                               handleRetreatClick(item);
                             }
                           }}
-                          className={`relative ${isDoubleHeight ? 'row-span-2' : ''} rounded-xl overflow-hidden cursor-pointer group hover:scale-[1.02] transition-transform duration-200`}
-                          style={isDoubleHeight ? { height: '296px' } : { height: '140px' }}
+                          className={className}
+                          style={{ 
+                            gridColumn: gridColumn,
+                            gridRow: gridRow,
+                            height: height
+                          }}
                         >
                           <img
                             src={getImageUrl(item)}
