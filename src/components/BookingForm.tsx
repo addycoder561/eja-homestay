@@ -306,7 +306,7 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
 
       console.log('🔍 Setting up Razorpay options...');
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_C7d9Vbcc9JM8dp',
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: order.currency,
         name: property.title,

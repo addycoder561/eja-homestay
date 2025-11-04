@@ -1,13 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { 
   MapPinIcon, 
-  ClockIcon, 
-  CurrencyDollarIcon,
-  EyeIcon,
-  CalendarDaysIcon
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 interface Suggestion {
@@ -31,14 +27,9 @@ interface AISuggestionCardProps {
 }
 
 export function AISuggestionCard({ suggestion, onViewDetails, onBook }: AISuggestionCardProps) {
-  const [showItinerary, setShowItinerary] = useState(false);
-
-  const handleViewDetails = () => {
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onViewDetails(suggestion);
-  };
-
-  const handleBook = () => {
-    onBook(suggestion);
   };
 
   const getMoodColor = (mood: string) => {
@@ -58,9 +49,9 @@ export function AISuggestionCard({ suggestion, onViewDetails, onBook }: AISugges
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer h-full flex flex-col">
       {/* Image */}
-      <div className="relative h-32 w-full">
+      <div className="relative h-40 w-full flex-shrink-0">
         <img
           src={suggestion.cover_image || '/placeholder-experience.jpg'}
           alt={suggestion.title}
@@ -72,86 +63,46 @@ export function AISuggestionCard({ suggestion, onViewDetails, onBook }: AISugges
         />
         {/* Mood Badge */}
         <div className="absolute top-2 left-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMoodColor(suggestion.mood)}`}>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getMoodColor(suggestion.mood)}`}>
             {suggestion.mood}
           </span>
         </div>
-        {/* Type Badge */}
+        {/* Price Badge */}
         <div className="absolute top-2 right-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            suggestion.type === 'experience' 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-blue-100 text-blue-800'
-          }`}>
-            {suggestion.type === 'experience' ? 'Experience' : 'Retreat'}
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-sm text-gray-900 shadow-sm">
+            ₹{suggestion.price.toLocaleString()}
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-3 flex-1 flex flex-col">
         {/* Title */}
-        <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2">
+        <h3 className="font-semibold text-gray-900 text-sm mb-1.5 line-clamp-2 flex-shrink-0">
           {suggestion.title}
         </h3>
 
-        {/* Description */}
-        <p className="text-gray-600 text-xs mb-3 line-clamp-2">
-          {suggestion.description}
-        </p>
-
-        {/* Details */}
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center text-gray-500 text-xs">
-            <MapPinIcon className="w-3 h-3 mr-1" />
-            <span>{suggestion.location}</span>
+        {/* Details - Compact */}
+        <div className="space-y-1 mb-3 flex-shrink-0">
+          <div className="flex items-center text-gray-600 text-xs">
+            <MapPinIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+            <span className="truncate">{suggestion.location}</span>
           </div>
-          <div className="flex items-center text-gray-500 text-xs">
-            <ClockIcon className="w-3 h-3 mr-1" />
+          <div className="flex items-center text-gray-600 text-xs">
+            <ClockIcon className="w-3 h-3 mr-1 flex-shrink-0" />
             <span>{suggestion.duration}</span>
-          </div>
-          <div className="flex items-center text-gray-500 text-xs">
-            <CurrencyDollarIcon className="w-3 h-3 mr-1" />
-            <span>₹{suggestion.price.toLocaleString()}</span>
           </div>
         </div>
 
-        {/* Itinerary Toggle */}
-        <button
-          onClick={() => setShowItinerary(!showItinerary)}
-          className="flex items-center gap-1 text-xs text-yellow-600 hover:text-yellow-700 mb-3 transition-colors"
-        >
-          <CalendarDaysIcon className="w-3 h-3" />
-          <span>{showItinerary ? 'Hide' : 'Show'} Itinerary</span>
-        </button>
-
-        {/* Itinerary */}
-        {showItinerary && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans">
-              {suggestion.itinerary}
-            </pre>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
+        {/* Action Button - Full Width */}
+        <div className="mt-auto">
           <Button
             onClick={handleViewDetails}
-            variant="outline"
-            size="sm"
-            className="flex-1 text-xs"
-          >
-            <EyeIcon className="w-3 h-3 mr-1" />
-            View Details
-          </Button>
-          <Button
-            onClick={handleBook}
             variant="primary"
             size="sm"
-            className="flex-1 text-xs bg-yellow-500 hover:bg-yellow-600"
+            className="w-full text-xs bg-yellow-500 hover:bg-yellow-600 text-white py-2"
           >
-            Book Now
+            View Details
           </Button>
         </div>
       </div>

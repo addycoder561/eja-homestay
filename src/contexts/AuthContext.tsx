@@ -37,44 +37,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const init = async () => {
       try {
-        // Set a timeout to prevent infinite loading
+        // Set a shorter timeout to prevent blocking
         timeoutId = setTimeout(() => {
           if (isMounted) {
-            console.warn('Auth initialization timeout - setting loading to false');
             setLoading(false);
           }
-        }, 10000); // 10 second timeout
+        }, 3000); // 3 second timeout - don't block page load
 
-        const { data: { session } } = await supabase.auth.getSession();
+        // Get session without blocking
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session } } = await sessionPromise;
         const isAuthenticated = !!session?.user;
         lastAuthenticatedRef.current = isAuthenticated;
         
         if (!isMounted) return;
         
+        // Set user immediately to unblock page
         setUser(session?.user ?? null);
+        setLoading(false); // Stop loading immediately
         
+        // Fetch profile in background (non-blocking)
         if (session?.user) {
-          try {
-            const userProfile = await getProfile(session.user.id);
-            if (!isMounted) return;
-            setProfile(userProfile);
-          } catch (profileError) {
-            console.error('Error fetching profile:', profileError);
-            // Don't fail auth if profile fetch fails
-            setProfile(null);
-          }
+          // Don't await - let it load in background
+          getProfile(session.user.id)
+            .then((userProfile) => {
+              if (isMounted) {
+                setProfile(userProfile);
+              }
+            })
+            .catch((profileError) => {
+              if (process.env.NODE_ENV !== 'production') {
+                console.error('Error fetching profile:', profileError);
+              }
+              if (isMounted) {
+                setProfile(null);
+              }
+            });
         } else {
           setProfile(null);
         }
         
-        if (isMounted) {
+        if (isMounted && timeoutId) {
           clearTimeout(timeoutId);
-          setLoading(false);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error initializing auth:', error);
+        }
         if (isMounted) {
-          clearTimeout(timeoutId);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
           setLoading(false);
         }
       }

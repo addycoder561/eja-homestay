@@ -51,12 +51,16 @@ export async function POST(request: NextRequest) {
     // Query database for relevant experiences and retreats
     const { experiences, retreats } = await getRecommendations(moodKeywords, 5);
 
-    // Generate AI response using Gemini
+    // Generate AI response using Gemini with conversation history
     const aiResponse = await geminiClient.generateTravelRecommendations(
       message,
       detectedMood,
       experiences,
-      retreats
+      retreats,
+      conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }))
     );
 
     // Format response with suggestions
@@ -96,23 +100,25 @@ export async function POST(request: NextRequest) {
 
 async function getRecommendations(moodKeywords: string[], limit: number = 5) {
   try {
-    // Query experiences
+    // Query experiences (Hyper-local and Online only, exclude Retreats)
     const { data: experiences, error: expError } = await supabase
       .from('experiences_with_host')
       .select('*')
       .in('mood', moodKeywords)
       .eq('is_active', true)
+      .neq('location', 'Retreats') // Exclude retreats
       .limit(limit);
 
     if (expError) {
       console.error('Error fetching experiences:', expError);
     }
 
-    // Query retreats
+    // Query retreats (only items with location = 'Retreats')
     const { data: retreats, error: retreatError } = await supabase
       .from('experiences')
       .select('*')
       .eq('is_active', true)
+      .eq('location', 'Retreats') // Only get actual retreats
       .limit(limit);
 
     if (retreatError) {
@@ -136,8 +142,18 @@ async function getRecommendations(moodKeywords: string[], limit: number = 5) {
 function formatSuggestions(experiences: any[], retreats: any[]) {
   const suggestions = [];
 
-  // Add experiences
+  // Add experiences (Hyper-local and Online)
   experiences.slice(0, 3).forEach(exp => {
+    // Determine duration based on location and available fields
+    let duration = 'Full day';
+    if (exp.duration_hours) {
+      duration = `${exp.duration_hours} hours`;
+    } else if (exp.location === 'Online') {
+      duration = 'Online';
+    } else if (exp.location === 'Hyper-local') {
+      duration = 'Hyper-local';
+    }
+
     suggestions.push({
       id: exp.id,
       type: 'experience',
@@ -147,7 +163,7 @@ function formatSuggestions(experiences: any[], retreats: any[]) {
       price: exp.price,
       mood: exp.mood,
       cover_image: exp.cover_image,
-      duration: exp.duration_hours ? `${exp.duration_hours} hours` : 'Full day',
+      duration: duration,
       booking_url: `/experiences/${exp.id}`,
       itinerary: itineraryGenerator.formatItineraryText(
         itineraryGenerator.generateExperienceItinerary(exp)
@@ -155,8 +171,14 @@ function formatSuggestions(experiences: any[], retreats: any[]) {
     });
   });
 
-  // Add retreats
+  // Add retreats (only items with location = 'Retreats')
   retreats.slice(0, 2).forEach(retreat => {
+    // For retreats, check duration_days field if available, otherwise use Multi-day
+    let duration = 'Multi-day';
+    if (retreat.duration_days) {
+      duration = `${retreat.duration_days} days`;
+    }
+
     suggestions.push({
       id: retreat.id,
       type: 'retreat',
@@ -166,7 +188,7 @@ function formatSuggestions(experiences: any[], retreats: any[]) {
       price: retreat.price,
       mood: 'Retreat',
       cover_image: retreat.cover_image,
-      duration: retreat.duration_days ? `${retreat.duration_days} days` : 'Multi-day',
+      duration: duration,
       booking_url: `/retreats/${retreat.id}`,
       itinerary: itineraryGenerator.formatItineraryText(
         itineraryGenerator.generateRetreatItinerary(retreat)

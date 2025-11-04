@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function SignUpForm() {
@@ -50,10 +51,38 @@ export default function SignUpForm() {
     }
 
     try {
-      const result = await signUp(formData.email, formData.password, 'User', 'guest');
-      if (!result.error) {
+      // Call Supabase signUp directly to get the full response with session info
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: 'User',
+            first_name: 'User',
+            role: 'guest',
+          },
+        },
+      });
+
+      if (signUpError) {
+        toast.error(signUpError.message || 'Failed to create account');
+        setLoading(false);
+        return;
+      }
+
+      // Check if user has a session (email confirmed) or needs verification
+      // If there's no session, email confirmation is required
+      if (signUpData.session) {
+        // Email already confirmed, user is logged in (has session)
         toast.success('Account created and logged in!');
         router.push('/');
+      } else {
+        // Email confirmation required - no session means email needs to be confirmed
+        toast.success('Account created! Please confirm your email to sign in.', {
+          duration: 5000,
+        });
+        // Redirect to signin page with message
+        router.push('/auth/signin?email=' + encodeURIComponent(formData.email) + '&message=confirm-email');
       }
     } catch (err) {
       toast.error('An unexpected error occurred');

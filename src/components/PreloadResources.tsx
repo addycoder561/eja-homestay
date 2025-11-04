@@ -4,6 +4,25 @@ import { useEffect } from 'react';
 
 export function PreloadResources() {
   useEffect(() => {
+    // Preconnect to external domains for faster loading
+    const preconnectDomains = [
+      'https://qfpfezjygemxfgwazsix.supabase.co',
+      'https://images.unsplash.com'
+    ];
+
+    preconnectDomains.forEach(domain => {
+      const preconnect = document.createElement('link');
+      preconnect.rel = 'preconnect';
+      preconnect.href = domain;
+      preconnect.crossOrigin = 'anonymous';
+      document.head.appendChild(preconnect);
+
+      const dnsPrefetch = document.createElement('link');
+      dnsPrefetch.rel = 'dns-prefetch';
+      dnsPrefetch.href = domain;
+      document.head.appendChild(dnsPrefetch);
+    });
+
     // Preload critical images
     const criticalImages = [
       '/eja_svg.svg',
@@ -18,16 +37,7 @@ export function PreloadResources() {
       document.head.appendChild(link);
     });
 
-    // Preload critical fonts
-    const fontLink = document.createElement('link');
-    fontLink.rel = 'preload';
-    fontLink.as = 'font';
-    fontLink.type = 'font/woff2';
-    fontLink.crossOrigin = 'anonymous';
-    fontLink.href = '/fonts/geist-sans.woff2';
-    document.head.appendChild(fontLink);
-
-    // Preload critical API endpoints
+    // Prefetch critical API endpoints
     const apiEndpoints = [
       '/api/properties',
       '/api/experiences',
@@ -41,11 +51,14 @@ export function PreloadResources() {
       document.head.appendChild(link);
     });
 
-    // Preload next page
-    const nextPageLink = document.createElement('link');
-    nextPageLink.rel = 'prefetch';
-    nextPageLink.href = '/discover';
-    document.head.appendChild(nextPageLink);
+    // Prefetch likely next pages
+    const nextPages = ['/discover', '/experiences'];
+    nextPages.forEach(page => {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = page;
+      document.head.appendChild(link);
+    });
 
   }, []);
 

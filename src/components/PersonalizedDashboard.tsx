@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { 
   HeartIcon, 
-  MapPinIcon, 
   StarIcon, 
   ClockIcon,
   CalendarIcon,
@@ -15,7 +14,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { LoadingSkeleton, DashboardSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Tooltip, HelpIcon } from '@/components/ui/Tooltip';
 import Image from 'next/image';
@@ -41,17 +39,24 @@ interface RecentActivity {
 }
 
 export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchUserData();
+    // Don't fetch if auth is still loading
+    if (authLoading) {
+      return;
     }
-  }, [user]);
+    
+    if (user && profile) {
+      fetchUserData();
+    } else {
+      // If no user and auth is done loading, set loading to false
+      setLoading(false);
+    }
+  }, [user?.id, profile?.id, authLoading]);
 
   const fetchUserData = async () => {
     try {
@@ -117,28 +122,6 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
         new Date(b.date).getTime() - new Date(a.date).getTime()
       ).slice(0, 5));
 
-      // Mock recommendations (in real app, this would be AI-powered)
-      setRecommendations([
-        {
-          id: '1',
-          title: 'Mountain Retreat in Himachal',
-          location: 'Manali, Himachal Pradesh',
-          price: 2500,
-          rating: 4.8,
-          image: '',
-          reason: 'Based on your love for mountains'
-        },
-        {
-          id: '2',
-          title: 'Beach House in Goa',
-          location: 'Calangute, Goa',
-          price: 3200,
-          rating: 4.6,
-          image: '',
-          reason: 'Perfect for your next beach vacation'
-        }
-      ]);
-
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
@@ -194,7 +177,7 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
             </div>
             <div>
               <h1 className="text-2xl font-bold">
-                {getGreeting()}, {profile?.display_name || profile?.first_name || 'Traveler'}! 👋
+                {getGreeting()}, {profile?.full_name?.split(' ')[0] || profile?.full_name || 'Guest'}! 👋
               </h1>
               <p className="text-blue-100">
                 Ready for your next adventure? Let's explore amazing homestays together.
@@ -310,65 +293,6 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
           )}
         </CardContent>
       </Card>
-
-      {/* Personalized Recommendations */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recommended for You</h3>
-            <Tooltip content="Properties we think you'll love based on your preferences">
-              <HelpIcon content="Properties we think you'll love based on your preferences" />
-            </Tooltip>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recommendations.map((rec) => (
-              <div key={rec.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start space-x-3">
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0">
-                    <Image
-                      src={rec.image}
-                      alt={rec.title}
-                      width={64}
-                      height={64}
-                      className="rounded-lg object-cover w-full h-full"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate">{rec.title}</h4>
-                    <p className="text-sm text-gray-600 truncate">{rec.location}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <div className="flex items-center">
-                        <StarSolid className="w-3 h-3 text-yellow-400" />
-                        <span className="text-xs text-gray-600 ml-1">{rec.rating}</span>
-                      </div>
-                      <span className="text-xs text-gray-500">•</span>
-                      <span className="text-xs font-medium text-gray-900">{formatCurrency(rec.price)}/night</span>
-                    </div>
-                    <p className="text-xs text-blue-600 mt-1">{rec.reason}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
-          <MapPinIcon className="w-5 h-5" />
-          Explore Properties
-        </Button>
-        <Button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
-          <HeartIcon className="w-5 h-5" />
-          My Bucket List
-        </Button>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
-          <CalendarIcon className="w-5 h-5" />
-          My Bookings
-        </Button>
-      </div>
     </div>
   );
 }

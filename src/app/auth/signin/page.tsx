@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,18 @@ function SignInInner() {
   });
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [emailConfirmationMessage, setEmailConfirmationMessage] = useState('');
+  
+  // Check for email confirmation message from URL params
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    const messageParam = searchParams.get('message');
+    if (messageParam === 'confirm-email' && emailParam) {
+      setFormData(prev => ({ ...prev, email: emailParam }));
+      setEmailConfirmationMessage('Please confirm your email to sign in. Check your inbox for the confirmation link.');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +46,29 @@ function SignInInner() {
 
     try {
       const result = await signIn(formData.email, formData.password);
-      if (!result.error) {
+      if (result.error) {
+        // Handle authentication errors
+        const errorMessage = result.error.message || 'Failed to sign in';
+        const lowerMessage = errorMessage.toLowerCase();
+        
+        if (lowerMessage.includes('email') && (lowerMessage.includes('confirm') || lowerMessage.includes('verify') || lowerMessage.includes('not confirmed'))) {
+          // Email not confirmed
+          setEmailConfirmationMessage('Please confirm your email to sign in. Check your inbox for the confirmation link.');
+          toast.error('Email not confirmed. Please check your inbox.');
+        } else if (lowerMessage.includes('password') || lowerMessage.includes('invalid') || lowerMessage.includes('credentials')) {
+          setPasswordError('Invalid email or password');
+          toast.error('Sign in failed. Please check your credentials.');
+        } else if (lowerMessage.includes('user')) {
+          setEmailError('User not found');
+          toast.error('Sign in failed. Please check your credentials.');
+        } else {
+          setPasswordError(errorMessage);
+          toast.error('Sign in failed. Please check your credentials.');
+        }
+      } else {
+        // Clear any previous errors
+        setPasswordError('');
+        setEmailError('');
         toast.success('Signed in successfully!');
         // Wait for profile to be available and auth state to update
         setTimeout(() => {
@@ -47,6 +81,7 @@ function SignInInner() {
         }, 500); // Increased timeout to ensure auth state is updated
       }
     } catch (err) {
+      setPasswordError('An unexpected error occurred');
       toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -74,6 +109,11 @@ function SignInInner() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {emailConfirmationMessage && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-blue-800 text-sm">{emailConfirmationMessage}</p>
+              </div>
+            )}
             <div>
               <input
                 type="email"
@@ -82,6 +122,7 @@ function SignInInner() {
                 onChange={(e) => {
                   setFormData({ ...formData, email: e.target.value });
                   setEmailError('');
+                  setEmailConfirmationMessage('');
                 }}
                 placeholder="Email"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
@@ -96,10 +137,18 @@ function SignInInner() {
                 type="password"
                 required
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  setPasswordError('');
+                }}
                 placeholder="Password"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className={`w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  passwordError ? 'border-red-500' : 'border-gray-300'
+                }`}
               />
+              {passwordError && (
+                <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+              )}
             </div>
 
             <div className="text-right">

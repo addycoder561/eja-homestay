@@ -27,7 +27,17 @@ Run the scripts in this exact order:
 - Upload your data files for each table
 - Recommended method for real/production data
 
-### 3. **03_create_views.sql** (Run LAST)
+### 3. **04_create_storage_buckets.sql** (Optional but Recommended)
+- Creates storage buckets for media files
+- Sets up storage policies for file access
+- Creates `completed-dares` bucket for dare completion media
+- Creates `experience-images` bucket for experience images
+
+**Prerequisites:**
+- Schema script (01) executed
+- Can be run at any time after schema setup
+
+### 4. **03_create_views.sql** (Run LAST)
 - Creates all 6 views for optimized queries
 - Sets up aggregated statistics views
 - Grants necessary permissions
@@ -62,6 +72,22 @@ Run the scripts in this exact order:
 - Foreign key constraints for data integrity
 - Indexes for query performance
 - Automatic `updated_at` triggers
+
+### 04_create_storage_buckets.sql
+
+**Buckets Created:**
+1. `completed-dares` - For dare completion media (images/videos)
+2. `experience-images` - For experience story images (backward compatibility)
+
+**Storage Policies:**
+- Public read access (anyone can view files)
+- Authenticated users can upload
+- Users can update/delete their own files (in folders named with their user ID)
+
+**Features:**
+- 50MB file size limit per file
+- Allowed MIME types: images (JPEG, PNG, WebP, GIF) and videos (MP4, WebM)
+- Secure file access controls
 
 ### 03_create_views.sql
 

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { 
   XMarkIcon,
   PhotoIcon,
@@ -108,20 +109,121 @@ export function CompleteDareModal({ isOpen, onClose, dare, onDareCompleted }: Co
     setLoading(true);
 
     try {
-      // Upload media files (in a real app, you'd upload to storage first)
-      const mediaUrls = mediaFiles.map(file => URL.createObjectURL(file));
+      // Upload media files to Supabase Storage
+      const mediaUrls: string[] = [];
       
+      // Try completed-dares bucket first, fallback to experience-images, then avatars
+      const bucketName = 'completed-dares';
+      const fallbackBucket = 'experience-images';
+      const finalFallback = 'avatars';
+      
+      for (const file of mediaFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${dare.id}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `dare-media/${fileName}`;
+
+        // Try uploading to completed-dares bucket first
+        const uploadError = null;
+        let usedBucket = bucketName;
+        
+        const { error: primaryError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (primaryError) {
+          console.error('Primary bucket upload error:', {
+            bucket: bucketName,
+            error: primaryError,
+            message: primaryError.message,
+            code: primaryError.statusCode
+          });
+          
+          // If bucket doesn't exist, try fallback buckets
+          if (primaryError.message?.includes('not found') || 
+              primaryError.message?.includes('Bucket') ||
+              primaryError.statusCode === '404' ||
+              primaryError.statusCode === 404) {
+            console.warn(`Bucket "${bucketName}" not found. Error: ${primaryError.message}. Trying fallback: ${fallbackBucket}`);
+            
+            // Try first fallback
+            const { error: fallbackError } = await supabase.storage
+              .from(fallbackBucket)
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+            
+            if (fallbackError) {
+              // Try final fallback
+              if (fallbackError.message?.includes('not found') || fallbackError.message?.includes('Bucket')) {
+                console.warn(`Bucket ${fallbackBucket} not found, using final fallback: ${finalFallback}`);
+                const { error: finalError } = await supabase.storage
+                  .from(finalFallback)
+                  .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                  });
+                
+                if (finalError) {
+                  const errorDetails = `Failed to upload ${file.name}. All buckets failed:
+- Primary bucket "${bucketName}": ${primaryError.message}
+- Fallback bucket "${fallbackBucket}": ${fallbackError.message}
+- Final fallback "${finalFallback}": ${finalError.message}
+
+Please verify:
+1. Bucket "${bucketName}" exists in Supabase Dashboard → Storage
+2. Bucket name is exactly "${bucketName}" (lowercase, hyphenated)
+3. Bucket is set to Public
+4. Storage policies are set up (run 04_create_storage_buckets.sql)`;
+                  throw new Error(errorDetails);
+                }
+                usedBucket = finalFallback;
+              } else {
+                throw new Error(`Failed to upload ${file.name}: ${fallbackError.message}`);
+              }
+            } else {
+              usedBucket = fallbackBucket;
+            }
+          } else {
+            throw new Error(`Failed to upload ${file.name}: ${primaryError.message}`);
+          }
+        }
+
+        // Get public URL from the bucket we used
+        const { data: { publicUrl } } = supabase.storage
+          .from(usedBucket)
+          .getPublicUrl(filePath);
+
+        mediaUrls.push(publicUrl);
+      }
+      
+      // Get the session to pass in the request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to complete dares');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`/api/dares/${dare.id}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'X-Refresh-Token': session.refresh_token || '',
         },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           media_urls: mediaUrls,
           caption: formData.caption.trim() || null,
           location: formData.location.trim() || null
         }),
       });
+
+      const responseData = await response.json();
 
       if (response.ok) {
         toast.success('Dare completed successfully!');
@@ -131,12 +233,19 @@ export function CompleteDareModal({ isOpen, onClose, dare, onDareCompleted }: Co
         setMediaFiles([]);
         setMediaPreviews([]);
       } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to complete dare');
+        const errorMessage = responseData.error || `Failed to complete dare (${response.status})`;
+        console.error('Error completing dare:', {
+          status: response.status,
+          error: responseData,
+          dareId: dare.id,
+          mediaUrlsCount: mediaUrls.length
+        });
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Error completing dare:', error);
-      toast.error('Error completing dare. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error completing dare. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -229,7 +338,7 @@ export function CompleteDareModal({ isOpen, onClose, dare, onDareCompleted }: Co
               placeholder="Tell us about your experience completing this dare..."
               rows={3}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-gray-900"
             />
           </div>
 

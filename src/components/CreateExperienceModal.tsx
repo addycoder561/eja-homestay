@@ -79,7 +79,6 @@ export function CreateDropdown({ isOpen, onClose, buttonRef }: {
       setShowModal(true);
     } else if (option === 'dare') {
       setShowDareModal(true);
-      onClose(); // Close the dropdown
     }
   };
 

@@ -25,7 +25,7 @@ export class GeminiError extends Error {
 
 export class GeminiClient {
   private apiKey: string;
-  private endpoint: string;
+  private endpoint: string | (() => string);
   private maxRetries: number;
   private timeout: number;
 
@@ -36,9 +36,14 @@ export class GeminiClient {
     this.timeout = GEMINI_CONFIG.timeout;
   }
 
+  private getEndpoint(): string {
+    return typeof this.endpoint === 'function' ? this.endpoint() : this.endpoint;
+  }
+
   async generateContent(
     prompt: string,
-    retryCount: number = 0
+    retryCount: number = 0,
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
   ): Promise<GeminiResponse> {
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
@@ -48,26 +53,41 @@ export class GeminiClient {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-      const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
+      // Build conversation history for context
+      const contents = conversationHistory.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }],
+      }));
+
+      // Add current user message
+      contents.push({
+        role: 'user',
+        parts: [{ text: prompt }],
+      });
+
+      const requestBody: any = {
+        contents,
+        generationConfig: {
+          maxOutputTokens: GEMINI_CONFIG.maxTokens,
+          temperature: GEMINI_CONFIG.temperature,
+          topP: 0.95,
+          topK: 40,
+        },
+      };
+
+      // Add system instruction if available
+      if (GEMINI_CONFIG.systemInstruction) {
+        requestBody.systemInstruction = {
+          parts: [{ text: GEMINI_CONFIG.systemInstruction }],
+        };
+      }
+
+      const response = await fetch(`${this.getEndpoint()}?key=${this.apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: GEMINI_CONFIG.maxTokens,
-            temperature: GEMINI_CONFIG.temperature,
-          },
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
@@ -75,6 +95,17 @@ export class GeminiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle 404 - model not found
+        if (response.status === 404) {
+          const modelName = GEMINI_CONFIG.model;
+          console.error(`Gemini model "${modelName}" not found. Available models: gemini-2.5-pro, gemini-2.5-flash`);
+          throw new GeminiError({
+            error: `Model "${modelName}" not found. Please check NEXT_PUBLIC_GEMINI_MODEL in your .env.local file. Try: gemini-2.5-pro or gemini-2.5-flash`,
+            code: 404,
+            retryable: false,
+          });
+        }
         
         // Handle rate limiting
         if (response.status === 429) {
@@ -95,7 +126,7 @@ export class GeminiClient {
         }
 
         throw new GeminiError({
-          error: `API request failed: ${response.status} ${response.statusText}`,
+          error: `API request failed: ${response.status} ${response.statusText}. ${errorData.error?.message || ''}`,
           code: response.status,
           retryable: response.status >= 500,
         });
@@ -153,49 +184,61 @@ export class GeminiClient {
     userMessage: string,
     detectedMood: string,
     experiencesData: any[],
-    retreatsData: any[]
+    retreatsData: any[],
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
   ): Promise<GeminiResponse> {
+    // Format experiences with more details
     const experiencesText = experiencesData
-      .slice(0, 5)
-      .map(exp => 
-        `- ${exp.title} (${exp.location}) - ${exp.mood} - ₹${exp.price} - ${exp.description?.substring(0, 100)}...`
-      )
+      .slice(0, 8)
+      .map(exp => {
+        const details = [
+          `Title: ${exp.title}`,
+          `Location: ${exp.location}`,
+          `Mood: ${exp.mood || 'Various'}`,
+          `Price: ₹${exp.price || 'N/A'}`,
+          exp.duration_hours ? `Duration: ${exp.duration_hours} hours` : '',
+          exp.description ? `Description: ${exp.description.substring(0, 200)}` : '',
+          exp.cover_image ? `Image: ${exp.cover_image}` : '',
+        ].filter(Boolean).join(' | ');
+        return `- ${details}`;
+      })
       .join('\n');
 
+    // Format retreats with more details
     const retreatsText = retreatsData
       .slice(0, 5)
-      .map(retreat => 
-        `- ${retreat.title} (${retreat.location}) - ₹${retreat.price} - ${retreat.description?.substring(0, 100)}...`
-      )
+      .map(retreat => {
+        const details = [
+          `Title: ${retreat.title}`,
+          `Location: ${retreat.location}`,
+          `Price: ₹${retreat.price || 'N/A'}`,
+          retreat.duration_days ? `Duration: ${retreat.duration_days} days` : '',
+          retreat.description ? `Description: ${retreat.description.substring(0, 200)}` : '',
+          retreat.cover_image ? `Image: ${retreat.cover_image}` : '',
+        ].filter(Boolean).join(' | ');
+        return `- ${details}`;
+      })
       .join('\n');
 
-    const prompt = `You are EJA's AI travel assistant. Help users discover experiences and retreats based on their mood.
+    // Build context-aware prompt
+    const conversationContext = conversationHistory.length > 0
+      ? `\n\nPrevious conversation:\n${conversationHistory.map(msg => `${msg.role === 'user' ? 'User' : 'You'}: ${msg.content}`).join('\n')}\n`
+      : '';
 
-Guidelines:
-- Keep responses under 100 words
-- Be conversational and friendly
-- Focus on mood-based recommendations
-- Always provide 2-3 specific suggestions
-- Include brief itinerary highlights
-- End with a call-to-action
-- Use emojis sparingly but effectively
-- Be encouraging and positive
+    const prompt = `User's current message: "${userMessage}"
+Detected mood: ${detectedMood}${conversationContext}
 
-Available Experiences:
-${experiencesText}
+Available Experiences (use these for recommendations):
+${experiencesText || 'No experiences available'}
 
-Available Retreats:
-${retreatsText}
+Available Retreats (use these for recommendations):
+${retreatsText || 'No retreats available'}
 
-User Mood: ${detectedMood}
-User Message: ${userMessage}
+IMPORTANT: Your response must be VERY SHORT - just a headline/title (1-2 sentences max). Think like a newspaper headline or section title. Be compelling and crisp. Examples: "Adventure Awaits! 🏔️", "Perfect for Your Chill Mood 🧘", "Ready to Unwind? ✨"
 
-Respond with:
-1. Brief greeting/acknowledgment
-2. 2-3 specific recommendations with highlights
-3. Call-to-action to book or explore more`;
-
-    return this.generateContent(prompt);
+Do NOT write long paragraphs. Keep it brief and punchy. The user will see the detailed options in cards below.`;
+    
+    return this.generateContent(prompt, 0, conversationHistory);
   }
 }
 

@@ -9,10 +9,7 @@ import {
   PaperAirplaneIcon,
   ChatBubbleLeftRightIcon,
   ArrowPathIcon,
-  ChatBubbleLeftIcon,
-  ArrowsPointingOutIcon,
-  ArrowsPointingInIcon,
-  PlusIcon
+  ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
 import { QUICK_MOODS } from '@/lib/gemini-config';
 
@@ -83,7 +80,10 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
         },
         body: JSON.stringify({
           message: content.trim(),
-          conversationHistory: messages.slice(-5), // Send last 5 messages for context
+          conversationHistory: messages.slice(-10).map(msg => ({ // Send last 10 messages for better context
+            role: msg.role,
+            content: msg.content,
+          })),
         }),
       });
 
@@ -140,6 +140,15 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
   };
 
   const handleQuickMood = (mood: string) => {
+    // Maximize chat when mood chip is clicked
+    if (!isMaximized) {
+      setIsMaximized(true);
+    }
+    // Ensure chat is open
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+    
     const moodMessages: Record<string, string> = {
       'happy': "I'm feeling happy and want to do something fun!",
       'chill': "I need to relax and unwind.",
@@ -148,6 +157,22 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
     };
     
     sendMessage(moodMessages[mood] || `I'm feeling ${mood}.`);
+  };
+
+  const handleInputFocus = () => {
+    // Maximize chat when input is focused
+    if (!isMaximized) {
+      setIsMaximized(true);
+    }
+    // Ensure chat is open
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleInputClick = () => {
+    // Maximize chat when input is clicked
+    handleInputFocus();
   };
 
   const handleSuggestionClick = (suggestion: any) => {
@@ -200,8 +225,14 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
           {/* Chat Panel */}
           <div className={`relative w-full ${isMaximized ? 'max-w-5xl h-[90vh] rounded-3xl overflow-hidden' : (inline ? 'max-w-4xl h-[240px]' : 'max-w-md h-full')} bg-white shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col ${inline && !isMaximized ? 'rounded-2xl overflow-hidden border border-gray-100' : ''}`}>
             {/* Header */}
-            <div className={`flex items-center ${isMaximized ? 'justify-center' : 'justify-between'} p-3 border-b border-gray-100 bg-white relative`}>
-              {isMaximized ? (
+            <div className="flex items-center justify-center p-3 border-b border-gray-100 bg-white relative">
+              {/* Title - Centered */}
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">Hi, I'm Geetu- Your AI Mom!</h3>
+              </div>
+              
+              {/* Left side buttons */}
+              {(isMaximized || (!isMaximized && messages.length > 0)) && (
                 <div className="absolute left-0 top-0 h-full flex items-center pl-3">
                   <div className="flex items-center gap-1">
                     {messages.length > 0 && (
@@ -215,16 +246,9 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
                     )}
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Experiences by Vibe</h3>
-                </div>
               )}
-              {isMaximized && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Experiences by Vibe</h3>
-                </div>
-              )}
+              
+              {/* Right side buttons */}
               {isMaximized ? (
                 <div className="absolute right-0 top-0 h-full flex items-center pr-3">
                   <button
@@ -234,43 +258,19 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
                   >
                     <XMarkIcon className="w-4 h-4" />
                   </button>
-              </div>
+                </div>
               ) : (
-                <div className="flex items-center gap-1">
-                {messages.length > 0 && (
-                  <button
-                    onClick={clearChat}
+                !inline && (
+                  <div className="absolute right-0 top-0 h-full flex items-center pr-3">
+                    <button
+                      onClick={() => setIsOpen(false)}
                       className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Clear chat"
-                  >
-                    <ArrowPathIcon className="w-4 h-4" />
-                  </button>
-                )}
-                  <button
-                    onClick={() => setIsMaximized(true)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Maximize"
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                  </button>
-                  {!inline && (
-                <button
-                  onClick={() => setIsMaximized(!isMaximized)}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="Maximize"
-                >
-                      <ArrowsPointingOutIcon className="w-4 h-4" />
-                </button>
-                  )}
-                  {!inline && (
-                <button
-                  onClick={() => setIsOpen(false)}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
+                      title="Close"
+                    >
                       <XMarkIcon className="w-4 h-4" />
-                </button>
-                  )}
-              </div>
+                    </button>
+                  </div>
+                )
               )}
             </div>
 
@@ -278,8 +278,6 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
             <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-hide">
               {messages.length === 0 ? (
                 <div className="text-center py-4">
-                  <h4 className="font-medium text-gray-900 mb-3 text-sm">Hi, I'm Geetu- Your AI Mom!</h4>
-                  
                   {/* Quick Mood Buttons */}
                   <div className="flex flex-wrap gap-2 justify-center">
                     {QUICK_MOODS.map((mood) => (
@@ -295,28 +293,40 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
                 </div>
               ) : (
                 messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 ${
-                      message.role === 'user' 
-                        ? 'bg-yellow-500 text-white shadow-sm' 
-                        : 'bg-gray-50 text-gray-900 border border-gray-100'
-                    }`}>
-                      <p className="text-xs whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                      
-                      {/* Suggestions */}
-                      {message.suggestions && message.suggestions.length > 0 && (
-                        <div className="mt-2 space-y-1.5">
-                          {message.suggestions.map((suggestion, index) => (
-                            <AISuggestionCard
-                              key={index}
-                              suggestion={suggestion}
-                              onViewDetails={handleSuggestionClick}
-                              onBook={handleSuggestionBook}
-                            />
-                          ))}
+                  <div key={message.id} className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'} gap-2`}>
+                    {/* Text Message */}
+                    {message.role === 'user' ? (
+                      <div className="max-w-[85%] rounded-2xl px-3 py-2 bg-yellow-500 text-white shadow-sm">
+                        <p className="text-xs whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Headline Text */}
+                        <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-gray-50 text-gray-900 border border-gray-100">
+                          <p className="text-sm font-semibold leading-relaxed">{message.content}</p>
                         </div>
-                      )}
-                    </div>
+                        
+                        {/* Horizontal Scroll Cards for Options */}
+                        {message.suggestions && message.suggestions.length > 0 && (
+                          <div className="w-full overflow-x-auto scrollbar-hide pb-2">
+                            <div className="flex gap-3 px-1">
+                              {message.suggestions.map((suggestion, index) => (
+                                <div
+                                  key={index}
+                                  className="flex-shrink-0 w-64"
+                                >
+                                  <AISuggestionCard
+                                    suggestion={suggestion}
+                                    onViewDetails={handleSuggestionClick}
+                                    onBook={handleSuggestionBook}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))
               )}
@@ -362,9 +372,11 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
                   ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Tell me how you feel..."
+                  onFocus={handleInputFocus}
+                  onClick={handleInputClick}
+                  placeholder="Tell me how you feel..."
                   disabled={isLoading}
-                className="flex-1 text-xs bg-white border-gray-200 focus:border-yellow-500 focus:ring-yellow-500"
+                  className="flex-1 text-xs bg-white border-gray-200 focus:border-yellow-500 focus:ring-yellow-500"
                 />
                 <Button
                   type="submit"

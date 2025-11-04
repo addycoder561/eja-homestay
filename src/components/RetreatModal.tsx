@@ -1781,73 +1781,128 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                         </div>
                       </div>
 
-                      {/* Step 5: Property Selection */}
+                      {/* Step 5 & 6: Property & Experience Selection - Side by Side on Desktop */}
                       {bookingForm.budget && (
-                        <div className="space-y-4">
-                          <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">5</span>
-                            Property Selection
-                          </h4>
-                          
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <div className="text-sm text-gray-600 mb-3">
-                              Choose your accommodation
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setShowRoomModal(true)}
-                              className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
-                            >
-                              <div className="text-gray-600 font-medium">
-                                {selectedRoom ? `Selected: ${selectedRoom.name || selectedRoom.room_type}` : 'Select a property'}
-                              </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                Click to browse available properties
-                              </div>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Step 6: Experience Selection */}
-                      {bookingForm.budget && (
-                        <div className="space-y-4">
-                          <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">6</span>
-                            Experience Selection
-                          </h4>
-                          
-                          <button
-                            type="button"
-                            onClick={() => setShowExperienceModal(true)}
-                            className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-left"
-                          >
-                            <div className="text-gray-600 font-medium mb-2">
-                              {bookingForm.selectedExperiences.length > 0 
-                                ? `Selected ${bookingForm.selectedExperiences.length} experiences` 
-                                : 'Select experiences'
-                              }
-                            </div>
-                            {bookingForm.selectedExperiences.length > 0 ? (
-                              <div className="space-y-1">
-                                {bookingForm.selectedExperiences.map(experienceId => {
-                                  const experience = experiences.find(exp => exp.id === experienceId);
-                                  return experience ? (
-                                    <div key={experienceId} className="text-sm text-gray-700 bg-blue-50 px-2 py-1 rounded">
-                                      • {experience.title}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Step 5: Property Selection */}
+                          <div className="space-y-4">
+                            <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">5</span>
+                              Property Selection
+                            </h4>
+                            
+                            <div className="bg-gray-50 rounded-xl p-4">
+                              {selectedRoom ? (
+                                <div className="border-2 border-blue-400 rounded-lg overflow-hidden bg-white">
+                                  <div className="relative w-full h-32">
+                                    <Image
+                                      src={selectedRoom.properties?.cover_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop'}
+                                      alt={selectedRoom.name || selectedRoom.room_type || 'Selected Property'}
+                                      fill
+                                      className="object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop';
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="font-medium text-gray-900 text-sm">
+                                        {selectedRoom.name || selectedRoom.room_type}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowRoomModal(true)}
+                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                      >
+                                        Change
+                                      </button>
                                     </div>
-                                  ) : null;
-                                })}
-                                <div className="text-xs text-blue-600 mt-2">
-                                  Click to modify selection
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowRoomModal(true)}
+                                  className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
+                                >
+                                  <div className="text-gray-600 font-medium text-sm">
+                                    Select a property
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Click to browse available properties
+                                  </div>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Step 6: Experience Selection */}
+                          <div className="space-y-4">
+                            <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                              <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">6</span>
+                              Experience Selection
+                            </h4>
+                            
+                            {bookingForm.selectedExperiences.length > 0 ? (
+                              <div className="bg-gray-50 rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="text-sm text-gray-600">
+                                    {bookingForm.selectedExperiences.length} experience{bookingForm.selectedExperiences.length > 1 ? 's' : ''} selected
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowExperienceModal(true)}
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    Change
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1.5 max-h-64 overflow-y-auto">
+                                  {bookingForm.selectedExperiences.map(experienceId => {
+                                    const experience = experiences.find(exp => exp.id === experienceId);
+                                    return experience ? (
+                                      <div key={experienceId} className="border-2 border-blue-200 rounded-lg overflow-hidden bg-white">
+                                        <div className="flex">
+                                          <div className="relative w-14 h-14 flex-shrink-0">
+                                            <Image
+                                              src={experience.cover_image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
+                                              alt={experience.title}
+                                              fill
+                                              className="object-cover"
+                                              onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="flex-1 p-1.5 flex items-center min-w-0">
+                                            <div className="font-medium text-gray-900 text-xs line-clamp-2">
+                                              {experience.title}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : null;
+                                  })}
                                 </div>
                               </div>
                             ) : (
-                              <div className="text-sm text-gray-500">
-                                Click to browse available experiences ({experiences.length} available)
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setShowExperienceModal(true)}
+                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
+                              >
+                                <div className="text-gray-600 font-medium text-sm">
+                                  Select experiences
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Click to browse available experiences ({experiences.length} available)
+                                </div>
+                              </button>
                             )}
-                          </button>
+                          </div>
                         </div>
                       )}
 
@@ -1863,7 +1918,7 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                             rows={3}
                             value={bookingForm.specialRequests}
                             onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm transition-all"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm text-gray-900 transition-all"
                             placeholder="Any dietary restrictions, accessibility needs, or special requirements..."
                           />
                         </div>
@@ -2686,64 +2741,99 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-900 mb-2">Select Property</label>
-                          <button
-                            type="button"
-                            onClick={() => setShowRoomModal(true)}
-                            className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-gray-900"
-                          >
-                            {selectedRoom ? selectedRoom.name || selectedRoom.room_type : 'Choose your property'}
-                          </button>
-                          {selectedRoom && (
-                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <div className="font-medium text-gray-900">{selectedRoom.name || selectedRoom.room_type || 'Selected Property'}</div>
-                                  <div className="text-sm text-gray-600">{selectedRoom.type || selectedRoom.room_type || 'Property'}</div>
+                          {selectedRoom ? (
+                            <div className="border-2 border-yellow-500 rounded-lg overflow-hidden bg-white">
+                              <div className="relative w-full h-32">
+                                <Image
+                                  src={selectedRoom.properties?.cover_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop'}
+                                  alt={selectedRoom.name || selectedRoom.room_type || 'Selected Property'}
+                                  fill
+                                  className="object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop';
+                                  }}
+                                />
+                              </div>
+                              <div className="p-3">
+                                <div className="flex justify-between items-center mb-2">
+                                  <div>
+                                    <div className="font-medium text-gray-900 text-sm">{selectedRoom.name || selectedRoom.room_type || 'Selected Property'}</div>
+                                    <div className="text-xs text-gray-600">{selectedRoom.type || selectedRoom.room_type || 'Property'}</div>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="font-semibold text-gray-900">₹{(selectedRoom.price || 0).toLocaleString()}</div>
-                                  <div className="text-sm text-gray-600">per night</div>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowRoomModal(true)}
+                                  className="w-full text-xs text-yellow-600 hover:text-yellow-800 font-medium text-center mt-2"
+                                >
+                                  Change Property
+                                </button>
                               </div>
                             </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setShowRoomModal(true)}
+                              className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-gray-900"
+                            >
+                              Choose your property
+                            </button>
                           )}
                         </div>
 
                         <div>
                           <label className="block text-sm font-semibold text-gray-900 mb-2">Select Experiences</label>
-                          <button
-                            type="button"
-                            onClick={() => setShowExperienceModal(true)}
-                            className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-gray-900"
-                          >
-                            {selectedExperiences.length > 0 
-                              ? `${selectedExperiences.length} experience${selectedExperiences.length > 1 ? 's' : ''} selected`
-                              : 'Pick experiences'
-                            }
-                          </button>
-                          {selectedExperiences.length > 0 && (
-                            <div className="mt-2 space-y-2">
-                              {selectedExperiences.map((experience, index) => (
-                                <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                                  <div className="flex justify-between items-center">
-                                    <div>
-                                      <div className="font-medium text-gray-900">{experience.title || 'Experience'}</div>
-                                      <div className="text-sm text-gray-600">{experience.duration || 'Duration not specified'}</div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="font-semibold text-gray-900">₹{(experience.price || 0).toLocaleString()}</div>
-                                      <button
-                                        type="button"
-                                        onClick={() => removeExperience(index)}
-                                        className="text-sm text-red-600 hover:text-red-800"
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
-                                  </div>
+                          {bookingForm.selectedExperiences.length > 0 ? (
+                            <div className="border-2 border-yellow-500 rounded-lg overflow-hidden bg-white">
+                              <div className="flex items-center justify-between p-2 border-b border-gray-200">
+                                <div className="text-xs font-medium text-gray-700">
+                                  {bookingForm.selectedExperiences.length} experience{bookingForm.selectedExperiences.length > 1 ? 's' : ''} selected
                                 </div>
-                              ))}
+                                <button
+                                  type="button"
+                                  onClick={() => setShowExperienceModal(true)}
+                                  className="text-xs text-yellow-600 hover:text-yellow-800 font-medium"
+                                >
+                                  Change
+                                </button>
+                              </div>
+                              <div className="p-2 space-y-2 max-h-48 overflow-y-auto">
+                                {bookingForm.selectedExperiences.map((experienceId) => {
+                                  const experience = experiences.find(exp => exp.id === experienceId);
+                                  if (!experience) return null;
+                                  return (
+                                    <div key={experienceId} className="flex gap-2 p-2 bg-gray-50 rounded-lg">
+                                      <div className="relative w-16 h-16 flex-shrink-0 rounded overflow-hidden">
+                                        <Image
+                                          src={experience.cover_image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
+                                          alt={experience.title || 'Experience'}
+                                          fill
+                                          className="object-cover"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0 flex items-center">
+                                        <div className="font-medium text-gray-900 text-xs">
+                                          {experience.title || 'Experience'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setShowExperienceModal(true)}
+                              className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-left focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-gray-900"
+                            >
+                              Pick experiences
+                            </button>
                           )}
                         </div>
                       </div>
@@ -2809,10 +2899,13 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                             <span className="text-lg font-bold text-gray-900">₹{((selectedRoom.price || 0) * bookingForm.guests).toLocaleString()}</span>
                           </div>
                         )}
-                        {selectedExperiences.length > 0 && (
+                        {bookingForm.selectedExperiences.length > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-gray-900 font-semibold">Experiences</span>
-                            <span className="text-lg font-bold text-gray-900">₹{selectedExperiences.reduce((sum, exp) => sum + ((exp.price || 0) * bookingForm.guests), 0).toLocaleString()}</span>
+                            <span className="text-lg font-bold text-gray-900">₹{bookingForm.selectedExperiences.reduce((sum, experienceId) => {
+                              const experience = experiences.find(exp => exp.id === experienceId);
+                              return sum + ((experience?.price || 0) * bookingForm.guests);
+                            }, 0).toLocaleString()}</span>
                           </div>
                         )}
                         <div className="border-t border-gray-300 pt-2">
@@ -2821,8 +2914,11 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
                             <span className="text-lg font-bold text-gray-900">
                               ₹{(
                                 (retreat.price * bookingForm.guests) +
-                                (selectedRoom ? (selectedRoom.price || 0) * bookingForm.guests : 0) +
-                                selectedExperiences.reduce((sum, exp) => sum + ((exp.price || 0) * bookingForm.guests), 0)
+                                (selectedRoom ? (selectedRoom.price_per_night || selectedRoom.price || 0) * bookingForm.guests : 0) +
+                                bookingForm.selectedExperiences.reduce((sum, experienceId) => {
+                                  const experience = experiences.find(exp => exp.id === experienceId);
+                                  return sum + ((experience?.price || 0) * bookingForm.guests);
+                                }, 0)
                               ).toLocaleString()}
                             </span>
                           </div>

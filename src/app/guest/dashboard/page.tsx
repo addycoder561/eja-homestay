@@ -113,34 +113,77 @@ const trips = [
 ];
 
 export default function GuestDashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
+    // Don't fetch if auth is still loading
+    if (authLoading) {
+      return;
+    }
+    
     const fetchBookings = async () => {
-      if (!profile?.email) return;
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('guest_id', profile!.id)
-        .order('created_at', { ascending: false });
-      if (error) {
-        showToast.error('Failed to fetch bookings');
+      // If no profile, silently set loading to false (user might not be logged in)
+      if (!profile?.id) {
+        setLoading(false);
         setBookings([]);
-      } else {
-        setBookings(data || []);
+        setIsInitialLoad(false);
+        return;
       }
-      setLoading(false);
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('guest_id', profile.id)
+          .order('created_at', { ascending: false });
+        if (error) {
+          // Only show error toast if it's not the initial load and it's a real error
+          const isRealError = error.code !== 'PGRST116' && 
+                             error.message && 
+                             !error.message.includes('No rows') &&
+                             !error.message.includes('permission') &&
+                             !error.message.includes('JWT') &&
+                             !error.message.includes('JWTExpired');
+          
+          if (isRealError && !isInitialLoad) {
+            console.error('Error fetching bookings:', error);
+            showToast.error('Failed to fetch bookings');
+          } else {
+            // Log silently for initial load or expected errors
+            if (process.env.NODE_ENV !== 'production') {
+              console.error('Error fetching bookings:', error);
+            }
+          }
+          setBookings([]);
+        } else {
+          setBookings(data || []);
+        }
+        setIsInitialLoad(false);
+      } catch (err) {
+        // Only show error for unexpected errors and if it's not initial load
+        console.error('Error fetching bookings:', err);
+        setBookings([]);
+        if (!isInitialLoad) {
+          // Only show toast after initial load
+          showToast.error('Failed to fetch bookings');
+        }
+        setIsInitialLoad(false);
+      } finally {
+        setLoading(false);
+      }
     };
-    if (profile?.id) fetchBookings();
-  }, [profile?.id, profile?.email]);
+    fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, authLoading]);
 
   const getBookingDetails = (booking: any) => {
     if (booking.property_id) {
@@ -345,38 +388,6 @@ export default function GuestDashboard() {
       <Navigation />
       
       <main className="flex-1">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">My Dashboard</h1>
-              <p className="text-xl text-yellow-100">
-                Welcome back, {profile?.full_name?.split(' ')[0] || 'Guest'}! Manage your bookings and travel plans.
-              </p>
-            </div>
-            
-            {/* Dashboard Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold mb-2">{dashboardStats.totalBookings}</div>
-                <div className="text-yellow-100">Total Bookings</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold mb-2">{dashboardStats.confirmedBookings}</div>
-                <div className="text-yellow-100">Confirmed</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold mb-2">{dashboardStats.pendingBookings}</div>
-                <div className="text-yellow-100">Pending</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold mb-2">₹{dashboardStats.totalSpent.toLocaleString()}</div>
-                <div className="text-yellow-100">Total Spent</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Personalized Dashboard */}
           <PersonalizedDashboard />

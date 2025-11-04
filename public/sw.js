@@ -94,23 +94,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle navigation requests
+  // Handle navigation requests - Network First strategy to prevent stale pages
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful page responses
-          if (response.status === 200) {
+          // Only cache if response is fresh and valid
+          if (response.status === 200 && response.headers.get('cache-control') !== 'no-cache') {
             const responseClone = response.clone();
+            // Cache with expiration (5 minutes for pages)
             caches.open(DYNAMIC_CACHE).then((cache) => {
               cache.put(request, responseClone);
             });
           }
           return response;
         })
-        .catch(() => {
+        .catch(async () => {
+          // Try cache first, then offline page
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) {
+            // Check if cache is fresh (less than 5 minutes old)
+            const cacheDate = cachedResponse.headers.get('date');
+            if (cacheDate) {
+              const cacheAge = Date.now() - new Date(cacheDate).getTime();
+              if (cacheAge < 5 * 60 * 1000) { // 5 minutes
+                return cachedResponse;
+              }
+            }
+          }
           // Return offline page if navigation fails
-          return caches.match('/offline');
+          return caches.match('/offline') || new Response('Offline', { status: 503 });
         })
     );
     return;

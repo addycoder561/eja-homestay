@@ -10,7 +10,8 @@ import {
   BookmarkIcon as BookmarkOutline
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid';
-import { useEffect, useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, useMemo, lazy, Suspense, memo } from 'react';
+import Image from 'next/image';
 import { getRetreats, getExperiences, getProperties, addToBucketlist, removeFromBucketlist } from '@/lib/database';
 import { supabase } from '@/lib/supabase';
 import { PropertyWithHost } from '@/lib/types';
@@ -428,16 +429,14 @@ export default function Home() {
                           gridRow: gridRow,
                         }}
                       >
-                      <img
-                          src={getImageUrl(item)}
+                      <Image
+                          src={getImageUrl(item) || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
                           alt={item.title || item.name || 'Gallery item'}
-                        className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
-                          }}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           loading="lazy"
-                          decoding="async"
+                          quality={75}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-2">
@@ -539,18 +538,16 @@ export default function Home() {
                           <div className="flex h-40">
                             {/* Image on the left */}
                             <div className="relative w-32 h-40">
-                              <img
-                                src={getImageUrl(item, isExperience)}
+                              <Image
+                                src={getImageUrl(item, isExperience) || (isExperience 
+                                  ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                                  : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80')}
                                 alt={item.title || (isExperience ? 'Experience' : 'Retreat')}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = isExperience 
-                                    ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
-                                    : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
-                                }}
+                                fill
+                                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                sizes="128px"
                                 loading="lazy"
-                                decoding="async"
+                                quality={75}
                               />
                             </div>
                             
@@ -634,12 +631,14 @@ export default function Home() {
                         <div className="flex h-40">
                           {/* Image on the left */}
                           <div className="relative w-32 h-40">
-                            <img
-                              src={sampleData.cover_image}
+                            <Image
+                              src={sampleData.cover_image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
                               alt={sampleData.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              fill
+                              className="object-cover group-hover:scale-110 transition-transform duration-500"
+                              sizes="128px"
                               loading="lazy"
-                              decoding="async"
+                              quality={75}
                             />
                           </div>
                           
@@ -732,12 +731,14 @@ export default function Home() {
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="relative w-full h-full">
-                      <img
+                      <Image
                         src={getMoodImage(mood)}
                         alt={mood}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         loading="lazy"
-                        decoding="async"
+                        quality={75}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <div className="absolute bottom-3 left-3 right-3">
@@ -963,16 +964,14 @@ export default function Home() {
                             height: height
                           }}
                         >
-                          <img
-                            src={getImageUrl(item)}
+                          <Image
+                            src={getImageUrl(item) || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
                             alt={item.title || item.name || 'Gallery item'}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80';
-                            }}
+                            quality={75}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -1091,18 +1090,16 @@ export default function Home() {
                             <div className="flex flex-col md:flex-row h-48">
                               {/* Image on the left */}
                               <div className="relative w-full md:w-1/3 h-48 md:h-full">
-                                <img
-                                  src={getImageUrl(item, isExperience)}
+                                <Image
+                                  src={getImageUrl(item, isExperience) || (isExperience 
+                                    ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
+                                    : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80')}
                                   alt={item.title || (isExperience ? 'Experience' : 'Retreat')}
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = isExperience 
-                                      ? 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'
-                                      : 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
-                                  }}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                  sizes="(max-width: 768px) 100vw, 33vw"
                                   loading="lazy"
-                                  decoding="async"
+                                  quality={75}
                                 />
                               </div>
                               
@@ -1186,12 +1183,14 @@ export default function Home() {
                           <div className="flex flex-col md:flex-row h-48">
                             {/* Image on the left */}
                             <div className="relative w-full md:w-1/3 h-48 md:h-full">
-                              <img
-                                src={sampleData.cover_image}
+                              <Image
+                                src={sampleData.cover_image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80'}
                                 alt={sampleData.title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                fill
+                                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                sizes="(max-width: 768px) 100vw, 33vw"
                                 loading="lazy"
-                                decoding="async"
+                                quality={75}
                               />
                             </div>
                             
@@ -1290,12 +1289,14 @@ export default function Home() {
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <div className="relative w-full h-full">
-                    <img
+                    <Image
                       src={getMoodImage(mood)}
                       alt={mood}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      sizes="(max-width: 768px) 100vw, 192px"
                       loading="lazy"
-                      decoding="async"
+                      quality={75}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4">

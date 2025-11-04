@@ -7,6 +7,7 @@ import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { AIChatAssistant } from "@/components/AIChatAssistant";
+import { PreloadResources } from "@/components/PreloadResources";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -83,6 +84,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <PreloadResources />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
