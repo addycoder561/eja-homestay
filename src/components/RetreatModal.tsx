@@ -845,42 +845,74 @@ export default function RetreatModal({ retreat, isOpen, onClose }: RetreatModalP
         order_id: orderData.id,
         handler: async function(response: any) {
           try {
-            // Create booking record
-            const bookingRes = await fetch('/api/bookings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                retreat_id: retreat.id,
-                check_in: bookingForm.date,
-                guests: bookingForm.guests,
+            // Create booking after successful payment using NEW schema fields
+            const bookingDate = bookingForm.date;
+            const { data, error } = await supabase
+              .from('bookings')
+              .insert({
+                user_id: user.id, // Changed from guest_id
+                booking_type: 'retreat' as const, // New field - enum
+                item_id: retreat.id, // Changed from property_id/retreat_id
+                check_in_date: bookingDate,
+                check_out_date: bookingDate, // Using same date for retreats
+                guests_count: bookingForm.guests,
+                special_requests: bookingForm.specialRequests || null,
                 total_price: totalPrice,
-                special_requests: bookingForm.specialRequests,
-                payment_id: response.razorpay_payment_id,
-                payment_status: 'completed'
+                status: 'confirmed' as const // Enum value
               })
-            });
+              .select()
+              .single();
 
-            if (bookingRes.ok) {
-              toast.success('Retreat booked successfully!');
-              setShowBookingForm(false);
-              setBookingForm({ 
-                date: '', 
-                guests: 2, 
-                specialRequests: '', 
-                destination: '', 
-                duration: 1, 
-                budget: 'family comfort', 
-                selectedRooms: [], 
-                selectedExperiences: [], 
-                selectedTransport: '' 
-              });
-            } else {
-              throw new Error('Failed to create booking');
+            if (error) {
+              console.error('🔍 Booking creation error:', error);
+              console.error('🔍 Error details:', JSON.stringify(error, null, 2));
+              toast.error(`Payment successful but booking creation failed: ${error.message || 'Unknown error'}`);
+              return;
             }
+
+            console.log('🔍 Booking created successfully:', data);
+            
+            // Send email confirmation
+            try {
+              const { sendPaymentReceiptEmail } = await import('@/lib/notifications');
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', user.id)
+                .single();
+              
+              await sendPaymentReceiptEmail({
+                to: user.email || '',
+                guestName: profile?.full_name || user.email?.split('@')[0] || 'Guest',
+                bookingType: 'retreat',
+                title: retreat.title,
+                checkIn: bookingDate,
+                checkOut: bookingDate,
+                guests: bookingForm.guests,
+                totalPrice: totalPrice,
+                paymentRef: response.razorpay_payment_id,
+              });
+            } catch (emailError) {
+              console.error('🔍 Error sending email:', emailError);
+              // Don't fail the booking if email fails
+            }
+            
+            toast.success('Retreat booked successfully!');
+            setShowBookingForm(false);
+            setBookingForm({ 
+              date: '', 
+              guests: 2, 
+              specialRequests: '', 
+              destination: '', 
+              duration: 1, 
+              budget: 'family comfort', 
+              selectedRooms: [], 
+              selectedExperiences: [], 
+              selectedTransport: '' 
+            });
           } catch (error) {
-            console.error('Booking creation error:', error);
-            toast.error('Payment successful but booking failed. Please contact support.');
+            console.error('🔍 Error creating booking:', error);
+            toast.error('Payment successful but booking creation failed');
           }
         },
         prefill: {

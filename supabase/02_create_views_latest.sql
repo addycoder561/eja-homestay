@@ -1,8 +1,8 @@
 -- =====================================================
--- EJA HOMESTAY - Database Views
+-- EJA HOMESTAY - Database Views (LATEST)
 -- =====================================================
 -- This script creates all 6 views for optimized queries
--- and aggregated statistics.
+-- and aggregated statistics based on latest schema.
 --
 -- Run this script AFTER schema creation and data insertion.
 -- Run in Supabase SQL Editor
@@ -52,7 +52,6 @@ SELECT
   e.title,
   e.description,
   e.location,
-  e.categories,
   e.mood,
   e.price,
   e.duration_hours,
@@ -61,14 +60,11 @@ SELECT
   e.is_active,
   e.host_name,
   e.host_avatar,
-  e.host_bio AS experience_host_bio,
-  e.host_usps AS experience_host_usps,
-  e.unique_propositions,
   e.created_at,
   e.updated_at,
   p.full_name AS host_full_name,
   p.avatar_url AS host_avatar_url,
-  p.bio AS profile_bio,
+  p.host_bio AS profile_host_bio,
   p.host_usps AS profile_host_usps
 FROM experiences e
 LEFT JOIN profiles p ON p.id = e.host_id
@@ -82,11 +78,11 @@ SELECT
   p.id AS property_id,
   p.title AS property_title,
   COUNT(DISTINCT r.id) AS total_rooms,
-  MIN(r.price) AS min_room_price,
-  MAX(r.price) AS max_room_price,
-  AVG(r.price) AS avg_room_price,
-  SUM(r.total_inventory) AS total_room_capacity,
-  SUM(r.max_guests) AS total_max_guests
+  MIN(r.base_price) AS min_room_price,
+  MAX(r.base_price) AS max_room_price,
+  AVG(r.base_price) AS avg_room_price,
+  SUM(r.max_guests) AS total_max_guests,
+  COUNT(CASE WHEN r.is_active = true THEN 1 END) AS active_rooms_count
 FROM properties p
 LEFT JOIN rooms r ON r.property_id = p.id
 WHERE p.is_available = true
@@ -99,26 +95,28 @@ CREATE OR REPLACE VIEW room_availability_view AS
 SELECT 
   ri.id AS inventory_id,
   ri.room_id,
-  ri.date,
-  ri.available,
+  ri.room_number,
+  ri.is_available,
   r.property_id,
   r.name AS room_name,
   r.room_type,
-  r.price,
-  r.total_inventory,
+  r.base_price,
   r.amenities,
   r.max_guests,
+  r.is_active AS room_is_active,
   p.title AS property_name,
   p.address AS property_location,
+  p.city,
+  p.is_available AS property_is_available,
   CASE 
-    WHEN ri.available > 0 THEN 'available'
-    WHEN ri.available = 0 THEN 'booked'
+    WHEN ri.is_available = true AND r.is_active = true AND p.is_available = true THEN 'available'
+    WHEN ri.is_available = false THEN 'booked'
     ELSE 'unavailable'
   END AS availability_status
 FROM room_inventory ri
 JOIN rooms r ON r.id = ri.room_id
 JOIN properties p ON p.id = r.property_id
-WHERE p.is_available = true;
+WHERE p.is_available = true AND r.is_active = true;
 
 -- =====================================================
 -- 6. USER_SOCIAL_STATS VIEW

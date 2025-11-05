@@ -66,12 +66,12 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
       const { data: bookings } = await supabase
         .from('bookings')
         .select('*')
-        .eq('guest_id', user?.id);
+        .eq('user_id', user?.id); // Changed from guest_id
 
       const { data: reviews } = await supabase
         .from('tales')
         .select('*')
-        .eq('guest_id', user?.id);
+        .eq('user_id', user?.id); // Changed from guest_id (assuming tales uses user_id)
 
       const { data: wishlist } = await supabase
         .from('bucketlist')
@@ -80,7 +80,7 @@ export function PersonalizedDashboard({ className = '' }: PersonalizedDashboardP
 
       // Calculate stats
       const totalBookings = bookings?.length || 0;
-      const totalSpent = bookings?.reduce((sum, booking) => sum + (booking.total_amount || 0), 0) || 0;
+      const totalSpent = bookings?.reduce((sum, booking) => sum + (booking.total_price || 0), 0) || 0; // Changed from total_amount
       const averageRating = reviews?.length ? 
         reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
 

@@ -273,13 +273,16 @@ export async function getBookings(userId: string): Promise<BookingWithProperty[]
     .from('bookings')
     .select(`
       *,
-      property:properties(*)
+      property:properties!bookings_item_id_fkey(*),
+      experience:experiences!bookings_item_id_fkey(*),
+      retreat:micro_experiences!bookings_item_id_fkey(*)
     `)
-    .eq('guest_id', userId)
+    .eq('user_id', userId) // Changed from guest_id
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching bookings:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return [];
   }
 
@@ -287,38 +290,85 @@ export async function getBookings(userId: string): Promise<BookingWithProperty[]
 }
 
 export async function getHostBookings(userId: string): Promise<BookingWithProperty[]> {
-  const { data, error } = await supabase
+  // Query bookings where the host owns the property/experience/retreat
+  // Need to join with properties, experiences, and micro_experiences tables
+  const { data: propertyBookings, error: propertyError } = await supabase
     .from('bookings')
     .select(`
       *,
-      property:properties(*)
+      property:properties!bookings_item_id_fkey(*)
     `)
+    .eq('booking_type', 'property')
     .eq('property.host_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching host bookings:', error);
+  const { data: experienceBookings, error: experienceError } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      experience:experiences!bookings_item_id_fkey(*)
+    `)
+    .eq('booking_type', 'experience')
+    .eq('experience.host_id', userId)
+    .order('created_at', { ascending: false });
+
+  const { data: retreatBookings, error: retreatError } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      retreat:micro_experiences!bookings_item_id_fkey(*)
+    `)
+    .eq('booking_type', 'retreat')
+    .eq('retreat.host_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (propertyError || experienceError || retreatError) {
+    console.error('Error fetching host bookings:', propertyError || experienceError || retreatError);
     return [];
   }
 
-  return data || [];
+  // Combine all bookings and sort by created_at
+  const allBookings = [
+    ...(propertyBookings || []),
+    ...(experienceBookings || []),
+    ...(retreatBookings || [])
+  ].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return allBookings;
 }
 
 export async function getAllBookings(): Promise<BookingWithPropertyAndGuest[]> {
   const { data, error } = await supabase
     .from('bookings')
-    .select(`*, property:properties(*), guest:profiles(*)`)
+    .select(`
+      *,
+      property:properties!bookings_item_id_fkey(*),
+      experience:experiences!bookings_item_id_fkey(*),
+      retreat:micro_experiences!bookings_item_id_fkey(*),
+      guest:profiles!bookings_user_id_fkey(*)
+    `)
     .order('created_at', { ascending: false });
   if (error) {
     console.error('Error fetching all bookings:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return [];
   }
   return data || [];
 }
 
 export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>): Promise<Booking | null> {
-  if (!booking.guest_id) {
-    console.error('Booking creation failed: guest_id is required.');
+  if (!booking.user_id) {
+    console.error('Booking creation failed: user_id is required.');
+    return null;
+  }
+  if (!booking.booking_type) {
+    console.error('Booking creation failed: booking_type is required.');
+    return null;
+  }
+  if (!booking.item_id) {
+    console.error('Booking creation failed: item_id is required.');
     return null;
   }
   const { data, error } = await supabase
@@ -328,6 +378,7 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
     .single();
   if (error) {
     console.error('Error creating booking:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return null;
   }
   return data;
@@ -358,12 +409,14 @@ export async function checkAvailability(
   const { data, error } = await supabase
     .from('bookings')
     .select('*')
-    .eq('property_id', propertyId)
+    .eq('booking_type', 'property') // New field - filter by booking type
+    .eq('item_id', propertyId) // Changed from property_id
     .in('status', ['confirmed', 'pending'])
     .or(`check_in_date.lte.${checkOut},check_out_date.gte.${checkIn}`);
 
   if (error) {
     console.error('Error checking availability:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return false;
   }
 
@@ -515,40 +568,52 @@ export async function searchProperties(filters: SearchFilters): Promise<Property
 } 
 
 export async function createExperienceBooking({ experienceId, email, name, date, guests, totalPrice, guestId }: { experienceId: string, email: string, name: string, date: string, guests: number, totalPrice: number, guestId: string }) {
-  // Insert booking for authenticated user
+  // Insert booking for authenticated user using new schema
   const { data, error } = await supabase
     .from('bookings')
     .insert({
-      experience_id: experienceId,
-      guest_id: guestId,
+      user_id: guestId, // Changed from guest_id
+      booking_type: 'experience' as const, // New field - enum
+      item_id: experienceId, // Changed from property_id
       check_in_date: date,
-      check_out_date: date,
+      check_out_date: date, // Using same date for experiences
       guests_count: guests,
       total_price: totalPrice,
-      status: 'pending',
+      status: 'confirmed' as const, // Enum value
+      special_requests: null,
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error('🔍 Error creating experience booking:', error);
+    console.error('🔍 Error details:', JSON.stringify(error, null, 2));
+    throw error;
+  }
   return data;
 }
 
 export async function createTripBooking({ tripId, email, name, date, guests, totalPrice, guestId }: { tripId: string, email: string, name: string, date: string, guests: number, totalPrice: number, guestId: string }) {
-  // Insert booking for authenticated user
+  // Insert booking for authenticated user using new schema
   const { data, error } = await supabase
     .from('bookings')
     .insert({
-      trip_id: tripId,
-      guest_id: guestId,
+      user_id: guestId, // Changed from guest_id
+      booking_type: 'retreat' as const, // Assuming trip is a retreat type
+      item_id: tripId, // Changed from trip_id
       check_in_date: date,
       check_out_date: date,
       guests_count: guests,
       total_price: totalPrice,
-      status: 'pending',
+      status: 'pending' as const, // Enum value
+      special_requests: null,
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error('🔍 Error creating trip booking:', error);
+    console.error('🔍 Error details:', JSON.stringify(error, null, 2));
+    throw error;
+  }
   return data;
 } 
 
@@ -559,12 +624,14 @@ export async function hasCompletedBooking(userId: string, propertyId: string): P
   const { data, error } = await supabase
     .from('bookings')
     .select('id')
-    .eq('guest_id', userId)
-    .eq('property_id', propertyId)
+    .eq('user_id', userId) // Changed from guest_id
+    .eq('booking_type', 'property') // New field - filter by booking type
+    .eq('item_id', propertyId) // Changed from property_id
     .eq('status', 'completed')
     .lte('check_out_date', today);
   if (error) {
     console.error('Error checking completed booking:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return false;
   }
   return (data || []).length > 0;
@@ -914,7 +981,7 @@ export async function checkMultiRoomAvailability(
 export async function createMultiRoomBooking(
   booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>,
   rooms: { room_id: string; quantity: number; check_in: string; check_out: string }[],
-  payment_ref?: string | null
+  payment_ref?: string | null // Note: payment_ref field removed from schema, keeping param for backward compatibility
 ): Promise<Booking | null> {
   // 1. Check availability for all rooms
   const isAvailable = await checkMultiRoomAvailability(rooms);
@@ -922,14 +989,15 @@ export async function createMultiRoomBooking(
     console.error('One or more rooms are not available for selected dates/quantities');
     return null;
   }
-  // 2. Create booking
+  // 2. Create booking using new schema (payment_ref field removed)
   const { data: bookingData, error: bookingError } = await supabase
     .from('bookings')
-    .insert({ ...booking, payment_ref })
+    .insert(booking) // payment_ref field removed from schema
     .select()
     .single();
   if (bookingError || !bookingData) {
     console.error('Error creating booking:', bookingError);
+    console.error('Error details:', JSON.stringify(bookingError, null, 2));
     return null;
   }
   // 3. Update booking with room information and decrement inventory

@@ -1,8 +1,8 @@
 -- =====================================================
--- EJA HOMESTAY - Database Schema Structure
+-- EJA HOMESTAY - Database Schema Structure (LATEST)
 -- =====================================================
--- This script creates all 15 tables with proper structure,
--- foreign keys, indexes, and RLS policies.
+-- This script creates all 15 tables with correct column structure,
+-- foreign keys, indexes, and RLS policies based on actual database.
 --
 -- Run this script FIRST before inserting data.
 -- Run in Supabase SQL Editor
@@ -10,26 +10,52 @@
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- =====================================================
+-- ENUMS AND CUSTOM TYPES
+-- =====================================================
+
+-- Booking Type Enum
+DO $$ BEGIN
+  CREATE TYPE booking_type AS ENUM ('property', 'experience', 'retreat');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Booking Status Enum
+DO $$ BEGIN
+  CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Property Type Enum
+DO $$ BEGIN
+  CREATE TYPE property_type_enum AS ENUM ('Boutique', 'Cottage', 'Homely', 'Off-Beat');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Item Type Enum (for bucketlist)
+DO $$ BEGIN
+  CREATE TYPE item_type_enum AS ENUM ('property', 'experience', 'retreat');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- =====================================================
 -- 1. PROFILES TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  full_name VARCHAR(255),
-  phone VARCHAR(50),
+  email TEXT NOT NULL,
+  full_name TEXT,
+  phone TEXT,
   avatar_url TEXT,
   is_host BOOLEAN DEFAULT FALSE,
-  role VARCHAR(20) DEFAULT 'guest' CHECK (role IN ('guest', 'admin')),
   host_bio TEXT,
   host_usps TEXT[],
-  bio TEXT,
-  mood_tag VARCHAR(50),
-  birthday_day VARCHAR(2),
-  birthday_month VARCHAR(2),
-  birthday_year VARCHAR(4),
-  gender VARCHAR(20),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -50,47 +76,39 @@ CREATE POLICY "Users can insert own profile" ON profiles
 -- 2. PROPERTIES TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS properties (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  host_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
-  subtitle VARCHAR(255),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  host_id TEXT,
+  title TEXT NOT NULL,
+  subtitle TEXT,
   description TEXT,
-  property_type VARCHAR(50) NOT NULL CHECK (property_type IN ('Boutique', 'Cottage', 'Homely', 'Off-Beat')),
-  address TEXT NOT NULL,
-  city VARCHAR(100) NOT NULL,
-  state VARCHAR(100),
-  country VARCHAR(100) NOT NULL DEFAULT 'India',
-  postal_code VARCHAR(20),
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  base_price DECIMAL(10, 2) NOT NULL,
-  max_guests INTEGER NOT NULL DEFAULT 1,
-  bedrooms INTEGER NOT NULL DEFAULT 1,
-  bathrooms INTEGER NOT NULL DEFAULT 1,
-  beds INTEGER,
-  amenities TEXT[] DEFAULT '{}',
-  tags TEXT[] DEFAULT '{}',
-  images TEXT[] DEFAULT '{}',
+  property_type property_type_enum NOT NULL,
+  address TEXT,
+  city TEXT NOT NULL,
+  state TEXT,
+  country TEXT NOT NULL,
+  postal_code TEXT,
+  latitude NUMERIC,
+  longitude NUMERIC,
+  base_price NUMERIC NOT NULL,
+  max_guests INTEGER NOT NULL,
+  bedrooms INTEGER NOT NULL,
+  bathrooms INTEGER NOT NULL,
+  amenities TEXT[],
   cover_image TEXT,
   gallery JSONB,
   usps TEXT[],
   house_rules TEXT,
   cancellation_policy TEXT,
-  room_config JSONB,
-  google_average_rating DECIMAL(3, 2),
-  google_reviews_count INTEGER DEFAULT 0,
-  google_place_id VARCHAR(255),
-  google_last_updated TIMESTAMPTZ,
-  host_name VARCHAR(255),
-  host_type VARCHAR(50),
-  host_tenure VARCHAR(50),
-  host_description TEXT,
-  host_image TEXT,
-  host_usps TEXT[],
-  unique_propositions TEXT[],
   is_available BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  accommodation_type TEXT,
+  beds INTEGER,
+  currency TEXT DEFAULT 'INR',
+  min_nights INTEGER DEFAULT 1,
+  max_nights INTEGER,
+  google_average_rating NUMERIC,
+  google_reviews_count INTEGER DEFAULT 0
 );
 
 -- RLS Policies for properties
@@ -100,49 +118,48 @@ CREATE POLICY "Anyone can view available properties" ON properties
   FOR SELECT USING (is_available = true);
 
 CREATE POLICY "Hosts can view their own properties" ON properties
-  FOR SELECT USING (auth.uid() = host_id);
+  FOR SELECT USING (auth.uid()::text = host_id);
 
 CREATE POLICY "Hosts can insert their own properties" ON properties
-  FOR INSERT WITH CHECK (auth.uid() = host_id);
+  FOR INSERT WITH CHECK (auth.uid()::text = host_id);
 
 CREATE POLICY "Hosts can update their own properties" ON properties
-  FOR UPDATE USING (auth.uid() = host_id);
+  FOR UPDATE USING (auth.uid()::text = host_id);
 
 CREATE POLICY "Hosts can delete their own properties" ON properties
-  FOR DELETE USING (auth.uid() = host_id);
+  FOR DELETE USING (auth.uid()::text = host_id);
 
 -- =====================================================
 -- 3. ROOMS TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS rooms (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
+  name TEXT NOT NULL,
+  room_type TEXT NOT NULL,
   description TEXT,
-  room_type VARCHAR(50) NOT NULL CHECK (room_type IN ('standard', 'deluxe', 'premium', 'suite')),
-  price DECIMAL(10, 2) NOT NULL,
-  total_inventory INTEGER NOT NULL DEFAULT 1,
-  max_guests INTEGER,
+  max_guests INTEGER NOT NULL,
+  base_price NUMERIC NOT NULL,
   amenities TEXT[],
-  images TEXT[] DEFAULT '{}',
-  extra_adult_price DECIMAL(10, 2) DEFAULT 0,
-  child_breakfast_price DECIMAL(10, 2) DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  cover_image TEXT,
+  gallery JSONB
 );
 
 -- RLS Policies for rooms
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can view rooms" ON rooms
-  FOR SELECT USING (true);
+CREATE POLICY "Anyone can view active rooms" ON rooms
+  FOR SELECT USING (is_active = true);
 
 CREATE POLICY "Hosts can manage rooms for their properties" ON rooms
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM properties 
       WHERE properties.id = rooms.property_id 
-      AND properties.host_id = auth.uid()
+      AND properties.host_id = auth.uid()::text
     )
   );
 
@@ -150,13 +167,12 @@ CREATE POLICY "Hosts can manage rooms for their properties" ON rooms
 -- 4. ROOM_INVENTORY TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS room_inventory (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  available INTEGER NOT NULL DEFAULT 0,
+  room_number TEXT NOT NULL,
+  is_available BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(room_id, date)
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- RLS Policies for room_inventory
@@ -171,7 +187,7 @@ CREATE POLICY "Hosts can manage inventory for their rooms" ON room_inventory
       SELECT 1 FROM rooms
       JOIN properties ON properties.id = rooms.property_id
       WHERE rooms.id = room_inventory.room_id
-      AND properties.host_id = auth.uid()
+      AND properties.host_id = auth.uid()::text
     )
   );
 
@@ -179,71 +195,51 @@ CREATE POLICY "Hosts can manage inventory for their rooms" ON room_inventory
 -- 5. BOOKINGS TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS bookings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE RESTRICT,
-  guest_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  check_in_date DATE NOT NULL,
-  check_out_date DATE NOT NULL,
-  guests_count INTEGER NOT NULL DEFAULT 1,
-  total_price DECIMAL(10, 2) NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  booking_type booking_type NOT NULL,
+  item_id UUID NOT NULL,
+  check_in_date DATE,
+  check_out_date DATE,
+  guests_count INTEGER,
+  total_price NUMERIC NOT NULL,
+  status booking_status DEFAULT 'pending'::booking_status,
   special_requests TEXT,
-  payment_ref VARCHAR(255),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (check_out_date > check_in_date)
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- RLS Policies for bookings
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own bookings" ON bookings
-  FOR SELECT USING (auth.uid() = guest_id);
-
-CREATE POLICY "Hosts can view bookings for their properties" ON bookings
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM properties
-      WHERE properties.id = bookings.property_id
-      AND properties.host_id = auth.uid()
-    )
-  );
+  FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can create their own bookings" ON bookings
-  FOR INSERT WITH CHECK (auth.uid() = guest_id);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Hosts can update bookings for their properties" ON bookings
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM properties
-      WHERE properties.id = bookings.property_id
-      AND properties.host_id = auth.uid()
-    )
-  );
+CREATE POLICY "Users can update their own bookings" ON bookings
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- =====================================================
--- 6. EXPERIENCES TABLE (formerly experiences_unified)
+-- 6. EXPERIENCES TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS experiences (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  host_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  host_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
   description TEXT,
-  location VARCHAR(100) NOT NULL CHECK (location IN ('Hyper-local', 'Online', 'Retreats')),
-  categories TEXT[] DEFAULT '{}',
-  mood VARCHAR(50),
-  price DECIMAL(10, 2) NOT NULL,
+  location TEXT NOT NULL,
+  mood TEXT,
+  price NUMERIC NOT NULL,
   duration_hours INTEGER,
   cover_image TEXT,
   gallery JSONB,
   is_active BOOLEAN DEFAULT TRUE,
-  host_name VARCHAR(255),
-  host_avatar TEXT,
-  host_bio TEXT,
-  host_usps TEXT[],
-  unique_propositions TEXT[],
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  host_name TEXT DEFAULT 'EJA',
+  host_avatar TEXT DEFAULT 'https://qfpfezjygemxfgwazsix.supabase.co/storage/v1/object/public/Brand%20Logo/eja_logo.png'
 );
 
 -- RLS Policies for experiences
@@ -265,17 +261,19 @@ CREATE POLICY "Hosts can delete their own experiences" ON experiences
   FOR DELETE USING (auth.uid() = host_id);
 
 -- =====================================================
--- 7. MICRO_EXPERIENCES TABLE (formerly retreat_experiences)
+-- 7. MICRO_EXPERIENCES TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS micro_experiences (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   retreat_id UUID REFERENCES experiences(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
+  title TEXT NOT NULL,
   description TEXT,
-  experience_type VARCHAR(50) NOT NULL CHECK (experience_type IN ('tight budget', 'family comfort', 'premium')),
+  experience_type TEXT NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  cover_image TEXT,
+  gallery JSONB
 );
 
 -- RLS Policies for micro_experiences
@@ -294,22 +292,20 @@ CREATE POLICY "Hosts can manage micro_experiences for their retreats" ON micro_e
   );
 
 -- =====================================================
--- 8. TALES TABLE (formerly experience_tales)
+-- 8. TALES TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS tales (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  experience_id UUID REFERENCES experiences(id) ON DELETE CASCADE,
-  item_id UUID, -- For properties or experiences
-  review_type VARCHAR(50) CHECK (review_type IN ('property', 'experience')),
+  experience_id UUID NOT NULL,
   guest_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  guest_name VARCHAR(255),
-  guest_email VARCHAR(255),
-  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  guest_name TEXT,
+  guest_email TEXT,
+  rating INTEGER,
   comment TEXT,
-  image_url TEXT,
-  video_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  image_url TEXT,
+  video_url TEXT
 );
 
 -- RLS Policies for tales
@@ -332,11 +328,11 @@ CREATE POLICY "Users can delete their own tales" ON tales
 -- =====================================================
 CREATE TABLE IF NOT EXISTS dares (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  creator_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
+  creator_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
   description TEXT NOT NULL,
-  hashtag VARCHAR(100),
-  vibe VARCHAR(50) NOT NULL CHECK (vibe IN ('Happy', 'Chill', 'Bold', 'Social')),
+  hashtag TEXT,
+  vibe TEXT NOT NULL,
   expiry_date TIMESTAMPTZ NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -366,9 +362,9 @@ CREATE POLICY "Users can delete their own dares" ON dares
 -- =====================================================
 CREATE TABLE IF NOT EXISTS completed_dares (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  dare_id UUID NOT NULL REFERENCES dares(id) ON DELETE CASCADE,
-  completer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  media_urls TEXT[] NOT NULL DEFAULT '{}',
+  dare_id UUID REFERENCES dares(id) ON DELETE SET NULL,
+  completer_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  media_urls TEXT[] NOT NULL,
   caption TEXT,
   location TEXT,
   is_active BOOLEAN DEFAULT TRUE,
@@ -399,21 +395,15 @@ CREATE POLICY "Users can delete their own completed dares" ON completed_dares
 -- =====================================================
 CREATE TABLE IF NOT EXISTS dare_engagements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  engagement_type VARCHAR(50) NOT NULL CHECK (engagement_type IN ('smile', 'comment', 'share', 'tag')),
-  -- Polymorphic entity reference (only one should be set)
-  item_id UUID, -- For properties, experiences, retreats
-  item_type VARCHAR(50), -- 'property', 'experience', 'retreat'
-  dare_id UUID REFERENCES dares(id) ON DELETE CASCADE,
-  completed_dare_id UUID REFERENCES completed_dares(id) ON DELETE CASCADE,
-  engagement_value VARCHAR(255), -- For platform name (shares) or reaction_type (reactions)
-  content TEXT, -- For comments and tags
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  dare_id UUID REFERENCES dares(id) ON DELETE SET NULL,
+  completed_dare_id UUID REFERENCES completed_dares(id) ON DELETE SET NULL,
+  engagement_type TEXT NOT NULL,
+  content TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT check_single_entity CHECK (
-    (item_id IS NOT NULL AND dare_id IS NULL AND completed_dare_id IS NULL) OR
-    (item_id IS NULL AND dare_id IS NOT NULL AND completed_dare_id IS NULL) OR
-    (item_id IS NULL AND dare_id IS NULL AND completed_dare_id IS NOT NULL)
-  )
+  item_id UUID,
+  item_type VARCHAR,
+  engagement_value VARCHAR
 );
 
 -- RLS Policies for dare_engagements
@@ -435,10 +425,10 @@ CREATE POLICY "Users can delete their own engagements" ON dare_engagements
 -- 12. BUCKETLIST TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS bucketlist (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  item_type item_type_enum NOT NULL,
   item_id UUID NOT NULL,
-  item_type VARCHAR(50) NOT NULL CHECK (item_type IN ('property', 'experience', 'retreat')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, item_id, item_type)
 );
@@ -456,7 +446,7 @@ CREATE POLICY "Users can manage their own bucketlist" ON bucketlist
 -- 13. FOLLOWS TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS follows (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   follower_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   following_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -477,14 +467,15 @@ CREATE POLICY "Users can manage their own follows" ON follows
 -- 14. NOTIFICATIONS TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  message TEXT,
-  read BOOLEAN DEFAULT FALSE,
-  link TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'info',
+  is_read BOOLEAN DEFAULT FALSE,
+  action_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- RLS Policies for notifications
@@ -503,18 +494,13 @@ CREATE POLICY "Users can insert their own notifications" ON notifications
 -- 15. BLOGS TABLE
 -- =====================================================
 CREATE TABLE IF NOT EXISTS blogs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  title VARCHAR(255) NOT NULL,
-  excerpt TEXT,
-  content TEXT,
-  author VARCHAR(255),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
   author_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  date DATE,
-  read_time VARCHAR(50),
-  category VARCHAR(100),
-  image TEXT,
-  featured BOOLEAN DEFAULT FALSE,
-  is_published BOOLEAN DEFAULT FALSE,
+  published BOOLEAN DEFAULT FALSE,
+  cover_image TEXT,
+  tags TEXT[],
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -523,7 +509,7 @@ CREATE TABLE IF NOT EXISTS blogs (
 ALTER TABLE blogs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view published blogs" ON blogs
-  FOR SELECT USING (is_published = true);
+  FOR SELECT USING (published = true);
 
 CREATE POLICY "Authors can view their own blogs" ON blogs
   FOR SELECT USING (auth.uid() = author_id);
@@ -547,14 +533,16 @@ CREATE INDEX IF NOT EXISTS idx_properties_property_type ON properties(property_t
 
 -- Rooms indexes
 CREATE INDEX IF NOT EXISTS idx_rooms_property_id ON rooms(property_id);
+CREATE INDEX IF NOT EXISTS idx_rooms_is_active ON rooms(is_active);
 
 -- Room inventory indexes
 CREATE INDEX IF NOT EXISTS idx_room_inventory_room_id ON room_inventory(room_id);
-CREATE INDEX IF NOT EXISTS idx_room_inventory_date ON room_inventory(date);
+CREATE INDEX IF NOT EXISTS idx_room_inventory_is_available ON room_inventory(is_available);
 
 -- Bookings indexes
-CREATE INDEX IF NOT EXISTS idx_bookings_guest_id ON bookings(guest_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_property_id ON bookings(property_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_item_id ON bookings(item_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_booking_type ON bookings(booking_type);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 
 -- Experiences indexes
@@ -568,7 +556,6 @@ CREATE INDEX IF NOT EXISTS idx_micro_experiences_type ON micro_experiences(exper
 
 -- Tales indexes
 CREATE INDEX IF NOT EXISTS idx_tales_experience_id ON tales(experience_id);
-CREATE INDEX IF NOT EXISTS idx_tales_item_id ON tales(item_id);
 CREATE INDEX IF NOT EXISTS idx_tales_guest_id ON tales(guest_id);
 
 -- Dares indexes
@@ -599,13 +586,12 @@ CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_id);
 
 -- Notifications indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
 -- Blogs indexes
 CREATE INDEX IF NOT EXISTS idx_blogs_author_id ON blogs(author_id);
-CREATE INDEX IF NOT EXISTS idx_blogs_is_published ON blogs(is_published);
-CREATE INDEX IF NOT EXISTS idx_blogs_featured ON blogs(featured);
+CREATE INDEX IF NOT EXISTS idx_blogs_published ON blogs(published);
 
 -- =====================================================
 -- TRIGGERS FOR UPDATED_AT
@@ -648,6 +634,9 @@ CREATE TRIGGER update_dares_updated_at BEFORE UPDATE ON dares
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_completed_dares_updated_at BEFORE UPDATE ON completed_dares
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_notifications_updated_at BEFORE UPDATE ON notifications
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_blogs_updated_at BEFORE UPDATE ON blogs

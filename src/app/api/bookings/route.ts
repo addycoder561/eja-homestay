@@ -45,17 +45,18 @@ export async function POST(request: NextRequest) {
         check_out: checkOut,
       }));
 
-    // Create the booking
+    // Create the booking using new schema
     const booking = await createMultiRoomBooking(
       {
-        property_id: propertyId,
-        guest_id: user.id,
+        user_id: user.id, // Changed from guest_id
+        booking_type: 'property' as const, // New field - enum
+        item_id: propertyId, // Changed from property_id
         check_in_date: checkIn,
         check_out_date: checkOut,
         guests_count: adults + children,
         total_price: totalPrice,
-        status: 'pending',
-        special_requests: guestInfo.specialRequests || '',
+        status: 'pending' as const, // Enum value
+        special_requests: guestInfo.specialRequests || null,
       },
       roomBookings
     );

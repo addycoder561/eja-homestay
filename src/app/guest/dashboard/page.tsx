@@ -140,11 +140,24 @@ export default function GuestDashboard() {
       
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Try new schema first (user_id), fallback to old schema (guest_id) for backward compatibility
+        let { data, error } = await supabase
           .from('bookings')
           .select('*')
-          .eq('guest_id', profile.id)
+          .eq('user_id', profile.id)
           .order('created_at', { ascending: false });
+        
+        // If no results and error suggests column doesn't exist, try old schema
+        if ((!data || data.length === 0) && error && (error.message?.includes('column') || error.code === '42703')) {
+          console.log('🔍 Trying old schema (guest_id) for backward compatibility...');
+          const oldSchemaQuery = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('guest_id', profile.id)
+            .order('created_at', { ascending: false });
+          data = oldSchemaQuery.data;
+          error = oldSchemaQuery.error;
+        }
         if (error) {
           // Only show error toast if it's not the initial load and it's a real error
           const isRealError = error.code !== 'PGRST116' && 
@@ -186,39 +199,43 @@ export default function GuestDashboard() {
   }, [profile?.id, authLoading]);
 
   const getBookingDetails = (booking: any) => {
-    if (booking.property_id) {
+    // Support both old and new schema
+    const bookingType = booking.booking_type || (booking.property_id ? 'property' : booking.experience_id ? 'experience' : booking.trip_id || booking.retreat_id ? 'retreat' : 'property');
+    const itemId = booking.item_id || booking.property_id || booking.experience_id || booking.trip_id || booking.retreat_id;
+    
+    if (bookingType === 'property' || booking.property_id) {
       return {
         type: 'Homestay',
-        title: booking.property_title || 'Homestay',
-        image: booking.property_image || '/globe.svg',
-        location: booking.property_location || 'Location not specified',
+        title: booking.property?.title || 'Homestay',
+        image: booking.property?.cover_image || '/globe.svg',
+        location: booking.property?.location || 'Location not specified',
         duration: '1 night',
         rating: 4.5,
-        price: booking.total_price
+        price: booking.total_price || booking.total_amount
       };
     }
-    if (booking.experience_id) {
-      const exp = experiences.find(e => e.id === booking.experience_id);
+    if (bookingType === 'experience' || booking.experience_id) {
+      const exp = experiences.find(e => e.id === itemId || e.id === booking.experience_id);
       return {
         type: 'Experience',
-        title: exp?.title || 'Experience',
-        image: exp?.image || '/globe.svg',
-        location: exp?.location || 'Location not specified',
-        duration: exp?.duration || 'Duration not specified',
-        rating: exp?.rating || 4.5,
-        price: exp?.price || booking.total_price
+        title: booking.experience?.title || exp?.title || 'Experience',
+        image: booking.experience?.cover_image || exp?.image || '/globe.svg',
+        location: booking.experience?.location || exp?.location || 'Location not specified',
+        duration: booking.experience?.duration || exp?.duration || 'Duration not specified',
+        rating: booking.experience?.rating || exp?.rating || 4.5,
+        price: booking.experience?.price || exp?.price || booking.total_price || booking.total_amount
       };
     }
-    if (booking.trip_id) {
-      const trip = trips.find(t => t.id === booking.trip_id);
+    if (bookingType === 'retreat' || booking.trip_id || booking.retreat_id) {
+      const trip = trips.find(t => t.id === itemId || t.id === booking.trip_id || t.id === booking.retreat_id);
       return {
-        type: 'Trip',
-        title: trip?.title || 'Trip',
-        image: trip?.image || '/globe.svg',
-        location: trip?.location || 'Location not specified',
-        duration: trip?.duration || 'Duration not specified',
-        rating: trip?.rating || 4.5,
-        price: trip?.price || booking.total_price
+        type: 'Retreat',
+        title: booking.retreat?.title || trip?.title || 'Retreat',
+        image: booking.retreat?.cover_image || trip?.image || '/globe.svg',
+        location: booking.retreat?.location || trip?.location || 'Location not specified',
+        duration: booking.retreat?.duration || trip?.duration || 'Duration not specified',
+        rating: booking.retreat?.rating || trip?.rating || 4.5,
+        price: booking.retreat?.price || trip?.price || booking.total_price || booking.total_amount
       };
     }
     return { 
@@ -228,7 +245,7 @@ export default function GuestDashboard() {
       location: 'Location not specified',
       duration: 'Duration not specified',
       rating: 4.5,
-      price: booking.total_price
+      price: booking.total_price || booking.total_amount
     };
   };
 
@@ -296,12 +313,18 @@ export default function GuestDashboard() {
       filtered = filtered.filter(b => b.status === statusFilter);
     }
     
-    // Type filter
+    // Type filter - support both old and new schema
     if (typeFilter !== 'all') {
       filtered = filtered.filter(b => {
-        if (typeFilter === 'properties') return b.property_id;
-        if (typeFilter === 'experiences') return b.experience_id;
-        if (typeFilter === 'retreats') return b.trip_id;
+        if (typeFilter === 'properties') {
+          return b.booking_type === 'property' || b.property_id;
+        }
+        if (typeFilter === 'experiences') {
+          return b.booking_type === 'experience' || b.experience_id;
+        }
+        if (typeFilter === 'retreats') {
+          return b.booking_type === 'retreat' || b.trip_id || b.retreat_id;
+        }
         return true;
       });
     }
@@ -344,9 +367,8 @@ export default function GuestDashboard() {
     doc.text(`Status: ${booking.status}`, 20, 130);
     doc.text(`Total Price: ₹${booking.total_price}`, 20, 140);
     
-    if (booking.payment_ref || booking.razorpay_payment_id) {
-      doc.text(`Payment Ref: ${booking.payment_ref || booking.razorpay_payment_id}`, 20, 150);
-    }
+    // Note: payment_ref field removed from new schema
+    // Payment reference can be stored elsewhere if needed
     
     doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 170);
     
@@ -365,12 +387,24 @@ export default function GuestDashboard() {
     if (confirm('Are you sure you want to cancel this booking?')) {
       await updateBookingStatus(bookingId, 'cancelled');
       showToast.success('Booking cancelled successfully.');
-      // Refresh bookings
-      const { data, error } = await supabase
+      // Refresh bookings - try new schema first, fallback to old schema
+      let { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('guest_id', profile!.id)
+        .eq('user_id', profile!.id)
         .order('created_at', { ascending: false });
+      
+      // If no results and error suggests column doesn't exist, try old schema
+      if ((!data || data.length === 0) && error && (error.message?.includes('column') || error.code === '42703')) {
+        const oldSchemaQuery = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('guest_id', profile!.id)
+          .order('created_at', { ascending: false });
+        data = oldSchemaQuery.data;
+        error = oldSchemaQuery.error;
+      }
+      
       setBookings(data || []);
     }
   };
@@ -487,7 +521,10 @@ export default function GuestDashboard() {
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-yellow-600">₹{booking.total_price}</span>
                           <button
-                            onClick={() => router.push(`/${details.type.toLowerCase()}s/${booking.property_id || booking.experience_id || booking.trip_id}`)}
+                            onClick={() => {
+                              const itemId = booking.item_id || booking.property_id || booking.experience_id || booking.trip_id || booking.retreat_id;
+                              router.push(`/${details.type.toLowerCase()}s/${itemId}`);
+                            }}
                             className="px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-colors"
                           >
                             View Details
@@ -628,12 +665,16 @@ export default function GuestDashboard() {
                               <button
                                 className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition-colors text-sm font-semibold"
                                 onClick={() => {
-                                  if (booking.property_id) {
-                                    router.push(`/property/${booking.property_id}`);
-                                  } else if (booking.experience_id) {
-                                    router.push(`/experiences/${booking.experience_id}`);
-                                  } else if (booking.trip_id) {
-                                    router.push(`/retreats/${booking.trip_id}`);
+                                  // Support both old and new schema
+                                  const bookingType = booking.booking_type || (booking.property_id ? 'property' : booking.experience_id ? 'experience' : booking.trip_id || booking.retreat_id ? 'retreat' : 'property');
+                                  const itemId = booking.item_id || booking.property_id || booking.experience_id || booking.trip_id || booking.retreat_id;
+                                  
+                                  if (bookingType === 'property' || booking.property_id) {
+                                    router.push(`/property/${itemId}`);
+                                  } else if (bookingType === 'experience' || booking.experience_id) {
+                                    router.push(`/experiences/${itemId}`);
+                                  } else if (bookingType === 'retreat' || booking.trip_id || booking.retreat_id) {
+                                    router.push(`/retreats/${itemId}`);
                                   }
                                 }}
                               >

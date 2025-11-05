@@ -127,18 +127,18 @@ export interface BookingRoom {
   check_out: string;
 }
 
-// Update Booking to remove room_id (now handled by booking_rooms)
+// Booking interface matching latest schema
 export interface Booking {
   id: string;
-  property_id: string;
-  guest_id: string;
-  check_in_date: string;
-  check_out_date: string;
-  guests_count: number;
+  user_id: string; // Changed from guest_id
+  booking_type: 'property' | 'experience' | 'retreat'; // New field - enum
+  item_id: string; // Changed from property_id - can be property, experience, or retreat ID
+  check_in_date: string | null; // Nullable in new schema
+  check_out_date: string | null; // Nullable in new schema
+  guests_count: number | null; // Nullable in new schema
   total_price: number;
-  status: BookingStatus;
+  status: BookingStatus; // Enum: 'pending' | 'confirmed' | 'cancelled' | 'completed'
   special_requests: string | null;
-  payment_ref?: string | null;
   created_at: string;
   updated_at: string;
 }

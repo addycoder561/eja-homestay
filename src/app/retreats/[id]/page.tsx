@@ -251,33 +251,52 @@ export default function RetreatDetailPage() {
         handler: async function (response: any) {
           console.log('🔍 Payment successful, creating booking...');
           try {
-            // Create booking after successful payment
+            // Create booking after successful payment using NEW schema fields
+            const bookingDate = bookingForm.date;
             const { data, error } = await supabase
               .from('bookings')
               .insert({
-                property_id: retreat.id, // Using property_id for experience/retreat ID
-                guest_id: user.id,
-                guest_name: profile?.full_name || user.email?.split('@')[0] || 'Guest',
-                guest_email: user.email || '',
-                guest_phone: profile?.phone || '',
-                check_in: bookingForm.date,
-                booking_type: 'retreat', // Add type to distinguish retreat bookings
-                guests: bookingForm.guests,
-                special_requests: bookingForm.specialRequests,
+                user_id: user.id, // Changed from guest_id
+                booking_type: 'retreat' as const, // New field - enum
+                item_id: retreat.id, // Changed from property_id
+                check_in_date: bookingDate,
+                check_out_date: bookingDate, // Using same date for retreats
+                guests_count: bookingForm.guests,
+                special_requests: bookingForm.specialRequests || null,
                 total_price: totalPrice,
-                status: 'confirmed',
-                payment_id: response.razorpay_payment_id
+                status: 'confirmed' as const // Enum value
               })
               .select()
               .single();
 
             if (error) {
               console.error('🔍 Booking creation error:', error);
-              toast.error('Payment successful but booking creation failed');
+              console.error('🔍 Error details:', JSON.stringify(error, null, 2));
+              toast.error(`Payment successful but booking creation failed: ${error.message || 'Unknown error'}`);
               return;
             }
 
             console.log('🔍 Booking created successfully:', data);
+            
+            // Send email confirmation
+            try {
+              const { sendPaymentReceiptEmail } = await import('@/lib/notifications');
+              await sendPaymentReceiptEmail({
+                to: user.email || '',
+                guestName: profile?.full_name || user.email?.split('@')[0] || 'Guest',
+                bookingType: 'retreat',
+                title: retreat.title,
+                checkIn: bookingDate,
+                checkOut: bookingDate,
+                guests: bookingForm.guests,
+                totalPrice: totalPrice,
+                paymentRef: response.razorpay_payment_id,
+              });
+            } catch (emailError) {
+              console.error('🔍 Error sending email:', emailError);
+              // Don't fail the booking if email fails
+            }
+            
             toast.success('Retreat booked and payment successful!');
             
             // Reset form

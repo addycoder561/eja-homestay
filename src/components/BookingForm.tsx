@@ -324,14 +324,15 @@ export default function BookingForm({ property, preselectedRoomId }: BookingForm
 
             console.log('🔍 Creating booking after payment...');
             const booking = await createMultiRoomBooking({
-              property_id: property.id,
-              guest_id: user.id!,
+              user_id: user.id!, // Changed from guest_id
+              booking_type: 'property' as const, // New field - enum
+              item_id: property.id, // Changed from property_id
               check_in_date: checkIn,
               check_out_date: checkOut,
               guests_count: getTotalGuests(),
               total_price: totalPrice,
               special_requests: specialRequests || null,
-              status: 'confirmed',
+              status: 'confirmed' as const, // Enum value
             }, roomRequests, response.razorpay_payment_id);
 
             console.log('🔍 Booking result:', booking);
