@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
 
-// API route for sending emails (server-side only - environment variables safe)
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { to, subject, html, from } = body;
+    // Check if Resend API key is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not configured');
+      return NextResponse.json(
+        { error: 'Email service not configured' },
+        { status: 500 }
+      );
+    }
 
-    // Validate required fields
+    const body = await request.json();
+    const { to, subject, html, text } = body;
+
     if (!to || !subject || !html) {
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, html' },
@@ -14,50 +24,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If Resend API key is not set, return success (development mode)
-    if (!process.env.RESEND_API_KEY) {
-      console.log(`[EMAIL STUB] To: ${to} | Subject: ${subject}`);
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Email logged (Resend API key not configured)' 
-      });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      );
     }
 
-    // Send email via Resend API
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: from || process.env.RESEND_FROM_EMAIL || 'EJA <noreply@ejastays.com>',
-        to,
-        subject,
-        html,
-      }),
+    const { data, error } = await resend.emails.send({
+      from: 'EJA <noreply@ejastays.com>',
+      to: [to],
+      subject: subject,
+      html: html,
+      text: text || subject,
+      replyTo: 'noreply@ejastays.com',
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Resend API error:', error);
+    if (error) {
+      console.error('Resend error:', error);
       return NextResponse.json(
-        { error: `Failed to send email: ${error.message || 'Unknown error'}` },
+        { error: 'Failed to send email', details: error },
         { status: 500 }
       );
     }
 
-    const data = await response.json();
-    console.log('Email sent successfully:', data);
-    
+    console.log('✅ Email sent successfully via Resend:', data?.id);
     return NextResponse.json({ 
       success: true, 
-      id: data.id 
+      id: data?.id,
+      message: 'Email sent successfully' 
     });
-  } catch (error: any) {
-    console.error('Error sending email:', error);
+
+  } catch (error) {
+    console.error('Email API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
