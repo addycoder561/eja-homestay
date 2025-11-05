@@ -1283,7 +1283,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                          rows={2}
                          value={bookingForm.specialRequests}
                          onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
-                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm transition-all"
+                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm text-gray-900 placeholder:text-gray-600 transition-all"
                          placeholder="Any dietary restrictions, accessibility needs, or special requirements..."
                        />
                      </div>
@@ -1458,7 +1458,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                     value={bookingForm.specialRequests}
                     onChange={(e) => setBookingForm({...bookingForm, specialRequests: e.target.value})}
                     rows={2}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm text-gray-900 placeholder:text-gray-600"
                     placeholder="Any special requirements?"
                   />
                 </div>
@@ -1756,7 +1756,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                           value={bookingForm.specialRequests}
                           onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
                           rows={3}
-                          className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900"
+                          className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 placeholder:text-gray-600"
                           placeholder="Any special requirements or requests..."
                         />
                       </div>

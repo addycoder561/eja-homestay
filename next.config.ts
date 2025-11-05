@@ -84,7 +84,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate'
+            value: 'public, max-age=31536000, immutable'
           }
         ]
       },
@@ -210,7 +210,10 @@ const nextConfig: NextConfig = {
 
   // Optimize for production
   poweredByHeader: false,
-  generateEtags: false,
+  generateEtags: true,
+  
+  // React strict mode for better performance
+  reactStrictMode: true,
 };
 
 export default nextConfig;

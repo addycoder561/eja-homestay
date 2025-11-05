@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateDareModal } from './CreateDareModal';
+import { ComingSoonModal } from './ComingSoonModal';
 import { 
   XMarkIcon, 
   ChevronRightIcon,
@@ -71,15 +72,19 @@ export function CreateDropdown({ isOpen, onClose, buttonRef }: {
   const [showModal, setShowModal] = useState(false);
   const [selectedOption, setSelectedOption] = useState<'experience' | 'dare' | null>(null);
   const [showDareModal, setShowDareModal] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   const handleOptionSelect = (option: 'experience' | 'dare') => {
     setSelectedOption(option);
-    if (option === 'experience') {
-      setShowModal(true);
-    } else if (option === 'dare') {
-      setShowDareModal(true);
-    }
+    // Show Coming Soon modal instead of actual forms
+    setShowComingSoonModal(true);
+    // Keep the original modals commented out for future use:
+    // if (option === 'experience') {
+    //   setShowModal(true);
+    // } else if (option === 'dare') {
+    //   setShowDareModal(true);
+    // }
   };
 
   useEffect(() => {
@@ -142,7 +147,18 @@ export function CreateDropdown({ isOpen, onClose, buttonRef }: {
         </div>
       </div>
 
-      {showModal && (
+      {/* Coming Soon Modal - Shows for both options */}
+      <ComingSoonModal
+        isOpen={showComingSoonModal}
+        onClose={() => {
+          setShowComingSoonModal(false);
+          setSelectedOption(null);
+          onClose();
+        }}
+      />
+
+      {/* Original modals kept but not shown - for future use */}
+      {false && showModal && (
         <CreateExperienceModal 
           isOpen={showModal} 
           onClose={() => {
@@ -153,7 +169,7 @@ export function CreateDropdown({ isOpen, onClose, buttonRef }: {
         />
       )}
 
-      {showDareModal && (
+      {false && showDareModal && (
         <CreateDareModal 
           isOpen={showDareModal} 
           onClose={() => {

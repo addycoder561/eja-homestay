@@ -109,65 +109,82 @@ export default function SearchPageClient() {
   
 
 
+  // Combined data fetching for better performance
   useEffect(() => {
-    const fetchProperties = async () => {
+    const fetchAllData = async () => {
       setLoading(true);
-      const startTime = Date.now();
+      setLoadingExperiences(true);
+      setLoadingRetreats(true);
       
       try {
-        // Property search retained for future use; Discover shows experiences/retreats
-        const data = await getProperties();
-        setProperties(data || []);
-        setTotalResults((data || []).length);
-      } catch (error) {
-        console.error('Error fetching properties:', error);
-        setProperties([]);
-        setTotalResults(0);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProperties();
-  }, [filters]);
+        // Fetch critical data in parallel
+        const [experiencesData, retreatsData] = await Promise.allSettled([
+          getExperiences(),
+          getRetreats()
+        ]);
 
-  // Fetch experiences
-  useEffect(() => {
-    const fetchExperiences = async () => {
-      try {
-        setLoadingExperiences(true);
-        const data = await getExperiences();
-        setExperiences(data || []);
-        
-        // Extract unique mood values
-        const moods = [...new Set(data?.map(exp => exp.mood).filter(mood => mood && mood.trim() !== '') || [])];
-        setAvailableMoods(moods);
-      } catch (error) {
-        console.error('Error fetching experiences:', error);
-        setExperiences([]);
-        setAvailableMoods([]);
-      } finally {
+        // Set experiences data immediately
+        if (experiencesData.status === 'fulfilled') {
+          const data = experiencesData.value || [];
+          setExperiences(data);
+          // Extract unique mood values
+          const moods = [...new Set(data.map(exp => exp.mood).filter(mood => mood && mood.trim() !== ''))];
+          setAvailableMoods(moods);
+        } else {
+          setExperiences([]);
+          setAvailableMoods([]);
+        }
         setLoadingExperiences(false);
-      }
-    };
-    fetchExperiences();
-  }, []);
 
-  // Fetch retreats
-  useEffect(() => {
-    const fetchRetreats = async () => {
-      try {
-        setLoadingRetreats(true);
-        const data = await getRetreats();
-        setRetreats(data || []);
+        // Set retreats data immediately
+        if (retreatsData.status === 'fulfilled') {
+          setRetreats(retreatsData.value || []);
+        } else {
+          setRetreats([]);
+        }
+        setLoadingRetreats(false);
+        
+        // Unblock UI early
+        setLoading(false);
+
+        // Fetch properties in background (less critical)
+        try {
+          const data = await getProperties();
+          setProperties(data || []);
+          setTotalResults((data || []).length);
+        } catch (error) {
+          console.error('Error fetching properties:', error);
+          setProperties([]);
+          setTotalResults(0);
+        }
       } catch (error) {
-        console.error('Error fetching retreats:', error);
-        setRetreats([]);
-      } finally {
+        console.error('Error fetching data:', error);
+        setLoading(false);
+        setLoadingExperiences(false);
         setLoadingRetreats(false);
       }
     };
-    fetchRetreats();
-  }, []);
+
+    fetchAllData();
+  }, []); // Only run once on mount
+
+  // Fetch properties when filters change (separate effect for filter-based updates)
+  useEffect(() => {
+    if (filters.location || filters.checkIn || filters.checkOut) {
+      const fetchProperties = async () => {
+        try {
+          const data = await getProperties(filters);
+          setProperties(data || []);
+          setTotalResults((data || []).length);
+        } catch (error) {
+          console.error('Error fetching properties:', error);
+          setProperties([]);
+          setTotalResults(0);
+        }
+      };
+      fetchProperties();
+    }
+  }, [filters]);
 
   // Category fetching removed
 

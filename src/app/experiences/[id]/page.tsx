@@ -899,7 +899,7 @@ export default function ExperienceDetailPage() {
                         rows={3}
                         value={bookingForm.specialRequests}
                         onChange={e => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 placeholder:text-gray-600"
                         placeholder="Any special requirements or requests..."
                 />
               </div>

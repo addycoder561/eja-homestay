@@ -6,8 +6,8 @@ import { Toaster } from "react-hot-toast";
 import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
-import { AIChatAssistant } from "@/components/AIChatAssistant";
 import { PreloadResources } from "@/components/PreloadResources";
+import { LazyAIChatAssistant } from "@/components/LazyAIChatAssistant";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -94,6 +94,7 @@ export default function RootLayout({
           {children}
           <MobileBottomNavigation />
           <Toaster position="top-right" />
+          <LazyAIChatAssistant />
           <PerformanceMonitor />
           <ServiceWorkerRegistration />
         </AuthProvider>

@@ -89,8 +89,8 @@ export default function Home() {
       try {
         setLoading(true);
         
-        // Fetch data with timeout and better error handling
-        const fetchWithTimeout = async (promise: Promise<any>, timeoutMs: number = 8000): Promise<any | null> => {
+        // Reduced timeout for faster failure recovery
+        const fetchWithTimeout = async (promise: Promise<any>, timeoutMs: number = 5000): Promise<any | null> => {
           try {
             const timeoutPromise = new Promise<never>((_, reject) => 
               setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
@@ -98,15 +98,28 @@ export default function Home() {
             return await Promise.race([promise, timeoutPromise]);
           } catch (error) {
             if (process.env.NODE_ENV !== 'production') {
-            console.error('Request failed or timed out:', error);
+              console.error('Request failed or timed out:', error);
             }
             return null;
           }
         };
 
-        const [retreatsData, experiencesData, propertiesData, moodData] = await Promise.allSettled([
-          fetchWithTimeout(getRetreats()),
+        // Fetch critical data first, then less critical data
+        const [experiencesData, retreatsData] = await Promise.allSettled([
           fetchWithTimeout(getExperiences()),
+          fetchWithTimeout(getRetreats())
+        ]);
+
+        const experiencesResult = experiencesData.status === 'fulfilled' ? (experiencesData.value || []) : [];
+        const retreatsResult = retreatsData.status === 'fulfilled' ? (retreatsData.value || []) : [];
+        
+        // Set critical data immediately
+        setExperiences(experiencesResult);
+        setRetreats(retreatsResult);
+        setLoading(false); // Unblock UI early
+
+        // Fetch less critical data in background
+        Promise.allSettled([
           fetchWithTimeout(getProperties()),
           fetchWithTimeout(
             supabase
@@ -114,32 +127,28 @@ export default function Home() {
               .select('mood')
               .not('mood', 'is', null)
               .neq('mood', '')
+              .limit(100) // Limit query for performance
               .then(({ data, error }) => {
                 if (error) throw error;
                 return data;
               })
           )
-        ]);
-
-        const retreatsResult = retreatsData.status === 'fulfilled' ? (retreatsData.value || []) : [];
-        const experiencesResult = experiencesData.status === 'fulfilled' ? (experiencesData.value || []) : [];
-        const propertiesResult = propertiesData.status === 'fulfilled' ? (propertiesData.value || []) : [];
-        const moodResult = moodData.status === 'fulfilled' ? (moodData.value || []) : [];
-        
-        setRetreats(retreatsResult);
-        setExperiences(experiencesResult);
-        setProperties(propertiesResult);
-
-        if (moodResult.length > 0) {
-          const uniqueMoods = [...new Set(moodResult.map(item => item.mood).filter(Boolean))];
-          setMoods(uniqueMoods.slice(0, 9)); // Limit to 9 moods
-        }
+        ]).then(([propertiesData, moodData]) => {
+          const propertiesResult = propertiesData.status === 'fulfilled' ? (propertiesData.value || []) : [];
+          const moodResult = moodData.status === 'fulfilled' ? (moodData.value || []) : [];
+          
+          setProperties(propertiesResult);
+          
+          if (moodResult.length > 0) {
+            const uniqueMoods = [...new Set(moodResult.map((item: any) => item.mood).filter(Boolean))];
+            setMoods(uniqueMoods.slice(0, 9)); // Limit to 9 moods
+          }
+        });
 
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
-        console.error('Error fetching data:', error);
+          console.error('Error fetching data:', error);
         }
-      } finally {
         setLoading(false);
       }
     };

@@ -51,10 +51,9 @@ interface Experience {
 }
 
 interface Metrics {
-  check_ins: number;
-  followers: number;
   smiles: number;
-  aura: 'low' | 'high' | 'elite';
+  dares: number;
+  followers: number;
 }
 
 interface Dare {
@@ -88,10 +87,9 @@ function ProfilePageContent() {
   const [topFollowers, setTopFollowers] = useState<Follower[]>([]);
   const [activeTab, setActiveTab] = useState<'experiences' | 'dares' | 'followers'>('experiences');
   const [metrics, setMetrics] = useState<Metrics>({
-    check_ins: 0,
-    followers: 0,
     smiles: 0,
-    aura: 'low'
+    dares: 0,
+    followers: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -102,14 +100,6 @@ function ProfilePageContent() {
   });
   const [supportOpen, setSupportOpen] = useState(false);
 
-  // Calculate aura level based on metrics
-  const calculateAura = (checkIns: number, followers: number, smiles: number): 'low' | 'high' | 'elite' => {
-    const totalScore = checkIns + followers + smiles;
-    
-    if (totalScore >= 100) return 'elite';
-    if (totalScore >= 30) return 'high';
-    return 'low';
-  };
 
   // Fetch profile data
   useEffect(() => {
@@ -137,20 +127,56 @@ function ProfilePageContent() {
           });
         }
 
-        // Fetch data in parallel to improve performance
-        const [experiencesResult, daresResult, followersResult, socialStatsResult, reactionCountResult] = await Promise.allSettled([
+        // Fetch critical metrics first, then content
+        const [completedDaresResult, followersCountResult, reactionCountResult] = await Promise.allSettled([
+          // Fetch completed dares count for the user
+          supabase
+            .from('completed_dares')
+            .select('id', { count: 'exact', head: true })
+            .eq('completer_id', user.id)
+            .eq('is_active', true),
+          // Fetch followers count for the user
+          supabase
+            .from('follows')
+            .select('id', { count: 'exact', head: true })
+            .eq('following_id', user.id),
+          // Get reaction count (smiles)
+          getUserReactionCount(user.id)
+        ]);
+
+        // Process metrics immediately
+        const completedDaresCount = completedDaresResult.status === 'fulfilled' && completedDaresResult.value.count !== null
+          ? completedDaresResult.value.count
+          : 0;
+        const followersCount = followersCountResult.status === 'fulfilled' && followersCountResult.value.count !== null
+          ? followersCountResult.value.count
+          : 0;
+        const reactionCount = reactionCountResult.status === 'fulfilled' ? reactionCountResult.value : { success: false };
+        const smiles = reactionCount.success ? reactionCount.count : 0;
+
+        setMetrics({
+          smiles: smiles,
+          dares: completedDaresCount,
+          followers: followersCount,
+        });
+        setIsLoading(false); // Unblock UI early
+
+        // Fetch content data in background (less critical)
+        const [experiencesResult, daresResult, followersResult] = await Promise.allSettled([
           // Fetch created experiences
           supabase
             .from('experiences_with_host')
             .select('id, title, cover_image, mood, location, created_at')
             .eq('created_by', user.id)
-            .order('created_at', { ascending: false }),
+            .order('created_at', { ascending: false })
+            .limit(20), // Limit for performance
           // Fetch created dares
           supabase
             .from('dares')
             .select('id, title, description, hashtag, vibe, expiry_date, created_at, completion_count, smile_count, comment_count, share_count')
             .eq('creator_id', user.id)
-            .order('created_at', { ascending: false }),
+            .order('created_at', { ascending: false })
+            .limit(20), // Limit for performance
           // Fetch top followers (mock data for now)
           Promise.resolve({
             data: [
@@ -195,11 +221,7 @@ function ProfilePageContent() {
                 total_smiles: 18
               }
             ]
-          }),
-          // Get social stats
-          getUserSocialStats(user.id),
-          // Get reaction count
-          getUserReactionCount(user.id)
+          })
         ]);
 
         // Handle experiences data
@@ -248,25 +270,8 @@ function ProfilePageContent() {
           setTopFollowers([]);
         }
 
-        // Handle social stats
-        const socialStats = socialStatsResult.status === 'fulfilled' ? socialStatsResult.value : { success: false };
-        const reactionCount = reactionCountResult.status === 'fulfilled' ? reactionCountResult.value : { success: false };
-        
-        const checkIns = experiencesResult.status === 'fulfilled' ? (experiencesResult.value.data?.length || 0) : 0;
-        const followers = socialStats.success ? socialStats.data?.follower_count || 0 : 0;
-        const smiles = reactionCount.success ? reactionCount.count : 0;
-        const aura = calculateAura(checkIns, followers, smiles);
-
-        setMetrics({
-          check_ins: checkIns,
-          followers: followers,
-          smiles: smiles,
-          aura: aura
-        });
-
       } catch (error) {
         console.error('Error fetching profile data:', error);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -561,20 +566,16 @@ function ProfilePageContent() {
                   {/* Metrics integrated into profile section */}
                   <div className="flex gap-6 mt-4">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">{metrics.check_ins}</div>
-                      <div className="text-xs text-gray-600">Check-ins</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">{metrics.followers}</div>
-                      <div className="text-xs text-gray-600">Followers</div>
-                    </div>
-                    <div className="text-center">
                       <div className="text-lg font-bold text-gray-900">{metrics.smiles}</div>
                       <div className="text-xs text-gray-600">Smiles</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900 capitalize">{metrics.aura}</div>
-                      <div className="text-xs text-gray-600">Aura</div>
+                      <div className="text-lg font-bold text-gray-900">{metrics.dares}</div>
+                      <div className="text-xs text-gray-600">Dares</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">{metrics.followers}</div>
+                      <div className="text-xs text-gray-600">Followers</div>
                     </div>
                   </div>
                 </div>

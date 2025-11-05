@@ -37,48 +37,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const init = async () => {
       try {
-        // Set a shorter timeout to prevent blocking
+        // Set a very short timeout as fallback (500ms)
         timeoutId = setTimeout(() => {
           if (isMounted) {
             setLoading(false);
           }
-        }, 3000); // 3 second timeout - don't block page load
+        }, 500);
 
-        // Get session without blocking
+        // Get session with timeout to prevent blocking
         const sessionPromise = supabase.auth.getSession();
-        const { data: { session } } = await sessionPromise;
-        const isAuthenticated = !!session?.user;
-        lastAuthenticatedRef.current = isAuthenticated;
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 1000)
+        );
         
-        if (!isMounted) return;
-        
-        // Set user immediately to unblock page
-        setUser(session?.user ?? null);
-        setLoading(false); // Stop loading immediately
-        
-        // Fetch profile in background (non-blocking)
-        if (session?.user) {
-          // Don't await - let it load in background
-          getProfile(session.user.id)
-            .then((userProfile) => {
-              if (isMounted) {
-                setProfile(userProfile);
-              }
-            })
-            .catch((profileError) => {
-              if (process.env.NODE_ENV !== 'production') {
-                console.error('Error fetching profile:', profileError);
-              }
-              if (isMounted) {
-                setProfile(null);
-              }
-            });
-        } else {
-          setProfile(null);
-        }
-        
-        if (isMounted && timeoutId) {
-          clearTimeout(timeoutId);
+        try {
+          const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+          const isAuthenticated = !!session?.user;
+          lastAuthenticatedRef.current = isAuthenticated;
+          
+          if (!isMounted) return;
+          
+          // Set user immediately to unblock page
+          setUser(session?.user ?? null);
+          setLoading(false); // Stop loading immediately
+          
+          // Clear timeout
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          
+          // Fetch profile in background (non-blocking)
+          if (session?.user) {
+            // Don't await - let it load in background
+            getProfile(session.user.id)
+              .then((userProfile) => {
+                if (isMounted) {
+                  setProfile(userProfile);
+                }
+              })
+              .catch((profileError) => {
+                if (process.env.NODE_ENV !== 'production') {
+                  console.error('Error fetching profile:', profileError);
+                }
+                if (isMounted) {
+                  setProfile(null);
+                }
+              });
+          } else {
+            setProfile(null);
+          }
+        } catch (timeoutError) {
+          // Session check timed out - set loading to false and continue
+          if (isMounted) {
+            setLoading(false);
+            setUser(null);
+            setProfile(null);
+          }
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         }
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {

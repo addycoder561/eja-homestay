@@ -48,6 +48,7 @@ export function Navigation() {
   const [destinationsOpen, setDestinationsOpen] = useState(false);
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -67,56 +68,57 @@ export function Navigation() {
 { name: 'Kanatal', state: 'Uttarakhand', url: '/discover?location=Kanatal' },
   ];
 
-  // Fetch bucketlist count when user is logged in
+  // Fetch bucketlist count when user is logged in (delayed to avoid blocking initial render)
   useEffect(() => {
-    const fetchBucketlistCount = async () => {
-      if (user?.id) {
+    if (!user?.id) {
+      setBucketlistCount(0);
+      return;
+    }
+
+    // Delay fetching to avoid blocking initial render
+    const timeoutId = setTimeout(() => {
+      const fetchBucketlistCount = async () => {
         try {
           const bucketlist = await getBucketlist(user.id);
           const count = bucketlist?.length || 0;
-          console.log('📊 Bucketlist count updated:', count, 'items');
-          console.log('📋 Bucketlist items:', bucketlist);
-          console.log('🔍 Item types breakdown:', {
-            properties: bucketlist?.filter(item => item.item_type === 'property').length || 0,
-            experiences: bucketlist?.filter(item => item.item_type === 'experience').length || 0,
-            retreats: bucketlist?.filter(item => item.item_type === 'trip').length || 0
-          });
           setBucketlistCount(count);
         } catch (error) {
           if (process.env.NODE_ENV !== 'production') {
-          console.error('Error fetching bucketlist count:', error);
+            console.error('Error fetching bucketlist count:', error);
           }
           setBucketlistCount(0);
         }
-      } else {
-        setBucketlistCount(0);
-      }
-    };
+      };
+      fetchBucketlistCount();
+    }, 100); // Small delay to prioritize page rendering
 
-    // Always try to fetch - let the database function handle errors
-    fetchBucketlistCount();
+    return () => clearTimeout(timeoutId);
   }, [user?.id]);
 
-  // Fetch notification count when user is logged in
+  // Fetch notification count when user is logged in (delayed to avoid blocking initial render)
   useEffect(() => {
-    const fetchNotificationCount = async () => {
-      if (user?.id) {
+    if (!user?.id) {
+      setNotificationCount(0);
+      return;
+    }
+
+    // Delay fetching to avoid blocking initial render
+    const timeoutId = setTimeout(() => {
+      const fetchNotificationCount = async () => {
         try {
           const count = await getUnreadNotificationCount(user.id);
           setNotificationCount(count);
         } catch (error) {
           if (process.env.NODE_ENV !== 'production') {
-          console.error('Error fetching notification count:', error);
+            console.error('Error fetching notification count:', error);
           }
           setNotificationCount(0);
         }
-      } else {
-        setNotificationCount(0);
-      }
-    };
+      };
+      fetchNotificationCount();
+    }, 150); // Small delay to prioritize page rendering
 
-    // Always try to fetch - let the database function handle errors
-    fetchNotificationCount();
+    return () => clearTimeout(timeoutId);
   }, [user?.id]);
 
   // Function to refresh bucketlist count (can be called from other components)
@@ -193,8 +195,24 @@ export function Navigation() {
     };
   }, [isAccountMenuOpen, destinationsOpen]);
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (isSigningOut) return; // Prevent multiple clicks
+    
+    try {
+      setIsSigningOut(true);
+      setIsAccountMenuOpen(false); // Close menu immediately
+      await signOut();
+      // Force a page reload to clear all state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+      setIsSigningOut(false);
+    }
   };
 
   return (
@@ -364,15 +382,12 @@ export function Navigation() {
                             Support
                           </button>
                           <button
-                            onClick={() => {
-                              console.log('Sign Out clicked');
-                              handleSignOut();
-                              setIsAccountMenuOpen(false);
-                            }}
-                            className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                            onClick={handleSignOut}
+                            disabled={isSigningOut}
+                            className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                            Sign Out
+                            {isSigningOut ? 'Signing out...' : 'Sign Out'}
                           </button>
                         </div>
                       )}
@@ -461,14 +476,12 @@ export function Navigation() {
                           Support
                         </button>
                         <button
-                          onClick={() => {
-                            handleSignOut();
-                            setIsAccountMenuOpen(false);
-                          }}
-                          className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                          onClick={handleSignOut}
+                          disabled={isSigningOut}
+                          className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                          Sign Out
+                          {isSigningOut ? 'Signing out...' : 'Sign Out'}
                         </button>
                       </div>
                     )}
