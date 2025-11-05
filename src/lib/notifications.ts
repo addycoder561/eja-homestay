@@ -49,9 +49,9 @@ function generatePaymentReceiptHTML(params: SendPaymentReceiptEmailParams): stri
   <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
     <h2 style="color: #F59E0B; margin-top: 0; font-size: 24px;">Payment Receipt Confirmed</h2>
     
-    <p style="font-size: 16px;">Dear ${guestName},</p>
+    <p style="font-size: 16px;">Hello ${guestName},</p>
     
-    <p style="font-size: 16px;">Thank you for your booking with EJA! Your payment has been successfully processed.</p>
+    <p style="font-size: 16px;">Thank you for your booking with EJA! We have successfully received your payment and your booking is confirmed.</p>
     
     <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 30px 0;">
       <h3 style="color: #1f2937; margin-top: 0; font-size: 18px; border-bottom: 2px solid #F59E0B; padding-bottom: 10px;">Booking Details</h3>
@@ -84,13 +84,15 @@ function generatePaymentReceiptHTML(params: SendPaymentReceiptEmailParams): stri
           <td style="padding: 8px 0; color: #1f2937; font-size: 18px; font-weight: bold; color: #F59E0B;">₹${totalPrice.toLocaleString('en-IN')}</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0; color: #6b7280; font-weight: bold;">Payment Reference:</td>
-          <td style="padding: 8px 0; color: #1f2937; font-family: monospace;">${paymentRef}</td>
+          <td style="padding: 8px 0; color: #6b7280; font-weight: bold;">Transaction ID:</td>
+          <td style="padding: 8px 0; color: #1f2937; font-family: monospace; font-size: 12px;">${paymentRef}</td>
         </tr>
       </table>
     </div>
     
-    <p style="font-size: 16px; margin-top: 30px;">We look forward to hosting you! If you have any questions or need assistance, please don't hesitate to contact us.</p>
+    <p style="font-size: 16px; margin-top: 30px;">We are excited to host you! If you have any questions or need assistance, please feel free to reach out to our support team.</p>
+    
+    <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">For support, please visit our website at <a href="https://ejastays.com" style="color: #F59E0B; text-decoration: none;">ejastays.com</a> or reply to this email.</p>
     
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
       <p style="font-size: 14px; color: #6b7280; margin: 5px 0;">Best regards,</p>

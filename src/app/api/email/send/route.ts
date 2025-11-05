@@ -34,12 +34,29 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: 'EJA <noreply@ejastays.com>',
+      from: 'EJA <bookings@ejastays.com>',
       to: [to],
       subject: subject,
       html: html,
       text: text || subject,
-      replyTo: 'noreply@ejastays.com',
+      replyTo: 'bookings@ejastays.com',
+      // Add headers to improve deliverability
+      headers: {
+        'X-Entity-Ref-ID': `booking-${Date.now()}`,
+        'List-Unsubscribe': '<https://ejastays.com/unsubscribe>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+      // Add tags for better tracking and categorization
+      tags: [
+        {
+          name: 'category',
+          value: 'transactional',
+        },
+        {
+          name: 'type',
+          value: 'booking-confirmation',
+        },
+      ],
     });
 
     if (error) {
