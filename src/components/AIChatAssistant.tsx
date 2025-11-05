@@ -197,14 +197,14 @@ export function AIChatAssistant({ onViewExperience, onViewRetreat, inline = fals
 
   return (
     <>
-      {/* Floating Chat Button - Only show if not inline */}
+      {/* Floating Chat Button - Only show if not inline, hidden on mobile (AI chat available in hero section) */}
       {!inline && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 md:w-16 md:h-16 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group z-50"
+          className="hidden lg:flex fixed bottom-6 right-6 w-16 h-16 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 items-center justify-center group z-50"
           aria-label="Open AI Assistant"
         >
-          <ChatBubbleLeftIcon className="w-6 h-6 md:w-7 md:h-7 group-hover:scale-110 transition-transform" />
+          <ChatBubbleLeftIcon className="w-7 h-7 group-hover:scale-110 transition-transform" />
         </button>
       )}
 

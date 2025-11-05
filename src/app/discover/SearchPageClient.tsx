@@ -1045,13 +1045,9 @@ export default function SearchPageClient() {
                       {/* Upcoming/Active Label - Top Right (except for Karaoke Nights) */}
                       {exp.title !== 'Karaoke Nights' && (
                         <div className="absolute top-4 right-4 z-10">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border backdrop-blur-sm shadow-lg text-white ${
-                            exp.title === 'Sample Experience' 
-                              ? 'bg-green-500/95 border-green-400' 
-                              : 'bg-yellow-500/95 border-yellow-400'
-                          }`}>
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border backdrop-blur-sm shadow-lg text-white bg-yellow-500/95 border-yellow-400">
                             <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                            {exp.title === 'Sample Experience' ? 'Active' : 'Upcoming'}
+                            Upcoming
                           </span>
                         </div>
                       )}
@@ -1160,13 +1156,9 @@ export default function SearchPageClient() {
                       {/* Upcoming/Active Label - Top Right (except for Karaoke Nights) */}
                       {exp.title !== 'Karaoke Nights' && (
                         <div className="absolute top-4 right-4 z-10">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border backdrop-blur-sm shadow-lg text-white ${
-                            exp.title === 'Sample Experience' 
-                              ? 'bg-green-500/95 border-green-400' 
-                              : 'bg-yellow-500/95 border-yellow-400'
-                          }`}>
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border backdrop-blur-sm shadow-lg text-white bg-yellow-500/95 border-yellow-400">
                             <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                            {exp.title === 'Sample Experience' ? 'Active' : 'Upcoming'}
+                            Upcoming
                           </span>
                         </div>
                       )}

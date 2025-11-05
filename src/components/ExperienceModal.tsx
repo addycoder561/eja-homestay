@@ -165,12 +165,9 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
 
   // Check if this is Karaoke Nights (exception case)
   const isKaraokeNights = experience?.title?.toLowerCase().includes('karaoke');
-  
-  // Check if this is Sample Experience (exception case)
-  const isSampleExperience = experience?.title === 'Sample Experience';
 
   // Determine if we should show "Join Waitlist" instead of "Check-in"
-  const shouldShowWaitlist = experience && !isKaraokeNights && !isSampleExperience && (isOnlineExperience(experience) || experience.location !== 'Retreats');
+  const shouldShowWaitlist = experience && !isKaraokeNights && (isOnlineExperience(experience) || experience.location !== 'Retreats');
 
   // Fetch tales when experience changes
   useEffect(() => {
@@ -832,8 +829,8 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                 {/* Check-in/Join Waitlist Button */}
                 <button
                   onClick={() => {
-                    // For Karaoke Nights, Sample Experience, or retreats, show booking form
-                    if (experience.title === 'Karaoke Nights' || experience.title === 'Sample Experience' || experience.location === 'Retreats') {
+                    // For Karaoke Nights or retreats, show booking form
+                    if (experience.title === 'Karaoke Nights' || experience.location === 'Retreats') {
                       setMobileDrawerType('checkin');
                     } else {
                       // For other experiences, join waitlist directly
@@ -1357,8 +1354,8 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                   </div>
                   <Button 
                     onClick={() => {
-                      // Check if it's Karaoke Nights, Sample Experience, or a retreat - show booking form
-                      if (experience.title === 'Karaoke Nights' || experience.title === 'Sample Experience' || experience.location === 'Retreats') {
+                      // Check if it's Karaoke Nights or a retreat - show booking form
+                      if (experience.title === 'Karaoke Nights' || experience.location === 'Retreats') {
                         if (window.innerWidth < 768) {
                           setShowMobileBooking(true);
                         } else {
@@ -1373,7 +1370,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                     size="lg"
                     className="px-8"
                   >
-                    {experience.title === 'Karaoke Nights' || experience.title === 'Sample Experience' || experience.location === 'Retreats' ? 'Check-in' : 'Join Waitlist'}
+                    {experience.title === 'Karaoke Nights' || experience.location === 'Retreats' ? 'Check-in' : 'Join Waitlist'}
                   </Button>
                 </div>
               </div>
@@ -1534,7 +1531,7 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                 )}
                 {mobileDrawerType === 'checkin' && (
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {experience.title === 'Karaoke Nights' || experience.title === 'Sample Experience' || experience.location === 'Retreats' ? 'Check-in' : 'Join Waitlist'}
+                    {experience.title === 'Karaoke Nights' || experience.location === 'Retreats' ? 'Check-in' : 'Join Waitlist'}
                   </h3>
                 )}
                 <button
@@ -1713,8 +1710,8 @@ export default function ExperienceModal({ experience, isOpen, onClose }: Experie
                     <div className="text-gray-700 font-semibold">per person</div>
                   </div>
 
-                  {/* Check if it's Karaoke Nights, Sample Experience, or a retreat - show booking form */}
-                  {experience.title === 'Karaoke Nights' || experience.title === 'Sample Experience' || experience.location === 'Retreats' ? (
+                  {/* Check if it's Karaoke Nights or a retreat - show booking form */}
+                  {experience.title === 'Karaoke Nights' || experience.location === 'Retreats' ? (
                     <form className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>

@@ -23,7 +23,6 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { CompleteDareModal } from '@/components/CompleteDareModal';
 import { DareCard } from '@/components/DareCard';
 import { CompletedDareCard } from '@/components/CompletedDareCard';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Navigation } from '@/components/Navigation';
 import { MobileBottomNavigation } from '@/components/MobileBottomNavigation';
 
@@ -83,62 +82,21 @@ const VIBE_FILTERS = [
 
 export default function DaresPage() {
   const { user } = useAuth();
+  // Initialize with empty array - real data loads immediately
   const [completedDares, setCompletedDares] = useState<CompletedDare[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Never block UI with loading
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedDare, setSelectedDare] = useState<Dare | null>(null);
 
-  // Sample placeholder data for preview
-  const sampleCompletedDares: CompletedDare[] = [
-    {
-      id: '1',
-      dare_id: '1',
-      media_urls: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400'],
-      caption: 'Met this amazing person at the park! We had such a great conversation and both ended up smiling genuinely. This dare really made my day!',
-      location: 'Central Park, New York',
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      completer: { full_name: 'Tanu Sen', avatar_url: undefined },
-      dare: {
-        title: 'Take a photo with a stranger and make them smile',
-        description: 'Approach someone you don\'t know, ask to take a photo together, and make sure they\'re genuinely smiling in the picture. Share the joy!',
-        hashtag: 'strangersmile',
-        vibe: 'Happy',
-        creator: { full_name: 'Aditya Pandit', avatar_url: undefined }
-      },
-      smile_count: 12,
-      comment_count: 3,
-      share_count: 1
-    },
-    {
-      id: '2',
-      dare_id: '2',
-      media_urls: ['https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400'],
-      caption: 'Learned the floss dance in 10 minutes and performed it at the mall! Got some weird looks but also made a few people laugh. Totally worth it!',
-      location: 'Shopping Mall',
-      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      completer: { full_name: 'Rohan Kapoor', avatar_url: undefined },
-      dare: {
-        title: 'Learn and perform a random dance move in public',
-        description: 'Find a random dance tutorial online, learn it in 10 minutes, then perform it in a public space. Bonus points for getting others to join!',
-        hashtag: 'publicdance',
-        vibe: 'Bold',
-        creator: { full_name: 'Jasmine Kaur', avatar_url: undefined }
-      },
-      smile_count: 8,
-      comment_count: 2,
-      share_count: 1
-    }
-  ];
-
-  // Fetch all completed dares (API with fallback to samples) - optimized with timeout
+  // Fetch all completed dares - non-blocking, loads real data immediately
   const fetchAllCompletedDares = async () => {
-    setLoading(true);
     try {
-      // Set timeout to prevent blocking
+      // Reduced timeout for faster failure recovery
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
-      const response = await fetch('/api/dares/completed?limit=50', {
+      // Reduced initial limit for faster loading
+      const response = await fetch('/api/dares/completed?limit=20', {
         signal: controller.signal
       });
       
@@ -146,23 +104,28 @@ export default function DaresPage() {
       const data = await response.json();
 
       if (response.ok && Array.isArray(data.completed_dares)) {
+        // Set real data immediately
         setCompletedDares(data.completed_dares);
       } else {
-        console.warn('Falling back to samples. API error:', data?.error || 'unknown');
-        setCompletedDares(sampleCompletedDares);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('API error:', data?.error || 'unknown');
+        }
+        // Keep empty array - show empty state
       }
     } catch (error) {
       if (error instanceof Error && error.name !== 'AbortError') {
-        console.warn('Falling back to samples. API failed:', error);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('API failed:', error);
+        }
       }
-      setCompletedDares(sampleCompletedDares);
-    } finally {
-      setLoading(false);
+      // Keep empty array on error - show empty state
     }
+    // Never set loading to true - UI should always show immediately
   };
 
   useEffect(() => {
     fetchAllCompletedDares();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCompleteDare = (dare: Dare) => {
@@ -281,51 +244,45 @@ export default function DaresPage() {
     <>
       <Navigation />
       <div className="min-h-screen bg-gray-50">
-
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-      {/* Grid layout for Discover-style cards: 1/2/3 columns */}
-      {loading ? (
-        <LoadingSpinner message="Loading completed dares..." />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {completedDares.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <SparklesIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No completed dares yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Complete some dares to see them here!
-              </p>
-            </div>
-          ) : (
-            completedDares.map((completedDare) => (
-              <div key={completedDare.id} className="w-full">
-                <CompletedDareCard
-                  completedDare={completedDare}
-                  onEngagement={(type, content) => handleEngagement(completedDare.id, type, content)}
-                  onTryDare={handleTryDare}
-                  onTagUsers={(userIds) => handleTagUsers(completedDare.id, userIds)}
-                />
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Grid layout for Discover-style cards: 1/2/3 columns - Always show immediately */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {completedDares.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <SparklesIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No completed dares yet
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Complete some dares to see them here!
+                </p>
               </div>
-            ))
-          )}
+            ) : (
+              completedDares.map((completedDare) => (
+                <div key={completedDare.id} className="w-full">
+                  <CompletedDareCard
+                    completedDare={completedDare}
+                    onEngagement={(type, content) => handleEngagement(completedDare.id, type, content)}
+                    onTryDare={handleTryDare}
+                    onTagUsers={(userIds) => handleTagUsers(completedDare.id, userIds)}
+                  />
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      )}
-      </div>
 
-      {showCompleteModal && selectedDare && (
-        <CompleteDareModal
-          isOpen={showCompleteModal}
-          onClose={() => {
-            setShowCompleteModal(false);
-            setSelectedDare(null);
-          }}
-          dare={selectedDare}
-          onDareCompleted={handleDareCompleted}
-        />
-      )}
+        {showCompleteModal && selectedDare && (
+          <CompleteDareModal
+            isOpen={showCompleteModal}
+            onClose={() => {
+              setShowCompleteModal(false);
+              setSelectedDare(null);
+            }}
+            dare={selectedDare}
+            onDareCompleted={handleDareCompleted}
+          />
+        )}
       </div>
       <MobileBottomNavigation />
     </>

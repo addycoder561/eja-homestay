@@ -287,6 +287,18 @@ export default function Home() {
                 const title = (item.title || item.name || '').toLowerCase();
                 return title.includes('community dining');
               });
+              const musicFestival = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('music festival');
+              });
+              const karaokeNights = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('karaoke');
+              });
+              const openMicNight = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                const title = (item.title || item.name || '').toLowerCase();
+                return title.includes('open mic');
+              });
               const cyclingTour = [...hyperLocalExperiences, ...retreats].find((item: any) => {
                 const title = (item.title || item.name || '').toLowerCase();
                 return title.includes('cycling');
@@ -296,8 +308,8 @@ export default function Home() {
               galleryItems = galleryItems.map((item: any) => {
                 const title = (item.title || item.name || '').toLowerCase();
                 
-                // Replace "Birthday Surprise" with "Family Getaways"
-                if ((title.includes('birthday') && title.includes('surprise')) || title.includes('birthday surprise')) {
+                // Replace "The Gratitude Trek" with "Family Getaways"
+                if (title.includes('gratitude') && title.includes('trek')) {
                   if (familyGetaways) {
                     return {
                       ...familyGetaways,
@@ -306,8 +318,8 @@ export default function Home() {
                   }
                 }
                 
-                // Replace "Stranger Potluck" with "Community Dining"
-                if ((title.includes('stranger') && title.includes('potluck')) || title.includes('stranger potluck')) {
+                // Replace "Spiritual Tour" with "Community Dining"
+                if (title.includes('spiritual') && title.includes('tour')) {
                   if (communityDining) {
                     return {
                       ...communityDining,
@@ -316,18 +328,8 @@ export default function Home() {
                   }
                 }
                 
-                // Replace "Festival Immersion" with "Street Food Tour"
-                if ((title.includes('festival') && title.includes('immersion')) || title.includes('festival immersion')) {
-                  if (streetFoodTour) {
-                    return {
-                      ...streetFoodTour,
-                      type: streetFoodTour.type || 'experience' as const
-                    };
-                  }
-                }
-                
-                // Replace "Mystic Trails" with "Corporate Retreats"
-                if ((title.includes('mystic') && title.includes('trails')) || title.includes('mystic trails')) {
+                // Replace "Street Food Tour" with "Corporate Retreat" (check first to avoid conflicts)
+                if (title.includes('street food') && title.includes('tour')) {
                   if (corporateRetreats) {
                     return {
                       ...corporateRetreats,
@@ -336,8 +338,48 @@ export default function Home() {
                   }
                 }
                 
-                // Replace "Karaoke Nights" with "Cycling Tour"
-                if ((title.includes('karaoke') && title.includes('nights')) || title.includes('karaoke nights')) {
+                // Replace "PUBG" with "Street Food Tour"
+                if (title.includes('pubg')) {
+                  if (streetFoodTour) {
+                    return {
+                      ...streetFoodTour,
+                      type: streetFoodTour.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                // Replace "Art n Craft" or "Art & Craft" with "Karaoke Nights"
+                if ((title.includes('art') && title.includes('craft')) || title.includes('art n craft') || title.includes('art & craft')) {
+                  if (karaokeNights) {
+                    return {
+                      ...karaokeNights,
+                      type: karaokeNights.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                // Replace "Community Dining" with "Music Festival" (check first to avoid conflicts)
+                if (title.includes('community') && title.includes('dining')) {
+                  if (musicFestival) {
+                    return {
+                      ...musicFestival,
+                      type: musicFestival.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                // Replace "Heritage Tour" with "Open Mic Night"
+                if (title.includes('heritage') && title.includes('tour')) {
+                  if (openMicNight) {
+                    return {
+                      ...openMicNight,
+                      type: openMicNight.type || 'experience' as const
+                    };
+                  }
+                }
+                
+                // Replace "Music Festival" with "Cycling Tour"
+                if (title.includes('music') && title.includes('festival')) {
                   if (cyclingTour) {
                     return {
                       ...cyclingTour,
@@ -818,13 +860,25 @@ export default function Home() {
                   const title = (item.title || item.name || '').toLowerCase();
                   return title.includes('music festival');
                 });
+                const karaokeNights = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('karaoke');
+                });
+                const openMicNight = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('open mic');
+                });
+                const cyclingTour = [...hyperLocalExperiences, ...retreats].find((item: any) => {
+                  const title = (item.title || item.name || '').toLowerCase();
+                  return title.includes('cycling');
+                });
 
                 // Replace items in gallery
                 galleryItems = galleryItems.map((item: any) => {
                   const title = (item.title || item.name || '').toLowerCase();
                   
-                  // Replace "Birthday Surprise" with "Family Getaways"
-                  if ((title.includes('birthday') && title.includes('surprise')) || title.includes('birthday surprise')) {
+                  // Replace "The Gratitude Trek" with "Family Getaways"
+                  if (title.includes('gratitude') && title.includes('trek')) {
                     if (familyGetaways) {
                       return {
                         ...familyGetaways,
@@ -833,8 +887,8 @@ export default function Home() {
                     }
                   }
                   
-                  // Replace "Stranger Potluck" with "Community Dining"
-                  if ((title.includes('stranger') && title.includes('potluck')) || title.includes('stranger potluck')) {
+                  // Replace "Spiritual Tour" with "Community Dining"
+                  if (title.includes('spiritual') && title.includes('tour')) {
                     if (communityDining) {
                       return {
                         ...communityDining,
@@ -843,18 +897,8 @@ export default function Home() {
                     }
                   }
                   
-                  // Replace "Festival Immersion" with "Street Food Tour"
-                  if ((title.includes('festival') && title.includes('immersion')) || title.includes('festival immersion')) {
-                    if (streetFoodTour) {
-                      return {
-                        ...streetFoodTour,
-                        type: streetFoodTour.type || 'experience' as const
-                      };
-                    }
-                  }
-                  
-                  // Replace "Mystic Trails" with "Corporate Retreats"
-                  if ((title.includes('mystic') && title.includes('trails')) || title.includes('mystic trails')) {
+                  // Replace "Street Food Tour" with "Corporate Retreat" (check first to avoid conflicts)
+                  if (title.includes('street food') && title.includes('tour')) {
                     if (corporateRetreats) {
                       return {
                         ...corporateRetreats,
@@ -863,12 +907,52 @@ export default function Home() {
                     }
                   }
                   
-                  // Replace "Theatre" or "Theater" with "Music Festival"
-                  if (title.includes('theatre') || title.includes('theater')) {
+                  // Replace "PUBG" with "Street Food Tour"
+                  if (title.includes('pubg')) {
+                    if (streetFoodTour) {
+                      return {
+                        ...streetFoodTour,
+                        type: streetFoodTour.type || 'experience' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Art n Craft" or "Art & Craft" with "Karaoke Nights"
+                  if ((title.includes('art') && title.includes('craft')) || title.includes('art n craft') || title.includes('art & craft')) {
+                    if (karaokeNights) {
+                      return {
+                        ...karaokeNights,
+                        type: karaokeNights.type || 'experience' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Community Dining" with "Music Festival" (check first to avoid conflicts)
+                  if (title.includes('community') && title.includes('dining')) {
                     if (musicFestival) {
                       return {
                         ...musicFestival,
                         type: musicFestival.type || 'experience' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Heritage Tour" with "Open Mic Night"
+                  if (title.includes('heritage') && title.includes('tour')) {
+                    if (openMicNight) {
+                      return {
+                        ...openMicNight,
+                        type: openMicNight.type || 'experience' as const
+                      };
+                    }
+                  }
+                  
+                  // Replace "Music Festival" with "Cycling Tour"
+                  if (title.includes('music') && title.includes('festival')) {
+                    if (cyclingTour) {
+                      return {
+                        ...cyclingTour,
+                        type: cyclingTour.type || 'experience' as const
                       };
                     }
                   }

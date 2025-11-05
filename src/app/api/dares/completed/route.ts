@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getSupabaseServer();
 
-    // 1) Fetch completed dares with basic joins
-    const { data: baseCompleted, error: baseError } = await supabase
+    // Optimized: Fetch completed dares first, then fetch matching stats
+    const { data: completed, error: baseError } = await supabase
       .from('completed_dares')
       .select(`
         *,
@@ -35,49 +35,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch completed dares' }, { status: 500 });
     }
 
-    const completed = baseCompleted || [];
-    if (completed.length === 0) {
+    if (!completed || completed.length === 0) {
       return NextResponse.json({ completed_dares: [] });
     }
 
-    // 2) Aggregate engagement counts for these completed dare IDs
+    // Fetch stats only for the completed dares we fetched (optimized query)
     const completedIds = completed.map((cd: any) => cd.id);
-
-    const { data: engagements, error: engagementsError } = await supabase
-      .from('dare_engagements')
-      .select('completed_dare_id, engagement_type')
+    const { data: statsData } = await supabase
+      .from('completed_dare_stats')
+      .select('completed_dare_id, smile_count, comment_count, share_count')
       .in('completed_dare_id', completedIds);
 
-    if (engagementsError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Error fetching engagement aggregates:', engagementsError);
-      }
-      // Continue without counts rather than failing the entire request
+    // Create stats map for O(1) lookup
+    const statsMap = new Map();
+    if (statsData) {
+      statsData.forEach((stat: any) => {
+        statsMap.set(stat.completed_dare_id, stat);
+      });
     }
 
-    const countsByCompleted: Record<string, { smile_count: number; comment_count: number; share_count: number; }> = {};
-    for (const id of completedIds) {
-      countsByCompleted[id] = { smile_count: 0, comment_count: 0, share_count: 0 };
-    }
-
-    if (engagements) {
-      for (const e of engagements as Array<{ completed_dare_id: string | null; engagement_type: string }>) {
-        if (!e.completed_dare_id) continue;
-        const bucket = countsByCompleted[e.completed_dare_id];
-        if (!bucket) continue;
-        if (e.engagement_type === 'smile') bucket.smile_count += 1;
-        else if (e.engagement_type === 'comment') bucket.comment_count += 1;
-        else if (e.engagement_type === 'share') bucket.share_count += 1;
-      }
-    }
-
-    // 3) Merge counts into the response shape
-    const response = completed.map((cd: any) => ({
-      ...cd,
-      smile_count: countsByCompleted[cd.id]?.smile_count ?? 0,
-      comment_count: countsByCompleted[cd.id]?.comment_count ?? 0,
-      share_count: countsByCompleted[cd.id]?.share_count ?? 0,
-    }));
+    // Merge stats into response efficiently
+    const response = completed.map((cd: any) => {
+      const stats = statsMap.get(cd.id);
+      return {
+        ...cd,
+        smile_count: stats?.smile_count ?? 0,
+        comment_count: stats?.comment_count ?? 0,
+        share_count: stats?.share_count ?? 0,
+      };
+    });
 
     return NextResponse.json({ completed_dares: response });
   } catch (error) {

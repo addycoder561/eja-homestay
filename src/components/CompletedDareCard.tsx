@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
+import Image from 'next/image';
 import { 
   FaceSmileIcon as FaceSmileSolidIcon
 } from '@heroicons/react/24/solid';
@@ -54,7 +55,7 @@ interface CompletedDareCardProps {
   onTagUsers?: (userIds: string[]) => void;
 }
 
-export function CompletedDareCard({ completedDare, onEngagement, onTryDare, onTagUsers }: CompletedDareCardProps) {
+export const CompletedDareCard = memo(function CompletedDareCard({ completedDare, onEngagement, onTryDare, onTagUsers }: CompletedDareCardProps) {
   const [showCommentModal, setShowCommentModal] = useState(false);
 
   const completer = completedDare.completer ?? { full_name: 'Anonymous', avatar_url: undefined };
@@ -127,11 +128,16 @@ export function CompletedDareCard({ completedDare, onEngagement, onTryDare, onTa
         className="relative rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer aspect-square bg-gray-200"
         onClick={handleCardClick}
       >
-        {/* Full Image */}
-        <img 
-          src={displayImage} 
+        {/* Full Image - Optimized with Next.js Image */}
+        <Image
+          src={displayImage}
           alt={completedDare.dare.title || 'Completed dare'}
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          loading="lazy"
+          quality={85}
+          unoptimized={displayImage.startsWith('http') && !displayImage.includes('supabase.co')}
         />
 
         {/* Gradient overlay for better text visibility */}
@@ -139,12 +145,17 @@ export function CompletedDareCard({ completedDare, onEngagement, onTryDare, onTa
 
         {/* Top Left: Circular Profile Picture + Dare Creator Name */}
         <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-          <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-lg">
+          <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-lg relative">
             {completer?.avatar_url ? (
-              <img 
-                src={completer.avatar_url} 
+              <Image
+                src={completer.avatar_url}
                 alt={completer.full_name || 'User avatar'}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                sizes="40px"
+                loading="lazy"
+                quality={75}
+                unoptimized={completer.avatar_url.startsWith('http') && !completer.avatar_url.includes('supabase.co')}
               />
             ) : (
               <span className="text-gray-700 font-semibold text-sm">
@@ -212,4 +223,4 @@ export function CompletedDareCard({ completedDare, onEngagement, onTryDare, onTa
       />
     </>
   );
-}
+});

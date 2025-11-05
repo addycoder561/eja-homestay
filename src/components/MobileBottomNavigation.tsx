@@ -4,22 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getBucketlist } from '@/lib/database';
 import { 
   HomeIcon, 
   MagnifyingGlassIcon, 
-  HeartIcon,
   UserIcon,
-  SparklesIcon,
   PlusIcon,
   FireIcon
 } from '@heroicons/react/24/outline';
 import { 
   HomeIcon as HomeIconSolid, 
   MagnifyingGlassIcon as MagnifyingGlassIconSolid, 
-  HeartIcon as HeartIconSolid,
   UserIcon as UserIconSolid,
-  SparklesIcon as SparklesIconSolid,
   FireIcon as FireIconSolid
 } from '@heroicons/react/24/solid';
 import { CreateDropdown } from '@/components/CreateExperienceModal';
@@ -28,7 +23,6 @@ import { AuthPromptModal } from '@/components/AuthPromptModal';
 export function MobileBottomNavigation() {
   const { user, profile } = useAuth();
   const pathname = usePathname();
-  const [wishlistCount, setWishlistCount] = useState(0);
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -39,25 +33,6 @@ export function MobileBottomNavigation() {
     setIsMounted(true);
   }, []);
 
-  // Fetch wishlist count when user is logged in
-  useEffect(() => {
-    const fetchWishlistCount = async () => {
-      if (user?.id) {
-        try {
-          const wishlist = await getBucketlist(user.id);
-          setWishlistCount(wishlist?.length || 0);
-        } catch (error) {
-          console.error('Error fetching wishlist count:', error);
-          setWishlistCount(0);
-        }
-      } else {
-        setWishlistCount(0);
-      }
-    };
-
-    // Always try to fetch - let the database function handle errors
-    fetchWishlistCount();
-  }, [user?.id]);
 
   // Hide on auth pages and admin pages
   const isAuthPage = pathname?.startsWith('/auth/');
@@ -73,27 +48,6 @@ export function MobileBottomNavigation() {
     return null;
   }
 
-  const navigationItems = [
-    {
-      name: 'Home',
-      href: '/',
-      icon: pathname === '/' ? HomeIconSolid : HomeIcon,
-      active: pathname === '/'
-    },
-    {
-      name: 'Discover',
-      href: '/discover',
-      icon: pathname?.startsWith('/discover') ? MagnifyingGlassIconSolid : MagnifyingGlassIcon,
-      active: pathname?.startsWith('/discover')
-    },
-    {
-      name: 'Wishlist',
-      href: '/guest/wishlist',
-      icon: pathname?.startsWith('/guest/wishlist') ? HeartIconSolid : HeartIcon,
-      active: pathname?.startsWith('/guest/wishlist'),
-      badge: wishlistCount > 0 ? wishlistCount : undefined
-    },
-  ];
 
   return (
     <>
@@ -131,21 +85,6 @@ export function MobileBottomNavigation() {
             <span className="text-xs font-semibold mt-1">Discover</span>
           </Link>
 
-          {/* Dares */}
-          <Link
-            href="/drop"
-            className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
-              pathname?.startsWith('/drop')
-                ? 'text-yellow-500 bg-yellow-50/80'
-                : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
-            }`}
-          >
-            <div className="relative">
-              {pathname?.startsWith('/drop') ? <FireIconSolid className="w-6 h-6" /> : <FireIcon className="w-6 h-6" />}
-            </div>
-            <span className="text-xs font-semibold mt-1">Dares</span>
-          </Link>
-
           {/* Create Button - Central Floating */}
           <button
             ref={createButtonRef}
@@ -162,24 +101,19 @@ export function MobileBottomNavigation() {
             <PlusIcon className="w-7 h-7" />
           </button>
 
-          {/* Wishlist */}
+          {/* Dares */}
           <Link
-            href="/guest/wishlist"
+            href="/drop"
             className={`flex flex-col items-center justify-center w-full py-3 px-2 rounded-2xl transition-all duration-300 ${
-              pathname?.startsWith('/guest/wishlist')
+              pathname?.startsWith('/drop')
                 ? 'text-yellow-500 bg-yellow-50/80'
                 : 'text-gray-600 hover:text-yellow-500 hover:bg-gray-50/50'
             }`}
           >
             <div className="relative">
-              {pathname?.startsWith('/guest/wishlist') ? <HeartIconSolid className="w-6 h-6" /> : <HeartIcon className="w-6 h-6" />}
-              {wishlistCount > 0 && (
-                <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
-                  {wishlistCount > 99 ? '99+' : wishlistCount}
-                </span>
-              )}
+              {pathname?.startsWith('/drop') ? <FireIconSolid className="w-6 h-6" /> : <FireIcon className="w-6 h-6" />}
             </div>
-            <span className="text-xs font-semibold mt-1">Bucketlist</span>
+            <span className="text-xs font-semibold mt-1">Dares</span>
           </Link>
 
           {/* Profile */}
